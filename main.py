@@ -5,6 +5,13 @@ Main execution script for AV Deepfake Detection Pipeline
 Combines audio encoder, video encoder, and cross-modal fusion
 """
 
+import sys
+import os
+
+SCRIPT_DIR =os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0,SCRIPT_DIR)
+
 import argparse
 import torch
 import torch.nn as nn
@@ -13,8 +20,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, confusion_matrix
 import pandas as pd
 import numpy as np
-import os
-import sys
 
 # Import configuration
 from config import (
@@ -33,7 +38,6 @@ from data_utils import (
 )
 from train_utils import train_model, calculate_auc
 from checkpoint_utils import CheckpointManager
-
 
 # =============================================================================
 # FULL MODEL (Combines all modules)
