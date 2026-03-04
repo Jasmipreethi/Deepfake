@@ -3,6 +3,12 @@ Data utilities for AV Deepfake Detection
 """
 
 import os
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+        sys.path.insert(0, SCRIPT_DIR)
+
 import json
 import pickle
 import random
