@@ -2,15 +2,10 @@
 
 """
 Main execution script for AV Deepfake Detection Pipeline
-Combines audio encoder, video encoder, and cross-modal fusion
 """
 
 import sys
-import os
-
-SCRIPT_DIR =os.path.dirname(os.path.abspath(__file__))
-if SCRIPT_DIR not in sys.path:
-    sys.path.insert(0,SCRIPT_DIR)
+sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake')
 
 import argparse
 import torch
