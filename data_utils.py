@@ -238,8 +238,23 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
         print(f"  Resuming: {len(existing_indices):,} already extracted")
     
     for idx, row in split_df.iterrows():
-        # Skip if already extracted
-        if idx in existing_indices:
+        pt_path = os.path.join(split_dir, f'{idx}.pt')
+        
+        # Skip if .pt file already exists on disk
+        if idx in existing_indices and os.path.exists(pt_path):
+            skipped += 1
+            continue
+        
+        # Also skip if .pt file exists but wasn't in manifest (rebuild manifest entry)
+        if os.path.exists(pt_path):
+            mt = row['modify_type']
+            manifest.append({
+                'idx': idx,
+                'file': row['file'],
+                'type': mt,
+                'speaker': row['file'].split('/')[1] if '/' in row['file'] else 'unknown',
+                'pt_file': f'{idx}.pt'
+            })
             skipped += 1
             continue
         
