@@ -14,7 +14,7 @@ import pandas as pd
 import cv2
 import librosa
 import torch
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 from config import VAL_DIR, FEATURES_TRAIN_PATH, FEATURES_VAL_PATH, FEATURE_CONFIG
 
@@ -57,40 +57,77 @@ def load_metadata(val_dir=VAL_DIR):
     return df
 
 
-def sample_videos(df, samples_per_type, val_split=0.2, seed=42):
-    """Sample balanced dataset with train/val split"""
+def sample_videos(df, samples_per_type, val_split=0.2, seed=42, use_all=False):
+    """Sample balanced dataset with train/val split BY SPEAKER
+    
+    Args:
+        df: metadata DataFrame
+        samples_per_type: dict of {modify_type: count} for subset mode
+        val_split: fraction of data for validation
+        seed: random seed
+        use_all: if True, use ALL videos with audio (ignore samples_per_type)
+    
+    The split is done by speaker ID so that no speaker appears in both
+    train and val, preventing identity leakage.
+    """
     set_seeds(seed)
     
     df_with_audio = df[df['audio_frames'] > 0].copy()
     print(f"\nVideos with audio: {len(df_with_audio):,}")
     
-    samples = []
-    for mod_type, count in samples_per_type.items():
-        subset = df_with_audio[df_with_audio['modify_type'] == mod_type]
-        if len(subset) >= count:
-            sampled = subset.sample(count, random_state=seed)
-            samples.append(sampled)
-            print(f"✓ {mod_type:20s}: {count} samples")
-        else:
-            print(f"⚠ {mod_type:20s}: only {len(subset)} available, taking all")
-            samples.append(subset)
+    if use_all:
+        # Use all videos with audio
+        mini_df = df_with_audio.reset_index(drop=True)
+        print(f"\nUsing ALL {len(mini_df):,} videos:")
+        for mod_type in mini_df['modify_type'].unique():
+            count = len(mini_df[mini_df['modify_type'] == mod_type])
+            print(f"  ✓ {mod_type:20s}: {count:,} videos")
+    else:
+        # Subset mode: sample fixed count per type
+        samples = []
+        for mod_type, count in samples_per_type.items():
+            subset = df_with_audio[df_with_audio['modify_type'] == mod_type]
+            if len(subset) >= count:
+                sampled = subset.sample(count, random_state=seed)
+                samples.append(sampled)
+                print(f"✓ {mod_type:20s}: {count} samples")
+            else:
+                print(f"⚠ {mod_type:20s}: only {len(subset)} available, taking all")
+                samples.append(subset)
+        mini_df = pd.concat(samples).reset_index(drop=True)
     
-    mini_df = pd.concat(samples).reset_index(drop=True)
-    
-    train_df, val_df = train_test_split(
-        mini_df,
-        test_size=val_split,
-        stratify=mini_df['modify_type'],
-        random_state=seed
+    # Extract speaker IDs from file paths (e.g. "source/speaker_id/video.mp4")
+    mini_df['speaker'] = mini_df['file'].apply(
+        lambda f: f.split('/')[1] if '/' in f and len(f.split('/')) > 1 else 'unknown'
     )
     
-    train_df = train_df.reset_index(drop=True)
-    val_df = val_df.reset_index(drop=True)
+    n_speakers = mini_df['speaker'].nunique()
+    print(f"\nUnique speakers: {n_speakers:,}")
+    
+    # Speaker-based split: all videos from one speaker stay in the same split
+    gss = GroupShuffleSplit(n_splits=1, test_size=val_split, random_state=seed)
+    train_idx, val_idx = next(gss.split(mini_df, groups=mini_df['speaker']))
+    
+    train_df = mini_df.iloc[train_idx].reset_index(drop=True)
+    val_df = mini_df.iloc[val_idx].reset_index(drop=True)
+    
+    train_speakers = train_df['speaker'].nunique()
+    val_speakers = val_df['speaker'].nunique()
+    overlap = set(train_df['speaker'].unique()) & set(val_df['speaker'].unique())
     
     print(f"\n{'='*60}")
-    print(f"Split Summary:")
-    print(f"  Train: {len(train_df)} videos")
-    print(f"  Val:   {len(val_df)} videos")
+    print(f"Speaker-Based Split Summary:")
+    print(f"  Train: {len(train_df):,} videos from {train_speakers:,} speakers")
+    print(f"  Val:   {len(val_df):,} videos from {val_speakers:,} speakers")
+    print(f"  Speaker overlap: {len(overlap)} (should be 0)")
+    
+    # Show per-type distribution in each split
+    print(f"\n  Train distribution:")
+    for t in sorted(train_df['modify_type'].unique()):
+        print(f"    {t:20s}: {len(train_df[train_df['modify_type'] == t]):,}")
+    print(f"  Val distribution:")
+    for t in sorted(val_df['modify_type'].unique()):
+        print(f"    {t:20s}: {len(val_df[val_df['modify_type'] == t]):,}")
     
     return train_df, val_df
 

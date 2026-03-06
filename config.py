@@ -37,20 +37,20 @@ MODEL_CONFIG = {
 
 TRAIN_CONFIG = {
     "project_name": "av-deepfake-detection",
-    "run_name": "20-samples-modular",
+    "run_name": "full-val-modular",
     "architecture": "PretrainedResNet3D_ResNet18",
     "dataset": "AVDeepfake1M++",
-    "samples": 20,
-    "samples_per_type": {
+    "use_all_data": True,  # True = use all videos; False = use samples_per_type subset
+    "samples_per_type": {   # Only used when use_all_data is False
         "real": 5,
         "both_modified": 5,
         "audio_modified": 5,
         "visual_modified": 5
     },
-    "batch_size": 3,
-    "epochs": 30,
+    "batch_size": 16,
+    "epochs": 50,
     "freeze_epochs": 8,
-    "patience": 12,
+    "patience": 15,
     "grad_clip": 1.0,
     "label_smoothing": 0.05,
     "val_split": 0.2,

@@ -345,7 +345,8 @@ def main():
     train_df, val_df = sample_videos(
         df, 
         config['samples_per_type'],
-        config['val_split']
+        config['val_split'],
+        use_all=config.get('use_all_data', False)
     )
     
     # Extract features
