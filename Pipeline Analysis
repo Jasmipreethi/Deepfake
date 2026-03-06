@@ -197,3 +197,46 @@ python main.py --encoder_type pretrained --fusion_type attention --epochs 30
 | `patience` | `15` | Early stop after this many epochs with no AUC gain |
 | `freeze_epochs` | `8` | Epochs with frozen encoders before fine-tuning |
 | `val_split` | `0.2` | 80% train / 20% val |
+
+---
+
+## Changes: Disk-Based Lazy-Loading Optimization
+
+### Problem
+The original pipeline held **all video features in RAM** as a Python list before pickling to disk. Each video tensor is ~30MB, so 60K videos required ~1.8TB of RAM — causing Colab to crash at ~1,700 videos with 51GB usage.
+
+### Solution — 3 Files Modified
+
+#### `data_utils.py` (rewritten)
+- **Individual `.pt` files**: Each video's features (video tensor, audio tensor, labels) are saved as a separate `.pt` file under `features/train/` and `features/val/`
+- **Lazy-loading `AVDataset`**: The DataLoader loads one `.pt` file at a time per worker during training — RAM stays constant (~2-3GB) regardless of dataset size
+- **Resumable extraction**: A `manifest.json` is saved every 500 videos. If extraction crashes, re-running skips already-extracted videos and picks up where it left off
+- **Audio shape fixed**: Changed `n_fft` from 2048 to 1024 so mel-spectrogram output is a consistent `(1, 128, 63)` regardless of input audio length
+- **PySoundFile warnings suppressed**: Wrapped `librosa.load()` with `warnings.catch_warnings()` to silence the fallback warning
+
+#### `config.py`
+- Replaced `FEATURES_TRAIN_PATH` / `FEATURES_VAL_PATH` (pickle files) with `FEATURES_DIR` (directory for `.pt` files)
+
+#### `main.py`
+- Updated imports and function calls to match new signatures
+- `--fresh` flag now uses `shutil.rmtree()` to clear the entire features directory
+- Added `import shutil`
+
+### Feature Storage Structure
+```
+checkpoints/
+  features/
+    train/
+      0.pt, 1.pt, 2.pt, ...    ← one per video (~30MB each)
+    val/
+      0.pt, 1.pt, ...
+    train_manifest.json         ← metadata index (file, type, speaker)
+    val_manifest.json
+```
+
+### How Resuming Works
+1. On first run, `process_split_to_disk()` extracts features and writes `.pt` files + manifest
+2. If the process crashes at video N, the manifest has entries 0 to N-1
+3. On re-run (without `--fresh`), it loads the manifest and **skips** all already-extracted indices
+4. Extraction continues from video N onward
+

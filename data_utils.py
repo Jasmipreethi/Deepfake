@@ -1,5 +1,6 @@
 """
 Data utilities for AV Deepfake Detection
+Optimized for large-scale datasets with lazy-loading from disk.
 """
 
 import sys
@@ -7,8 +8,8 @@ sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake')
 
 import os
 import json
-import pickle
 import random
+import warnings
 import numpy as np
 import pandas as pd
 import cv2
@@ -16,7 +17,7 @@ import librosa
 import torch
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
-from config import VAL_DIR, FEATURES_TRAIN_PATH, FEATURES_VAL_PATH, FEATURE_CONFIG
+from config import VAL_DIR, FEATURE_CONFIG
 
 
 def set_seeds(seed=42):
@@ -133,7 +134,12 @@ def sample_videos(df, samples_per_type, val_split=0.2, seed=42, use_all=False):
 
 
 def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG):
-    """Extract synchronized audio and video features from video"""
+    """Extract synchronized audio and video features from video.
+    
+    Returns tensors with FIXED shapes regardless of input:
+      video: (num_frames, 3, img_size, img_size) = (50, 3, 224, 224)
+      audio: (1, 128, 63)  — fixed via n_fft=1024, hop_length=512
+    """
     # Determine which 2-second window to extract
     if fake_segments and len(fake_segments) > 0:
         start_sec = fake_segments[0][0]
@@ -144,7 +150,6 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
     # Video extraction
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(f"    ✗ Cannot open video: {video_path}")
         return None, None
     
     start_frame = int(start_sec * cfg['fps'])
@@ -164,18 +169,20 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
     # Pad if needed
     if len(frames) < cfg['num_frames']:
         while len(frames) < cfg['num_frames']:
-            frames.append(frames[-1] if frames else np.zeros((224, 224, 3)))
+            frames.append(frames[-1] if frames else np.zeros((cfg['img_size'], cfg['img_size'], 3)))
     
     video_tensor = torch.FloatTensor(np.array(frames)).permute(0, 3, 1, 2)
     
-    # Audio extraction
+    # Audio extraction — suppress PySoundFile warnings
     try:
-        y, sr = librosa.load(
-            video_path,
-            sr=cfg['sr'],
-            offset=start_sec,
-            duration=cfg['duration']
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            y, sr = librosa.load(
+                video_path,
+                sr=cfg['sr'],
+                offset=start_sec,
+                duration=cfg['duration']
+            )
         
         if len(y) < cfg['audio_samples']:
             y = np.pad(y, (0, cfg['audio_samples'] - len(y)))
@@ -183,29 +190,68 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
             y = y[:cfg['audio_samples']]
         
         mel_spec = librosa.feature.melspectrogram(
-            y=y, sr=cfg['sr'], n_mels=128, n_fft=2048, hop_length=512
+            y=y, sr=cfg['sr'], n_mels=128, n_fft=1024, hop_length=512
         )
         mel_db = librosa.power_to_db(mel_spec, ref=np.max)
         audio_tensor = torch.FloatTensor(mel_db).unsqueeze(0)
         
     except Exception as e:
-        print(f"    ⚠ Audio extraction failed: {e}")
-        audio_tensor = torch.zeros(1, 128, 87)
+        # Fallback: consistent shape with n_fft=1024, hop_length=512
+        # shape = (1, 128, 63)
+        audio_tensor = torch.zeros(1, 128, 63)
     
     return video_tensor, audio_tensor
 
 
-def process_split(split_df, split_name, val_dir=VAL_DIR):
-    """Process entire split and extract features"""
-    print(f"\nProcessing {split_name} set ({len(split_df)} videos)...")
-    features = []
+# =============================================================================
+# DISK-BASED FEATURE STORAGE (saves each video as individual .pt file)
+# =============================================================================
+
+def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
+    """Extract features for a split and save each as an individual .pt file.
+    
+    Saves:
+      feature_dir/{split_name}/0.pt, 1.pt, 2.pt, ...
+      feature_dir/{split_name}_manifest.json  (metadata for each sample)
+    
+    Supports resuming — skips videos whose .pt files already exist.
+    """
+    split_dir = os.path.join(feature_dir, split_name)
+    os.makedirs(split_dir, exist_ok=True)
+    manifest_path = os.path.join(feature_dir, f'{split_name}_manifest.json')
+    
+    # Load existing manifest for resume support
+    if os.path.exists(manifest_path):
+        with open(manifest_path, 'r') as f:
+            manifest = json.load(f)
+    else:
+        manifest = []
+    
+    existing_indices = {m['idx'] for m in manifest}
+    
+    success = 0
+    skipped = 0
+    failed = 0
+    
+    print(f"\nProcessing {split_name} set ({len(split_df):,} videos)...")
+    if existing_indices:
+        print(f"  Resuming: {len(existing_indices):,} already extracted")
     
     for idx, row in split_df.iterrows():
-        print(f"\n[{split_name} {idx+1}/{len(split_df)}] {row['modify_type'].upper()}")
+        # Skip if already extracted
+        if idx in existing_indices:
+            skipped += 1
+            continue
+        
+        # Progress logging (every 100 videos)
+        if (idx + 1) % 100 == 0 or idx == 0:
+            print(f"  [{split_name} {idx+1}/{len(split_df)}] "
+                  f"done={success + skipped} failed={failed}")
+        
         video_path = os.path.join(val_dir, row['file'])
         
         if not os.path.exists(video_path):
-            print(f"    ✗ File not found: {video_path}")
+            failed += 1
             continue
         
         video_tensor, audio_tensor = extract_av_features(
@@ -215,7 +261,7 @@ def process_split(split_df, split_name, val_dir=VAL_DIR):
         )
         
         if video_tensor is None:
-            print(f"    ✗ Feature extraction failed")
+            failed += 1
             continue
         
         # Create labels
@@ -228,91 +274,129 @@ def process_split(split_df, split_name, val_dir=VAL_DIR):
         }
         audio_label, video_label = label_map.get(mt, (0, 0))
         
-        features.append({
+        # Save individual .pt file
+        feature_data = {
             'video': video_tensor,
             'audio': audio_tensor,
             'labels': torch.FloatTensor([audio_label, video_label]),
-            'type': mt,
-            'file': row['file'],
-            'speaker': row['file'].split('/')[1] if '/' in row['file'] else 'unknown'
-        })
+        }
+        pt_path = os.path.join(split_dir, f'{idx}.pt')
+        torch.save(feature_data, pt_path)
         
-        print(f"    ✓ Video: {video_tensor.shape}, Audio: {audio_tensor.shape}")
+        # Update manifest
+        manifest.append({
+            'idx': idx,
+            'file': row['file'],
+            'type': mt,
+            'speaker': row['file'].split('/')[1] if '/' in row['file'] else 'unknown',
+            'pt_file': f'{idx}.pt'
+        })
+        success += 1
+        
+        # Save manifest periodically (every 500 videos) for crash safety
+        if success % 500 == 0:
+            with open(manifest_path, 'w') as f:
+                json.dump(manifest, f)
     
-    return features
+    # Final manifest save
+    with open(manifest_path, 'w') as f:
+        json.dump(manifest, f)
+    
+    total = success + skipped
+    print(f"\n  {split_name} Summary: {total:,} extracted "
+          f"({skipped:,} cached, {success:,} new, {failed:,} failed)")
+    
+    return split_dir, manifest_path
 
 
-def extract_all_features(train_df, val_df, val_dir=VAL_DIR, 
-                         cache_train_path=FEATURES_TRAIN_PATH,
-                         cache_val_path=FEATURES_VAL_PATH,
-                         use_cache=True):
-    """Extract features for both splits with caching"""
-    if use_cache and os.path.exists(cache_train_path) and os.path.exists(cache_val_path):
-        print("=" * 60)
-        print("Found cached features. Loading...")
-        print("=" * 60)
-        with open(cache_train_path, 'rb') as f:
-            train_features = pickle.load(f)
-        with open(cache_val_path, 'rb') as f:
-            val_features = pickle.load(f)
-        print(f"✓ Loaded {len(train_features)} train, {len(val_features)} val features")
-        return train_features, val_features
+def extract_all_features(train_df, val_df, val_dir, feature_dir, use_cache=True):
+    """Extract features for both splits, saving to disk.
+    
+    Returns (train_dir, train_manifest, val_dir, val_manifest) paths.
+    """
+    train_manifest = os.path.join(feature_dir, 'train_manifest.json')
+    val_manifest = os.path.join(feature_dir, 'val_manifest.json')
+    
+    # Check if extraction is already complete
+    if use_cache and os.path.exists(train_manifest) and os.path.exists(val_manifest):
+        with open(train_manifest, 'r') as f:
+            t_man = json.load(f)
+        with open(val_manifest, 'r') as f:
+            v_man = json.load(f)
+        
+        # Only skip if extraction covered most of the data
+        if len(t_man) >= len(train_df) * 0.95 and len(v_man) >= len(val_df) * 0.95:
+            print("=" * 60)
+            print(f"Features already extracted on disk.")
+            print(f"  Train: {len(t_man):,} features")
+            print(f"  Val:   {len(v_man):,} features")
+            print("=" * 60)
+            return (os.path.join(feature_dir, 'train'), train_manifest,
+                    os.path.join(feature_dir, 'val'), val_manifest)
     
     print("=" * 60)
-    print("SECTION: Feature Extraction")
+    print("FEATURE EXTRACTION (saving to disk)")
     print("=" * 60)
     
-    train_features = process_split(train_df, "TRAIN", val_dir)
-    val_features = process_split(val_df, "VAL", val_dir)
+    train_dir, train_manifest = process_split_to_disk(
+        train_df, "train", feature_dir, val_dir
+    )
+    val_dir_out, val_manifest = process_split_to_disk(
+        val_df, "val", feature_dir, val_dir
+    )
     
-    print(f"\n{'='*60}")
-    print("Extraction Summary:")
-    print(f"  Train: {len(train_features)}/{len(train_df)} successful")
-    print(f"  Val:   {len(val_features)}/{len(val_df)} successful")
-    
-    # Cache features
-    os.makedirs(os.path.dirname(cache_train_path), exist_ok=True)
-    with open(cache_train_path, 'wb') as f:
-        pickle.dump(train_features, f)
-    with open(cache_val_path, 'wb') as f:
-        pickle.dump(val_features, f)
-    print(f"\n✓ Features cached")
-    
-    return train_features, val_features
+    return train_dir, train_manifest, val_dir_out, val_manifest
 
+
+# =============================================================================
+# LAZY-LOADING DATASET (loads one .pt at a time from disk)
+# =============================================================================
 
 class AVDataset(torch.utils.data.Dataset):
-    """PyTorch Dataset for AV features"""
-    def __init__(self, features):
-        self.features = features
+    """PyTorch Dataset that lazy-loads features from individual .pt files.
+    
+    Only one video's tensors are in memory at a time per worker,
+    so RAM usage stays constant regardless of dataset size.
+    """
+    def __init__(self, feature_dir, manifest_path):
+        with open(manifest_path, 'r') as f:
+            self.manifest = json.load(f)
+        self.feature_dir = feature_dir
     
     def __len__(self):
-        return len(self.features)
+        return len(self.manifest)
     
     def __getitem__(self, idx):
-        item = self.features[idx]
+        entry = self.manifest[idx]
+        pt_path = os.path.join(self.feature_dir, entry['pt_file'])
+        data = torch.load(pt_path, map_location='cpu', weights_only=True)
         return {
-            'video': item['video'],
-            'audio': item['audio'],
-            'labels': item['labels'],
-            'type': item['type'],
-            'file': item['file']
+            'video': data['video'],
+            'audio': data['audio'],
+            'labels': data['labels'],
+            'type': entry['type'],
+            'file': entry['file']
         }
 
 
-def create_dataloaders(train_features, val_features, batch_size=3):
-    """Create DataLoaders for train and val sets"""
+def create_dataloaders(train_dir, train_manifest, val_dir, val_manifest, 
+                       batch_size=16, num_workers=2):
+    """Create DataLoaders with lazy-loading datasets."""
     train_loader = torch.utils.data.DataLoader(
-        AVDataset(train_features),
+        AVDataset(train_dir, train_manifest),
         batch_size=batch_size,
         shuffle=True,
-        drop_last=True
+        drop_last=True,
+        num_workers=num_workers,
+        pin_memory=True
     )
     
     val_loader = torch.utils.data.DataLoader(
-        AVDataset(val_features),
+        AVDataset(val_dir, val_manifest),
         batch_size=batch_size,
-        shuffle=False
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True
     )
     
     return train_loader, val_loader

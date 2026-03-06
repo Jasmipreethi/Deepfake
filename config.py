@@ -17,9 +17,11 @@ os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 # Checkpoint file paths
 CHECKPOINT_PATH = os.path.join(CHECKPOINT_DIR, 'training_checkpoint.pth')
 BEST_MODEL_PATH = os.path.join(CHECKPOINT_DIR, 'best_model.pth')
-FEATURES_TRAIN_PATH = os.path.join(CHECKPOINT_DIR, 'train_features.pkl')
-FEATURES_VAL_PATH = os.path.join(CHECKPOINT_DIR, 'val_features.pkl')
+FEATURES_DIR = os.path.join(CHECKPOINT_DIR, 'features')
 WAND_ID_PATH = os.path.join(CHECKPOINT_DIR, 'wandb_run_id.txt')
+
+# Create directories
+os.makedirs(FEATURES_DIR, exist_ok=True)
 
 # =============================================================================
 # MODEL CONFIGURATION

@@ -4,6 +4,7 @@
 Main execution script for AV Deepfake Detection Pipeline
 """
 import os
+import shutil
 import sys
 sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake')
 
@@ -19,7 +20,7 @@ import numpy as np
 # Import configuration
 from config import (
     VAL_DIR, CHECKPOINT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH,
-    FEATURES_TRAIN_PATH, FEATURES_VAL_PATH, WAND_ID_PATH,
+    FEATURES_DIR, WAND_ID_PATH,
     MODEL_CONFIG, TRAIN_CONFIG, OPTIM_CONFIG
 )
 
@@ -331,10 +332,10 @@ def main():
     if args.fresh:
         print("Starting fresh - removing existing checkpoints and features...")
         checkpoint_manager.clean_checkpoints()
-        for path in [FEATURES_TRAIN_PATH, FEATURES_VAL_PATH]:
-            if os.path.exists(path):
-                os.remove(path)
-                print(f"Removed {path}")
+        if os.path.exists(FEATURES_DIR):
+            shutil.rmtree(FEATURES_DIR)
+            os.makedirs(FEATURES_DIR, exist_ok=True)
+            print(f"Cleared {FEATURES_DIR}")
     
     # Load data
     print("\n" + "=" * 60)
@@ -349,20 +350,19 @@ def main():
         use_all=config.get('use_all_data', False)
     )
     
-    # Extract features
-    train_features, val_features = extract_all_features(
+    # Extract features (saved as individual .pt files to disk)
+    train_dir, train_manifest, val_dir_feat, val_manifest = extract_all_features(
         train_df, 
         val_df,
         VAL_DIR,
-        FEATURES_TRAIN_PATH,
-        FEATURES_VAL_PATH,
+        FEATURES_DIR,
         use_cache=not args.fresh
     )
     
-    # Create dataloaders
+    # Create dataloaders (lazy-loading from disk)
     train_loader, val_loader = create_dataloaders(
-        train_features, 
-        val_features,
+        train_dir, train_manifest,
+        val_dir_feat, val_manifest,
         config['batch_size']
     )
     
