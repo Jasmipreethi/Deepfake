@@ -9,11 +9,10 @@ sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake')
 import os
 import json
 import random
-import warnings
 import numpy as np
 import pandas as pd
 import cv2
-import librosa
+import torchaudio
 import torch
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
@@ -173,31 +172,45 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
     
     video_tensor = torch.FloatTensor(np.array(frames)).permute(0, 3, 1, 2)
     
-    # Audio extraction — suppress PySoundFile warnings
+    # Audio extraction using torchaudio
     try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            y, sr = librosa.load(
-                video_path,
-                sr=cfg['sr'],
-                offset=start_sec,
-                duration=cfg['duration']
-            )
+        # Load full audio, then slice to the 2-second window
+        waveform, orig_sr = torchaudio.load(video_path)
         
-        if len(y) < cfg['audio_samples']:
-            y = np.pad(y, (0, cfg['audio_samples'] - len(y)))
-        else:
-            y = y[:cfg['audio_samples']]
+        # Resample to target sample rate if needed
+        if orig_sr != cfg['sr']:
+            resampler = torchaudio.transforms.Resample(orig_sr, cfg['sr'])
+            waveform = resampler(waveform)
         
-        mel_spec = librosa.feature.melspectrogram(
-            y=y, sr=cfg['sr'], n_mels=128, n_fft=1024, hop_length=512
+        # Convert to mono if stereo
+        if waveform.shape[0] > 1:
+            waveform = waveform.mean(dim=0, keepdim=True)
+        
+        # Slice to the 2-second window
+        start_sample = int(start_sec * cfg['sr'])
+        end_sample = start_sample + cfg['audio_samples']
+        waveform = waveform[:, start_sample:end_sample]
+        
+        # Pad if too short
+        if waveform.shape[1] < cfg['audio_samples']:
+            pad_size = cfg['audio_samples'] - waveform.shape[1]
+            waveform = torch.nn.functional.pad(waveform, (0, pad_size))
+        
+        # Compute mel-spectrogram
+        mel_transform = torchaudio.transforms.MelSpectrogram(
+            sample_rate=cfg['sr'],
+            n_mels=128,
+            n_fft=1024,
+            hop_length=512
         )
-        mel_db = librosa.power_to_db(mel_spec, ref=np.max)
-        audio_tensor = torch.FloatTensor(mel_db).unsqueeze(0)
+        mel_spec = mel_transform(waveform)  # (1, 128, T)
+        
+        # Convert to dB scale
+        db_transform = torchaudio.transforms.AmplitudeToDB(top_db=80)
+        audio_tensor = db_transform(mel_spec)  # (1, 128, T)
         
     except Exception as e:
-        # Fallback: consistent shape with n_fft=1024, hop_length=512
-        # shape = (1, 128, 63)
+        # Fallback: consistent shape
         audio_tensor = torch.zeros(1, 128, 63)
     
     return video_tensor, audio_tensor
