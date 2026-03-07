@@ -210,7 +210,7 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
         audio_tensor = db_transform(mel_spec)  # (1, 128, T)
         
     except Exception as e:
-        # Fallback: consistent shape
+        # Fallback for corrupted/unreadable audio: use zero tensor
         audio_tensor = torch.zeros(1, 128, 63)
     
     return video_tensor, audio_tensor
@@ -232,6 +232,7 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
     split_dir = os.path.join(feature_dir, split_name)
     os.makedirs(split_dir, exist_ok=True)
     manifest_path = os.path.join(feature_dir, f'{split_name}_manifest.json')
+    failed_path = os.path.join(feature_dir, f'{split_name}_failed.json')
     
     # Load existing manifest for resume support
     if os.path.exists(manifest_path):
@@ -239,6 +240,13 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
             manifest = json.load(f)
     else:
         manifest = []
+    
+    # Load previously failed indices to skip them
+    if os.path.exists(failed_path):
+        with open(failed_path, 'r') as f:
+            failed_indices = set(json.load(f))
+    else:
+        failed_indices = set()
     
     existing_indices = {m['idx'] for m in manifest}
     
@@ -249,9 +257,16 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
     print(f"\nProcessing {split_name} set ({len(split_df):,} videos)...")
     if existing_indices:
         print(f"  Resuming: {len(existing_indices):,} already extracted")
+    if failed_indices:
+        print(f"  Skipping: {len(failed_indices):,} previously failed")
     
     for idx, row in split_df.iterrows():
         pt_path = os.path.join(split_dir, f'{idx}.pt')
+        
+        # Skip previously failed files
+        if idx in failed_indices:
+            failed += 1
+            continue
         
         # Skip if .pt file already exists on disk
         if idx in existing_indices and os.path.exists(pt_path):
@@ -280,6 +295,7 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
         
         if not os.path.exists(video_path):
             failed += 1
+            failed_indices.add(idx)
             continue
         
         video_tensor, audio_tensor = extract_av_features(
@@ -290,6 +306,7 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
         
         if video_tensor is None:
             failed += 1
+            failed_indices.add(idx)
             continue
         
         # Create labels
@@ -321,14 +338,18 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
         })
         success += 1
         
-        # Save manifest periodically (every 500 videos) for crash safety
+        # Save manifest and failed list periodically (every 500 videos) for crash safety
         if success % 500 == 0:
             with open(manifest_path, 'w') as f:
                 json.dump(manifest, f)
+            with open(failed_path, 'w') as f:
+                json.dump(list(failed_indices), f)
     
-    # Final manifest save
+    # Final save
     with open(manifest_path, 'w') as f:
         json.dump(manifest, f)
+    with open(failed_path, 'w') as f:
+        json.dump(list(failed_indices), f)
     
     total = success + skipped
     print(f"\n  {split_name} Summary: {total:,} extracted "
