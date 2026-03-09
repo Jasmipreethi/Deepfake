@@ -25,7 +25,7 @@ except ImportError:
 
 
 # Dataset info
-REPO_ID = "ControlNet-XS/AV-Deepfake1M"
+REPO_ID = "ControlNet/AV-Deepfake1M-PlusPlus"
 REPO_TYPE = "dataset"
 
 
