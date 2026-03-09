@@ -8,6 +8,24 @@ import shutil
 import sys
 sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake')
 
+# Load API keys from .env file
+def load_env(env_path=None):
+    """Load environment variables from .env file."""
+    if env_path is None:
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    if os.path.exists(env_path):
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+        print(f"✓ Loaded API keys from {env_path}")
+    else:
+        print(f"⚠ No .env file found at {env_path} — API keys not loaded")
+
+load_env()
+
 import argparse
 import torch
 import torch.nn as nn
@@ -34,6 +52,7 @@ from data_utils import (
 )
 from train_utils import train_model, calculate_auc
 from checkpoint_utils import CheckpointManager
+from download_data import download_and_extract
 
 # =============================================================================
 # FULL MODEL (Combines all modules)
@@ -336,6 +355,22 @@ def main():
             shutil.rmtree(FEATURES_DIR)
             os.makedirs(FEATURES_DIR, exist_ok=True)
             print(f"Cleared {FEATURES_DIR}")
+    
+    # Check if data exists, offer to download
+    if not os.path.exists(VAL_DIR) or not os.listdir(VAL_DIR):
+        print("\n" + "=" * 60)
+        print("DATA NOT FOUND")
+        print("=" * 60)
+        print(f"Val directory not found: {VAL_DIR}")
+        dl_input = input("\nDownload val data from Hugging Face? (y/n): ").strip().lower()
+        if dl_input == 'y':
+            data_root = os.path.dirname(VAL_DIR)
+            extract_dir = download_and_extract(data_root)
+            if extract_dir:
+                print(f"✓ Data ready at: {extract_dir}")
+        else:
+            print("Cannot proceed without data. Exiting.")
+            return
     
     # Load data
     print("\n" + "=" * 60)

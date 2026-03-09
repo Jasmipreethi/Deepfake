@@ -20,6 +20,7 @@ This pipeline detects deepfake videos using **both audio and video** modalities.
 | [cross_modal.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/cross_modal.py) | Fusion module (combines audio + video → predictions) |
 | [train_utils.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/train_utils.py) | Training loop, validation, loss functions, optimizer setup |
 | [checkpoint_utils.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/checkpoint_utils.py) | Save/load checkpoints for resumable training |
+| [download_data.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/download_data.py) | Download val data from Hugging Face + extract zips |
 | [main.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/main.py) | Entry point — ties everything together |
 
 ---
@@ -285,3 +286,32 @@ Google Drive storage can run out before all 77K features are extracted (~30MB pe
 - **`y`** → continues extracting more features
 - **`n`** → skips to training using only the already-extracted `.pt` files
 - If all features are already extracted, skips the prompt entirely
+
+---
+
+## Changes: Hugging Face Data Download
+
+### Problem
+Setting up the pipeline on a new machine (VPS, fresh Colab) required manually downloading and extracting the 56GB val dataset.
+
+### Solution — New file `download_data.py` + `main.py` integration
+
+#### `download_data.py`
+- Uses `huggingface_hub` API to download val zip parts and `val_metadata.json`
+- Handles Hugging Face login (gated dataset requires accepted terms)
+- Extracts multi-volume zips using 7z, unzip, or Python zipfile fallback
+- **Resume support** — skips already-downloaded files
+- Can be run standalone: `python download_data.py --data_dir /path/to/data`
+
+#### `main.py`
+- Auto-detects if `VAL_DIR` is missing or empty on startup
+- Prompts: `Download val data from Hugging Face? (y/n)`
+- If yes, runs the full download + extraction pipeline before proceeding
+- If no, exits gracefully
+
+### Prerequisites
+```bash
+pip install huggingface_hub
+huggingface-cli login  # one-time, need to accept dataset terms first
+apt-get install p7zip-full  # for multi-volume zip extraction
+```

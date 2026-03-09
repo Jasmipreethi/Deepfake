@@ -36,6 +36,7 @@ flowchart LR
 ├── data_utils.py       # Data loading, speaker split, feature extraction
 ├── train_utils.py      # Training loop, loss, optimizer
 ├── checkpoint_utils.py # Checkpoint management
+├── download_data.py    # Download val data from Hugging Face
 └── main.py             # Main execution script
 ```
 
