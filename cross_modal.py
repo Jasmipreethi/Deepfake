@@ -155,13 +155,84 @@ class AttentionFusion(nn.Module):
             'fused': fused
         }
 
+class TransformerFusion(nn.Module):
+    """
+    Transformer-based cross-modal fusion (GPU-optimized).
+    
+    Uses a transformer encoder with a learnable [CLS] token to fuse
+    audio and video embeddings. More powerful than MLP fusion but
+    requires more compute — best suited for GPU.
+    """
+    def __init__(self, feature_dim=256, hidden_dim=512, 
+                 num_heads=8, num_layers=2, dropout=0.4):
+        super().__init__()
+        self.feature_dim = feature_dim
+        
+        # Project both modalities to same dimension
+        self.audio_proj = nn.Linear(feature_dim, hidden_dim)
+        self.video_proj = nn.Linear(feature_dim, hidden_dim)
+        
+        # Learnable [CLS] token for classification
+        self.cls_token = nn.Parameter(torch.randn(1, 1, hidden_dim))
+        
+        # Positional embeddings: [CLS], video, audio
+        self.pos_embedding = nn.Parameter(torch.randn(1, 3, hidden_dim))
+        
+        # Transformer encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=hidden_dim,
+            nhead=num_heads,
+            dim_feedforward=hidden_dim * 4,
+            dropout=dropout,
+            activation='gelu',
+            batch_first=True,
+            norm_first=True
+        )
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer, 
+            num_layers=num_layers,
+            norm=nn.LayerNorm(hidden_dim)
+        )
+        
+        # Classification heads from the [CLS] token output
+        self.audio_classifier = nn.Linear(hidden_dim, 1)
+        self.video_classifier = nn.Linear(hidden_dim, 1)
+        self.joint_classifier = nn.Linear(hidden_dim, 1)
+    
+    def forward(self, video_feat, audio_feat):
+        B = video_feat.shape[0]
+        
+        # Project to hidden dimension
+        v = self.video_proj(video_feat).unsqueeze(1)  # (B, 1, H)
+        a = self.audio_proj(audio_feat).unsqueeze(1)   # (B, 1, H)
+        
+        # Prepend [CLS] token
+        cls = self.cls_token.expand(B, -1, -1)  # (B, 1, H)
+        
+        # Sequence: [CLS, video, audio] + positional embeddings
+        tokens = torch.cat([cls, v, a], dim=1)  # (B, 3, H)
+        tokens = tokens + self.pos_embedding
+        
+        # Transformer self-attention across modalities
+        fused = self.transformer(tokens)  # (B, 3, H)
+        
+        # Use [CLS] token output for classification
+        cls_out = fused[:, 0, :]  # (B, H)
+        
+        return {
+            'audio_pred': torch.sigmoid(self.audio_classifier(cls_out)),
+            'video_pred': torch.sigmoid(self.video_classifier(cls_out)),
+            'joint_pred': torch.sigmoid(self.joint_classifier(cls_out)),
+            'fused': cls_out
+        }
+
 
 def get_fusion_module(fusion_type='pretrained', feature_dim=256, hidden_dim=512, dropout=0.4):
     """
     Factory function to get fusion module by type
     
     Args:
-        fusion_type: 'simple', 'improved', 'pretrained', or 'attention'
+        fusion_type: 'simple', 'improved', 'pretrained', 'attention', or 'transformer'
         feature_dim: input feature dimension from encoders
         hidden_dim: hidden dimension for fusion
         dropout: dropout rate
@@ -177,5 +248,8 @@ def get_fusion_module(fusion_type='pretrained', feature_dim=256, hidden_dim=512,
         return PretrainedFusion(feature_dim=feature_dim, hidden_dim=hidden_dim, dropout=dropout)
     elif fusion_type == 'attention':
         return AttentionFusion(feature_dim=feature_dim, hidden_dim=hidden_dim, dropout=dropout)
+    elif fusion_type == 'transformer':
+        return TransformerFusion(feature_dim=feature_dim, hidden_dim=hidden_dim, dropout=dropout)
     else:
         raise ValueError(f"Unknown fusion type: {fusion_type}")
+

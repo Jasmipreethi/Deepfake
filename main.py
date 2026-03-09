@@ -114,9 +114,9 @@ def parse_args():
     parser.add_argument(
         '--fusion_type',
         type=str,
-        default='pretrained',
-        choices=['simple', 'improved', 'pretrained', 'attention'],
-        help='Cross-modal fusion method'
+        default='auto',
+        choices=['simple', 'improved', 'pretrained', 'attention', 'transformer', 'auto'],
+        help='Cross-modal fusion method (auto = transformer on GPU, pretrained on CPU)'
     )
     
     parser.add_argument(
@@ -434,16 +434,26 @@ def main():
         config['batch_size']
     )
     
+    # Auto-select fusion type based on device
+    fusion_type = args.fusion_type
+    if fusion_type == 'auto':
+        if device.type == 'cuda':
+            fusion_type = 'transformer'
+            print("  GPU detected → using TransformerFusion")
+        else:
+            fusion_type = 'pretrained'
+            print("  CPU detected → using PretrainedFusion (MLP)")
+    
     # Initialize model (combining all modules)
     print("\n" + "=" * 60)
     print(f"MODEL INITIALIZATION")
     print(f"  Encoder: {args.encoder_type}")
-    print(f"  Fusion:  {args.fusion_type}")
+    print(f"  Fusion:  {fusion_type}")
     print("=" * 60)
     
     model = AVDeepfakeDetector(
         encoder_type=args.encoder_type,
-        fusion_type=args.fusion_type,
+        fusion_type=fusion_type,
         feature_dim=config['feature_dim'],
         hidden_dim=config['hidden_dim'],
         dropout=config['dropout']

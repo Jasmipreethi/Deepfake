@@ -315,3 +315,59 @@ pip install huggingface_hub
 huggingface-cli login  # one-time, need to accept dataset terms first
 apt-get install p7zip-full  # for multi-volume zip extraction
 ```
+
+---
+
+## Changes: Transformer Fusion (GPU Auto-Selected)
+
+### Problem
+The MLP-based `PretrainedFusion` concatenates audio and video embeddings and passes them through linear layers — it cannot learn **cross-modal interactions** between the two modalities.
+
+### Solution — `cross_modal.py` + `main.py`
+
+#### New `TransformerFusion` class
+Uses a full transformer encoder to let audio and video embeddings **attend to each other**:
+
+```mermaid
+flowchart LR
+    V["Video 256-d"] --> VP["Linear → 512-d"]
+    A["Audio 256-d"] --> AP["Linear → 512-d"]
+    CLS["[CLS] token"] --> T
+    VP --> T["Transformer Encoder\n2 layers, 8 heads\nGELU, pre-norm"]
+    AP --> T
+    T --> CO["[CLS] output\n512-d"]
+    CO --> AH["Audio Head → σ"]
+    CO --> VH["Video Head → σ"]
+    CO --> JH["Joint Head → σ"]
+```
+
+**Architecture details:**
+- Input sequence: `[CLS, video_embedding, audio_embedding]` (3 tokens)
+- Learnable positional embeddings
+- 2 transformer encoder layers with 8-head self-attention
+- GELU activation, pre-norm (LayerNorm before attention)
+- [CLS] token output used for classification
+
+#### Device-based auto-selection (`main.py`)
+Default `--fusion_type` is now `auto`:
+- **GPU** → `TransformerFusion` (self-attention across modalities)
+- **CPU** → `PretrainedFusion` (MLP, faster on CPU)
+
+Can still be forced manually: `python main.py --fusion_type pretrained`
+
+---
+
+## Changes: Portable Paths via `.env`
+
+### Problem
+All paths were hardcoded for Google Colab (`/content/drive/MyDrive/...`), making it impossible to run on a VPS without editing `config.py`.
+
+### Solution — `config.py` + `.env`
+- `config.py` now reads `DATA_DIR` and `CHECKPOINT_DIR` from environment variables
+- Defaults to Colab paths if not set (backward compatible)
+- For VPS, just uncomment in `.env`:
+  ```
+  DATA_DIR=/workspace/Deepfake/data
+  CHECKPOINT_DIR=/workspace/Deepfake/checkpoints
+  ```
+- `main.py` loads `.env` at startup with a built-in parser (no `python-dotenv` needed)
