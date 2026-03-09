@@ -37,7 +37,7 @@ import numpy as np
 
 # Import configuration
 from config import (
-    VAL_DIR, CHECKPOINT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH,
+    DATA_DIR, VAL_DIR, CHECKPOINT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH,
     FEATURES_DIR, WAND_ID_PATH,
     MODEL_CONFIG, TRAIN_CONFIG, OPTIM_CONFIG
 )
@@ -364,8 +364,7 @@ def main():
         print(f"Val directory not found: {VAL_DIR}")
         dl_input = input("\nDownload val data from Hugging Face? (y/n): ").strip().lower()
         if dl_input == 'y':
-            data_root = os.path.dirname(VAL_DIR)
-            extract_dir = download_and_extract(data_root)
+            extract_dir = download_and_extract(DATA_DIR)
             if extract_dir:
                 print(f"✓ Data ready at: {extract_dir}")
         else:
