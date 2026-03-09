@@ -350,14 +350,48 @@ def main():
         use_all=config.get('use_all_data', False)
     )
     
-    # Extract features (saved as individual .pt files to disk)
-    train_dir, train_manifest, val_dir_feat, val_manifest = extract_all_features(
-        train_df, 
-        val_df,
-        VAL_DIR,
-        FEATURES_DIR,
-        use_cache=not args.fresh
-    )
+    # Check existing features and ask user whether to extract more
+    print("\n" + "=" * 60)
+    print("FEATURE EXTRACTION STATUS")
+    print("=" * 60)
+    
+    train_manifest_path = os.path.join(FEATURES_DIR, 'train_manifest.json')
+    val_manifest_path = os.path.join(FEATURES_DIR, 'val_manifest.json')
+    
+    existing_train = 0
+    existing_val = 0
+    if os.path.exists(train_manifest_path):
+        with open(train_manifest_path, 'r') as f:
+            import json
+            existing_train = len(json.load(f))
+    if os.path.exists(val_manifest_path):
+        with open(val_manifest_path, 'r') as f:
+            import json
+            existing_val = len(json.load(f))
+    
+    print(f"  Train: {existing_train:,} / {len(train_df):,} extracted")
+    print(f"  Val:   {existing_val:,} / {len(val_df):,} extracted")
+    
+    if existing_train < len(train_df) or existing_val < len(val_df):
+        user_input = input("\nContinue extracting features? (y = extract more, n = skip to training with existing): ").strip().lower()
+        
+        if user_input == 'y':
+            train_dir, train_manifest, val_dir_feat, val_manifest = extract_all_features(
+                train_df, val_df, VAL_DIR, FEATURES_DIR,
+                use_cache=not args.fresh
+            )
+        else:
+            print("Skipping extraction — using existing features for training.")
+            train_dir = os.path.join(FEATURES_DIR, 'train')
+            val_dir_feat = os.path.join(FEATURES_DIR, 'val')
+            train_manifest = train_manifest_path
+            val_manifest = val_manifest_path
+    else:
+        print("All features already extracted!")
+        train_dir = os.path.join(FEATURES_DIR, 'train')
+        val_dir_feat = os.path.join(FEATURES_DIR, 'val')
+        train_manifest = train_manifest_path
+        val_manifest = val_manifest_path
     
     # Create dataloaders (lazy-loading from disk)
     train_loader, val_loader = create_dataloaders(

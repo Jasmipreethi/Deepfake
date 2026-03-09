@@ -240,3 +240,48 @@ checkpoints/
 3. On re-run (without `--fresh`), it loads the manifest and **skips** all already-extracted indices
 4. Extraction continues from video N onward
 
+---
+
+## Changes: Replaced librosa with torchaudio
+
+### Problem
+`librosa` relied on PySoundFile/audioread for loading audio from video files, producing frequent `PySoundFile failed` warnings and occasional crashes on corrupted MP4 files.
+
+### Solution — `data_utils.py`
+- Replaced `librosa.load()` + `librosa.feature.melspectrogram()` with `torchaudio.load()` + `torchaudio.transforms.MelSpectrogram()`
+- Audio pipeline is now fully PyTorch-native: load → resample → mono → slice → mel-spectrogram → AmplitudeToDB
+- No more PySoundFile/audioread dependency chain
+- `librosa` no longer needed as a dependency
+
+---
+
+## Changes: Failed File Tracking
+
+### Problem
+Corrupted MP4 files (e.g. `moov atom not found`) would fail extraction but not get a `.pt` file saved. On every restart, the pipeline would retry these files — wasting time.
+
+### Solution — `data_utils.py`
+- Added `{split_name}_failed.json` that records indices of files that failed extraction
+- On resume, failed indices are loaded and **instantly skipped**
+- Failed list is saved alongside the manifest every 500 videos for crash safety
+- Both `video_tensor is None` and `file not found` failures are tracked
+
+---
+
+## Changes: User Input Prompt Before Extraction
+
+### Problem
+Google Drive storage can run out before all 77K features are extracted (~30MB per `.pt` file). Users need the ability to stop extraction early and train with whatever features are available.
+
+### Solution — `main.py`
+- After data loading, shows extraction progress:
+  ```
+  FEATURE EXTRACTION STATUS
+    Train: 30,412 / 60,726 extracted
+    Val:   8,200 / 16,389 extracted
+  
+  Continue extracting features? (y = extract more, n = skip to training with existing):
+  ```
+- **`y`** → continues extracting more features
+- **`n`** → skips to training using only the already-extracted `.pt` files
+- If all features are already extracted, skips the prompt entirely
