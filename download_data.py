@@ -108,14 +108,14 @@ def extract_zip_files(data_dir):
     print(f"\nExtracting to: {extract_dir}")
     print("  (this may take a while for large archives...)")
     
-    # Try 7z first (handles multi-volume zips well)
+    # Try p7zip first (handles multi-volume zips well)
     try:
         result = subprocess.run(
-            ["7z", "x", first_part, f"-o{extract_dir}", "-aoa"],
+            ["7za", "x", first_part, f"-o{extract_dir}", "-aoa"],
             capture_output=True, text=True
         )
         if result.returncode == 0:
-            print(f"  ✓ Extracted with 7z")
+            print(f"  ✓ Extracted with p7zip")
             return extract_dir
     except FileNotFoundError:
         pass
@@ -132,7 +132,7 @@ def extract_zip_files(data_dir):
     except FileNotFoundError:
         pass
     
-    print("  ✗ Extraction failed — install 7z: apt-get install p7zip-full")
+    print("  ✗ Extraction failed — install p7zip: apt-get install p7zip")
     return None
 
 

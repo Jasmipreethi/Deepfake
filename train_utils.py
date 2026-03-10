@@ -317,5 +317,5 @@ def train_model(model, train_loader, val_loader, config, device,
             wandb_run_id=wandb_run.id if wandb_run else None
         )
     
-    print("\n✅ Training complete")
+    print("\nTraining complete")
     return history
