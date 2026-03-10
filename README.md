@@ -32,8 +32,11 @@ Built on the [AV-Deepfake1M++](https://huggingface.co/datasets/ControlNet/AV-Dee
 
 ```mermaid
 flowchart TD
-    A["📥 Download Data\nfrom Hugging Face"] --> B["📋 Load Metadata\nval_metadata.json"]
-    B --> C["👥 Speaker-Based Split\n80/20 train/val\nzero speaker overlap"]
+    A["📥 Download Data
+      from Hugging Face"] --> B["📋 Load Metadata\nval_metadata.json"]
+    B --> C["👥 Speaker-Based Split
+            80/20 train/val
+            zero speaker overlap"]
     C --> D["🔧 Extract Features\nVideo: 50 frames → ResNet3D\nAudio: mel-spectrogram → ResNet18"]
     D --> E["💾 Save to Disk\nIndividual .pt files\nresumable extraction"]
     E --> F["🧠 Train Model\nPhase 1: Frozen encoders\nPhase 2: Fine-tune all"]
