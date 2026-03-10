@@ -37,10 +37,17 @@ flowchart TD
     B --> C["👥 Speaker-Based Split
             80/20 train/val
             zero speaker overlap"]
-    C --> D["🔧 Extract Features\nVideo: 50 frames → ResNet3D\nAudio: mel-spectrogram → ResNet18"]
-    D --> E["💾 Save to Disk\nIndividual .pt files\nresumable extraction"]
-    E --> F["🧠 Train Model\nPhase 1: Frozen encoders\nPhase 2: Fine-tune all"]
-    F --> G["📊 Evaluate\nAUC, Accuracy, Confusion Matrix"]
+    C --> D["🔧 Extract Features
+            Video: 50 frames → ResNet3D
+            Audio: mel-spectrogram → ResNet18"]
+    D --> E["💾 Save to Disk
+            Individual .pt files
+            resumable extraction"]
+    E --> F["🧠 Train Model
+            Phase 1: Frozen encoders
+            Phase 2: Fine-tune all"]
+    F --> G["📊 Evaluate
+            AUC, Accuracy, Confusion Matrix"]
 ```
 
 ---
