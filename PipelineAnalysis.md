@@ -371,3 +371,34 @@ All paths were hardcoded for Google Colab (`/content/drive/MyDrive/...`), making
   CHECKPOINT_DIR=/workspace/Deepfake/checkpoints
   ```
 - `main.py` loads `.env` at startup with a built-in parser (no `python-dotenv` needed)
+
+---
+
+## Changes: Dataset Analysis Script
+
+### New file `analyze_data.py`
+- Standalone script to analyze `val_metadata.json` before training
+- Prints: total videos, type distribution, video/audio frame stats, speaker stats, fake segment durations
+- Generates a 4-panel plot (`analysis/dataset_analysis.png`):
+  1. Videos by modification type
+  2. Videos per speaker distribution
+  3. Video frame count histogram
+  4. Modification types per speaker
+
+Run: `python analyze_data.py --metadata_path /path/to/val_metadata.json`
+
+---
+
+## Changes: Dual Modality Filter
+
+### Problem
+Videos with only audio or only video could pass through to training, causing shape mismatches or zero-tensor inputs that degrade model performance.
+
+### Solution — `data_utils.py`
+- Previously filtered: `audio_frames > 0` only
+- Now filters: `audio_frames > 0 AND video_frames > 0`
+- Logs how many videos were dropped:
+  ```
+  Videos with both audio and video: 75,412 (dropped 1,703)
+  ```
+

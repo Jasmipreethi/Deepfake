@@ -38,7 +38,7 @@ import numpy as np
 # Import configuration
 from config import (
     DATA_DIR, VAL_DIR, CHECKPOINT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH,
-    FEATURES_DIR, WAND_ID_PATH,
+    FEATURES_DIR, WAND_ID_PATH, RESULTS_DIR,
     MODEL_CONFIG, TRAIN_CONFIG, OPTIM_CONFIG
 )
 
@@ -53,6 +53,30 @@ from data_utils import (
 from train_utils import train_model, calculate_auc
 from checkpoint_utils import CheckpointManager
 from download_data import download_and_extract
+
+
+# =============================================================================
+# CONSOLE LOGGER (tees output to file)
+# =============================================================================
+
+class Logger:
+    """Tees stdout to both console and a log file."""
+    def __init__(self, log_path):
+        self.terminal = sys.stdout
+        self.log = open(log_path, 'a')
+    
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+        self.log.flush()
+    
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+    
+    def close(self):
+        self.log.close()
+        sys.stdout = self.terminal
 
 # =============================================================================
 # FULL MODEL (Combines all modules)
@@ -305,6 +329,7 @@ def evaluate_model(model, train_loader, val_loader, device):
     plt.show()
     
     # Print metrics
+    metrics = {}
     print(f"\nValidation Metrics:")
     for mod in ['audio', 'video', 'joint']:
         if mod == 'joint':
@@ -314,7 +339,40 @@ def evaluate_model(model, train_loader, val_loader, device):
         y_pred = val_df[f'{mod}_pred']
         auc = calculate_auc(y_true, y_pred)
         acc = accuracy_score(y_true, (y_pred > 0.5).astype(int))
+        metrics[mod] = {'auc': round(auc, 4), 'accuracy': round(acc, 4)}
         print(f"  {mod.upper()}: AUC={auc:.3f}, Acc={acc:.3f}")
+    
+    # Save evaluation results as JSON
+    results_json = {
+        'metrics': metrics,
+        'total_videos': len(df),
+        'val_videos': len(val_df),
+        'train_videos': len(df[df['split'] == 'train']),
+        'type_distribution': df['type'].value_counts().to_dict(),
+        'per_type_accuracy': {}
+    }
+    for t in df['type'].unique():
+        subset = val_df[val_df['type'] == t]
+        type_metrics = {}
+        for m in ['audio', 'video', 'joint']:
+            if m == 'joint':
+                yt = ((subset['audio_gt'] == 0) | (subset['video_gt'] == 0)).astype(int)
+            else:
+                yt = subset[f'{m}_gt']
+            yp = (subset[f'{m}_pred'] > 0.5).astype(int)
+            type_metrics[m] = round(accuracy_score(yt, yp), 4)
+        results_json['per_type_accuracy'][t] = type_metrics
+    
+    results_path = os.path.join(RESULTS_DIR, 'evaluation_results.json')
+    with open(results_path, 'w') as f:
+        import json
+        json.dump(results_json, f, indent=2)
+    print(f"\nResults saved: {results_path}")
+    
+    # Save predictions CSV
+    predictions_path = os.path.join(RESULTS_DIR, 'predictions.csv')
+    df.to_csv(predictions_path, index=False)
+    print(f"Predictions saved: {predictions_path}")
     
     return df
 
@@ -323,10 +381,80 @@ def evaluate_model(model, train_loader, val_loader, device):
 # MAIN EXECUTION
 # =============================================================================
 
+def save_training_curves(history, output_dir):
+    """Save training loss and AUC curves as plots."""
+    if not history or not history.get('train_loss'):
+        return
+    
+    epochs = range(1, len(history['train_loss']) + 1)
+    
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    fig.suptitle('Training Curves', fontsize=14, fontweight='bold')
+    
+    # Loss curves
+    ax = axes[0]
+    ax.plot(epochs, history['train_loss'], label='Train Loss', color='#e74c3c')
+    ax.plot(epochs, history['val_loss'], label='Val Loss', color='#3498db')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.set_title('Loss')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    # AUC curves
+    ax = axes[1]
+    ax.plot(epochs, history['val_auc_joint'], label='Joint AUC', color='#e74c3c', linewidth=2)
+    ax.plot(epochs, history['val_auc_audio'], label='Audio AUC', color='#3498db')
+    ax.plot(epochs, history['val_auc_video'], label='Video AUC', color='#2ecc71')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('AUC')
+    ax.set_title('Validation AUC')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    ax.set_ylim(0, 1.05)
+    
+    # Learning rate
+    ax = axes[2]
+    ax.plot(epochs, history['learning_rate'], color='#9b59b6')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Learning Rate')
+    ax.set_title('Learning Rate Schedule')
+    ax.set_yscale('log')
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    curves_path = os.path.join(output_dir, 'training_curves.png')
+    plt.savefig(curves_path, dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"Training curves saved: {curves_path}")
+    
+    # Also save history as JSON
+    import json
+    history_path = os.path.join(output_dir, 'training_history.json')
+    with open(history_path, 'w') as f:
+        json.dump(history, f, indent=2)
+    print(f"Training history saved: {history_path}")
+
+
 def main():
     """Main execution function"""
     args = parse_args()
     
+    # Start logging to file
+    log_path = os.path.join(RESULTS_DIR, 'pipeline_log.txt')
+    logger = Logger(log_path)
+    sys.stdout = logger
+    print(f"Logging to: {log_path}")
+    
+    try:
+        _run_pipeline(args)
+    finally:
+        logger.close()
+        print(f"\nFull log saved: {log_path}")
+
+
+def _run_pipeline(args):
+    """Internal pipeline runner."""
     # Merge configs
     config = {**TRAIN_CONFIG, **OPTIM_CONFIG, **MODEL_CONFIG}
     config['encoder_type'] = args.encoder_type
@@ -513,7 +641,7 @@ def main():
         wandb.finish()
     
     print("\n" + "=" * 60)
-    print("✅ PIPELINE COMPLETE")
+    print("PIPELINE COMPLETE")
     print("=" * 60)
 
 

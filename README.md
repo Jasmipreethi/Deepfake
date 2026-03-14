@@ -117,6 +117,9 @@ python main.py --no_wandb
 
 # Force a specific fusion type
 python main.py --fusion_type transformer
+
+# Analyze dataset before training
+python analyze_data.py
 ```
 
 The pipeline will auto-detect missing data and offer to download from Hugging Face.
@@ -147,6 +150,7 @@ The pipeline will auto-detect missing data and offer to download from Hugging Fa
 ├── train_utils.py       # Training loop, loss, optimizer
 ├── checkpoint_utils.py  # Checkpoint save/load for resumable training
 ├── download_data.py     # Download dataset from Hugging Face
+├── analyze_data.py      # Dataset analysis and visualization
 ├── main.py              # Entry point — orchestrates the full pipeline
 ├── requirements.txt     # Python dependencies
 ├── .env                 # API keys and configurable paths (git-ignored)

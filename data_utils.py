@@ -72,12 +72,13 @@ def sample_videos(df, samples_per_type, val_split=0.2, seed=42, use_all=False):
     """
     set_seeds(seed)
     
-    df_with_audio = df[df['audio_frames'] > 0].copy()
-    print(f"\nVideos with audio: {len(df_with_audio):,}")
+    df_valid = df[(df['audio_frames'] > 0) & (df['video_frames'] > 0)].copy()
+    dropped = len(df) - len(df_valid)
+    print(f"\nVideos with both audio and video: {len(df_valid):,} (dropped {dropped:,})")
     
     if use_all:
         # Use all videos with audio
-        mini_df = df_with_audio.reset_index(drop=True)
+        mini_df = df_valid.reset_index(drop=True)
         print(f"\nUsing ALL {len(mini_df):,} videos:")
         for mod_type in mini_df['modify_type'].unique():
             count = len(mini_df[mini_df['modify_type'] == mod_type])
@@ -86,7 +87,7 @@ def sample_videos(df, samples_per_type, val_split=0.2, seed=42, use_all=False):
         # Subset mode: sample fixed count per type
         samples = []
         for mod_type, count in samples_per_type.items():
-            subset = df_with_audio[df_with_audio['modify_type'] == mod_type]
+            subset = df_valid[df_valid['modify_type'] == mod_type]
             if len(subset) >= count:
                 sampled = subset.sample(count, random_state=seed)
                 samples.append(sampled)
