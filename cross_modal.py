@@ -48,22 +48,16 @@ class ImprovedFusion(nn.Module):
         self.video_classifier = nn.Linear(hidden_dim, 1)
         self.joint_classifier = nn.Linear(hidden_dim, 1)
         
-        self.temperature = 0.1  # Temperature for sigmoid scaling
+        #self.temperature = 0.1  # Temperature for sigmoid scaling --removed for label smoothing
 
     def forward(self, video_feat, audio_feat):
         combined = torch.cat([video_feat, audio_feat], dim=1)
         fused = self.fusion(combined)
 
-        # Temperature-scaled predictions
-        audio_pred = torch.sigmoid(
-            self.audio_classifier(fused) / self.temperature
-        )
-        video_pred = torch.sigmoid(
-            self.video_classifier(fused) / self.temperature
-        )
-        joint_pred = torch.sigmoid(
-            self.joint_classifier(fused) / self.temperature
-        )
+        # Sigmoid activation for predictions   
+        audio_pred = torch.sigmoid(self.audio_classifier(fused))
+        video_pred = torch.sigmoid(self.video_classifier(fused))
+        joint_pred = torch.sigmoid(self.joint_classifier(fused))
 
         return {
             'audio_pred': audio_pred,

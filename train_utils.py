@@ -105,7 +105,7 @@ def train_epoch(model, train_loader, criterion, criterion_hard, optimizer,
         
         loss = (criterion(outputs['audio_pred'], audio_labels) +
                 criterion(outputs['video_pred'], video_labels) +
-                2.0 * criterion_hard(outputs['joint_pred'], joint_labels))
+                2.0 * criterion(outputs['joint_pred'], joint_labels)) # Changed from criterion_hard to criterion for label smoothing
         
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)

@@ -4,7 +4,7 @@ Optimized for large-scale datasets with lazy-loading from disk.
 """
 
 import sys
-sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake')
+#sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake') --Colab only
 
 import os
 import json

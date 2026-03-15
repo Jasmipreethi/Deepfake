@@ -20,7 +20,7 @@ os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 CHECKPOINT_PATH = os.path.join(CHECKPOINT_DIR, 'training_checkpoint.pth')
 BEST_MODEL_PATH = os.path.join(CHECKPOINT_DIR, 'best_model.pth')
 FEATURES_DIR = os.path.join(CHECKPOINT_DIR, 'features')
-WAND_ID_PATH = os.path.join(CHECKPOINT_DIR, 'wandb_run_id.txt')
+WANDB_ID_PATH = os.path.join(CHECKPOINT_DIR, 'wandb_run_id.txt')
 RESULTS_DIR = os.path.join(CHECKPOINT_DIR, 'results')
 
 # Create directories

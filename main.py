@@ -6,7 +6,7 @@ Main execution script for AV Deepfake Detection Pipeline
 import os
 import shutil
 import sys
-sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake')
+#sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake') --Colab only 
 
 # Load API keys from .env file
 def load_env(env_path=None):
@@ -38,7 +38,7 @@ import numpy as np
 # Import configuration
 from config import (
     DATA_DIR, VAL_DIR, CHECKPOINT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH,
-    FEATURES_DIR, WAND_ID_PATH, RESULTS_DIR,
+    FEATURES_DIR, WANDB_ID_PATH, RESULTS_DIR,
     MODEL_CONFIG, TRAIN_CONFIG, OPTIM_CONFIG
 )
 
@@ -473,7 +473,7 @@ def _run_pipeline(args):
     print(f"Using device: {device}")
     
     # Initialize checkpoint manager
-    checkpoint_manager = CheckpointManager(CHECKPOINT_PATH, BEST_MODEL_PATH, WAND_ID_PATH)
+    checkpoint_manager = CheckpointManager(CHECKPOINT_PATH, BEST_MODEL_PATH, WANDB_ID_PATH)
     
     # Handle --fresh flag
     if args.fresh:
