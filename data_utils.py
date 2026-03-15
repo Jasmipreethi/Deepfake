@@ -3,7 +3,7 @@ Data utilities for AV Deepfake Detection
 Optimized for large-scale datasets with lazy-loading from disk.
 """
 
-import sys
+#import sys
 #sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake') --Colab only
 
 import os
@@ -450,7 +450,7 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
     return split_dir, manifest_path
 
 
-def extract_all_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG, augment=False):
+def extract_all_features(train_df, val_df, val_dir, feature_dir, use_cache=True):
     """Extract features for both splits, saving to disk.
     
     Returns (train_dir, train_manifest, val_dir, val_manifest) paths.
