@@ -61,7 +61,7 @@ def get_optimizer(model, learning_rate=1e-4, encoder_lr=1e-5,
     return optimizer
 
 
-def get_scheduler(optimizer, mode='min', factor=0.5, patience=5):
+def get_scheduler(optimizer, mode='max', factor=0.5, patience=5):
     """Get learning rate scheduler"""
     return optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
@@ -275,7 +275,7 @@ def train_model(model, train_loader, val_loader, config, device,
                   f"Time: {epoch_time:.1f}s")
         
         # Scheduler step
-        scheduler.step(val_loss)
+        scheduler.step(val_auc_joint)
         
         # Checkpointing
         is_best = val_auc_joint > best_val_auc

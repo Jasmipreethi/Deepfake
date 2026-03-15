@@ -63,6 +63,21 @@ def load_metadata(val_dir=VAL_DIR):
     
     return df
 
+def spec_augment(audio_tensor, freq_mask_param=20, time_mask_param=15):
+    """Apply SpecAugment: random frequency and time masking."""
+    _, n_mels, n_time = audio_tensor.shape
+    
+    # Frequency masking: zero out a random band of mel bins
+    f = random.randint(0, freq_mask_param)
+    f0 = random.randint(0, max(1, n_mels - f))
+    audio_tensor[:, f0:f0 + f, :] = 0.0
+    
+    # Time masking: zero out a random band of time steps
+    t = random.randint(0, time_mask_param)
+    t0 = random.randint(0, max(1, n_time - t))
+    audio_tensor[:, :, t0:t0 + t] = 0.0
+    
+    return audio_tensor
 
 def sample_videos(df, samples_per_type, val_split=0.2, seed=42, use_all=False):
     """Sample balanced dataset with train/val split BY SPEAKER
@@ -140,7 +155,7 @@ def sample_videos(df, samples_per_type, val_split=0.2, seed=42, use_all=False):
     return train_df, val_df
 
 
-def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG):
+def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG,augment=False, start_sec_override=None):
     """Extract synchronized audio and video features from video.
     
     Returns tensors with FIXED shapes regardless of input:
@@ -148,7 +163,9 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
       audio: (1, 128, 63)  — fixed via n_fft=1024, hop_length=512
     """
     # Determine which 2-second window to extract
-    if fake_segments and len(fake_segments) > 0:
+    if start_sec_override is not None:
+        start_sec = start_sec_override
+    elif fake_segments and len(fake_segments) > 0:
         start_sec = fake_segments[0][0]
     else:
         total_sec = total_frames / cfg['fps']
@@ -170,6 +187,9 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (cfg['img_size'], cfg['img_size']))
         frame = frame / 255.0
+        mean = np.array([0.485, 0.456, 0.406])
+        std  = np.array([0.229, 0.224, 0.225])
+        frame = (frame - mean) / std
         frames.append(frame)
     cap.release()
     
@@ -180,6 +200,17 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
     
     video_tensor = torch.FloatTensor(np.array(frames)).permute(0, 3, 1, 2)
     
+    if augment:
+        audio_tensor = spec_augment(audio_tensor)
+        # Random horizontal flip applied consistently across all 50 frames
+        if random.random() < 0.5:
+            video_tensor = torch.flip(video_tensor, dims=[3])  # flip width dimension
+        
+        # Random brightness/contrast jitter applied to the whole clip
+        brightness = random.uniform(-0.2, 0.2)
+        contrast   = random.uniform(0.8, 1.2)
+        video_tensor = torch.clamp(video_tensor * contrast + brightness, 0.0, 1.0)
+    D
     # Audio extraction using torchaudio
     try:
         # Load full audio, then slice to the 2-second window
@@ -210,10 +241,60 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
         
     except Exception as e:
         # Fallback for corrupted/unreadable audio: use zero tensor
-        audio_tensor = torch.zeros(1, 128, 63)
+        # Per-sample mean/std normalisation
+        mean = audio_tensor.mean()
+        std  = audio_tensor.std()
+        if std > 0:
+            audio_tensor = (audio_tensor - mean) / (std + 1e-6)
     
     return video_tensor, audio_tensor
 
+def extract_multiple_windows(video_path, fake_segments=None, total_frames=0,
+                              cfg=FEATURE_CONFIG, n_windows=3):
+    """Extract n windows, prioritising fake segments when known."""
+    total_sec = total_frames / cfg['fps']
+    duration = cfg['duration']
+    max_start = max(0, total_sec - duration)
+
+    starts = []
+
+    if fake_segments and len(fake_segments) > 0:
+        # Always add a window at the start of each known fake segment
+        for seg in fake_segments:
+            seg_start = seg[0]
+            # Clamp so the window doesn't run past the end of the video
+            clamped = min(seg_start, max_start)
+            starts.append(clamped)
+            if len(starts) >= n_windows:
+                break
+
+        # If we still have room, fill remaining slots with evenly spaced windows
+        remaining = n_windows - len(starts)
+        if remaining > 0 and max_start > 0:
+            for i in range(remaining):
+                evenly_spaced = max_start * i / (remaining - 1) if remaining > 1 else 0.0
+                # Only add if it's not already covered by a fake segment window
+                if not any(abs(evenly_spaced - s) < duration for s in starts):
+                    starts.append(evenly_spaced)
+    else:
+        # Real video — spread evenly across the full duration
+        if n_windows == 1 or max_start == 0:
+            starts = [0.0]
+        else:
+            starts = [max_start * i / (n_windows - 1) for i in range(n_windows)]
+
+    # Extract each window
+    windows = []
+    for start_sec in starts:
+        v, a = extract_av_features(
+            video_path, fake_segments, total_frames, cfg,
+            augment=False,
+            start_sec_override=start_sec
+        )
+        if v is not None:
+            windows.append((v, a))
+
+    return windows
 
 # =============================================================================
 # DISK-BASED FEATURE STORAGE (saves each video as individual .pt file)
@@ -280,7 +361,9 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
                 'file': row['file'],
                 'type': mt,
                 'speaker': row['file'].split('/')[1] if '/' in row['file'] else 'unknown',
-                'pt_file': f'{idx}.pt'
+                'pt_file': f'{idx}.pt',
+                'fake_segments': row.get('fake_segments', []),
+                'total_frames':  int(row['video_frames'])
             })
             skipped += 1
             continue
@@ -300,7 +383,8 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
         video_tensor, audio_tensor = extract_av_features(
             video_path=video_path,
             fake_segments=row.get('fake_segments'),
-            total_frames=row['video_frames']
+            total_frames=row['video_frames'],
+            augment=(split_name == 'train')
         )
         
         if video_tensor is None:
@@ -357,7 +441,7 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
     return split_dir, manifest_path
 
 
-def extract_all_features(train_df, val_df, val_dir, feature_dir, use_cache=True):
+def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG, augment=False):
     """Extract features for both splits, saving to disk.
     
     Returns (train_dir, train_manifest, val_dir, val_manifest) paths.
@@ -423,7 +507,9 @@ class AVDataset(torch.utils.data.Dataset):
             'audio': data['audio'],
             'labels': data['labels'],
             'type': entry['type'],
-            'file': entry['file']
+            'file': entry['file'],
+            'fake_segments': entry.get('fake_segments', []),
+            'total_frames':  entry.get('total_frames', 0)   
         }
 
 

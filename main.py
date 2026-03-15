@@ -226,22 +226,59 @@ def evaluate_model(model, train_loader, val_loader, device):
     # Collect all predictions
     all_results = []
     
-    for split_name, loader in [("train", train_loader), ("val", val_loader)]:
-        with torch.no_grad():
-            for batch in loader:
-                outputs = model(batch['video'].to(device), batch['audio'].to(device))
-                
-                for i in range(len(batch['file'])):
-                    all_results.append({
-                        'split': split_name,
-                        'file': batch['file'][i],
-                        'type': batch['type'][i],
-                        'audio_gt': batch['labels'][i, 0].item(),
-                        'video_gt': batch['labels'][i, 1].item(),
-                        'audio_pred': outputs['audio_pred'][i].item(),
-                        'video_pred': outputs['video_pred'][i].item(),
-                        'joint_pred': outputs['joint_pred'][i].item()
-                    })
+    from data_utils import extract_multiple_windows
+
+for split_name, loader in [("train", train_loader), ("val", val_loader)]:
+    with torch.no_grad():
+        for batch in loader:
+            batch_size = len(batch['file'])
+
+            for i in range(batch_size):
+                file_path = batch['file'][i]
+                mod_type  = batch['type'][i]
+                labels    = batch['labels'][i]
+
+                # Reconstruct full path to the original video file
+                video_path = os.path.join(VAL_DIR, file_path)
+
+                # Get fake_segments and total_frames from the manifest
+                fake_segments = batch.get('fake_segments', [None])[i]
+                total_frames  = batch.get('total_frames',  [0])[i]
+
+                if os.path.exists(video_path):
+                    # Extract multiple windows from the original video
+                    windows = extract_multiple_windows(
+                        video_path=video_path,
+                        fake_segments=fake_segments,
+                        total_frames=total_frames,
+                        n_windows=3
+                    )
+                else:
+                    # Video file not available — fall back to single pre-extracted window
+                    windows = [(batch['video'][i], batch['audio'][i])]
+
+                # Run model on each window and average predictions
+                window_preds = {'audio': [], 'video': [], 'joint': []}
+                for v, a in windows:
+                    out = model(
+                        v.unsqueeze(0).to(device),
+                        a.unsqueeze(0).to(device)
+                    )
+                    window_preds['audio'].append(out['audio_pred'].item())
+                    window_preds['video'].append(out['video_pred'].item())
+                    window_preds['joint'].append(out['joint_pred'].item())
+
+                # Average across all windows
+                all_results.append({
+                    'split':     split_name,
+                    'file':      file_path,
+                    'type':      mod_type,
+                    'audio_gt':  labels[0].item(),
+                    'video_gt':  labels[1].item(),
+                    'audio_pred': sum(window_preds['audio']) / len(window_preds['audio']),
+                    'video_pred': sum(window_preds['video']) / len(window_preds['video']),
+                    'joint_pred': sum(window_preds['joint']) / len(window_preds['joint']),
+                })
     
     df = pd.DataFrame(all_results)
     
