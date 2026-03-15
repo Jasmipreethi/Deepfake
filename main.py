@@ -6,6 +6,7 @@ Main execution script for AV Deepfake Detection Pipeline
 import os
 import shutil
 import sys
+import json
 #sys.path.insert(0, '/content/drive/MyDrive/Colab Notebooks/Deepfake') --Colab only 
 
 # Load API keys from .env file
@@ -34,6 +35,9 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, confusion_matrix
 import pandas as pd
 import numpy as np
+
+from dataclasses import asdict
+config = {**asdict(TRAIN_CONFIG), **asdict(OPTIM_CONFIG), **asdict(MODEL_CONFIG)}
 
 # Import configuration
 from config import (
@@ -365,7 +369,7 @@ def evaluate_model(model, train_loader, val_loader, device):
     
     results_path = os.path.join(RESULTS_DIR, 'evaluation_results.json')
     with open(results_path, 'w') as f:
-        import json
+        #import json
         json.dump(results_json, f, indent=2)
     print(f"\nResults saved: {results_path}")
     
@@ -429,7 +433,7 @@ def save_training_curves(history, output_dir):
     print(f"Training curves saved: {curves_path}")
     
     # Also save history as JSON
-    import json
+    #import json
     history_path = os.path.join(output_dir, 'training_history.json')
     with open(history_path, 'w') as f:
         json.dump(history, f, indent=2)
@@ -524,11 +528,9 @@ def _run_pipeline(args):
     existing_val = 0
     if os.path.exists(train_manifest_path):
         with open(train_manifest_path, 'r') as f:
-            import json
             existing_train = len(json.load(f))
     if os.path.exists(val_manifest_path):
         with open(val_manifest_path, 'r') as f:
-            import json
             existing_val = len(json.load(f))
     
     print(f"  Train: {existing_train:,} / {len(train_df):,} extracted")

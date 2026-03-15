@@ -31,12 +31,46 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # MODEL CONFIGURATION
 # =============================================================================
 
-MODEL_CONFIG = {
-    "feature_dim": 256,
-    "hidden_dim": 512,
-    "dropout": 0.4,
-}
+from dataclasses import dataclass, field
 
+@dataclass
+class ModelConfig:
+    feature_dim: int = 256
+    hidden_dim: int = 512
+    dropout: float = 0.4
+
+@dataclass
+class TrainConfig:
+    project_name: str = "av-deepfake-detection"
+    run_name: str = "full-val-modular"
+    architecture: str = "PretrainedResNet3D_ResNet18"
+    dataset: str = "AVDeepfake1M++"
+    use_all_data: bool = False
+    samples_per_type: dict = field(default_factory=lambda: {
+        "real": 40,
+        "both_modified": 40,
+        "audio_modified": 40,
+        "visual_modified": 40
+    })
+    batch_size: int = 16
+    epochs: int = 50
+    freeze_epochs: int = 8
+    patience: int = 15
+    grad_clip: float = 1.0
+    label_smoothing: float = 0.05
+    val_split: float = 0.2
+    checkpoint_freq: int = 1
+    resume: bool = True
+
+@dataclass
+class OptimConfig:
+    learning_rate: float = 1e-4
+    encoder_lr: float = 1e-5
+    weight_decay: float = 1e-4
+
+MODEL_CONFIG = ModelConfig()
+TRAIN_CONFIG = TrainConfig()
+OPTIM_CONFIG = OptimConfig()
 # =============================================================================
 # TRAINING CONFIGURATION
 # =============================================================================

@@ -18,6 +18,13 @@ from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 from config import VAL_DIR, FEATURE_CONFIG
 
+_MEL_TRANSFORM = torchaudio.transforms.MelSpectrogram(
+    sample_rate=FEATURE_CONFIG['sr'],
+    n_mels=128,
+    n_fft=1024,
+    hop_length=512
+)
+_DB_TRANSFORM = torchaudio.transforms.AmplitudeToDB(top_db=80)
 
 def set_seeds(seed=42):
     """Set all random seeds for reproducibility"""
@@ -198,17 +205,8 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
             waveform = torch.nn.functional.pad(waveform, (0, pad_size))
         
         # Compute mel-spectrogram
-        mel_transform = torchaudio.transforms.MelSpectrogram(
-            sample_rate=cfg['sr'],
-            n_mels=128,
-            n_fft=1024,
-            hop_length=512
-        )
-        mel_spec = mel_transform(waveform)  # (1, 128, T)
-        
-        # Convert to dB scale
-        db_transform = torchaudio.transforms.AmplitudeToDB(top_db=80)
-        audio_tensor = db_transform(mel_spec)  # (1, 128, T)
+        mel_spec = _MEL_TRANSFORM(waveform)
+        audio_tensor = _DB_TRANSFORM(mel_spec)
         
     except Exception as e:
         # Fallback for corrupted/unreadable audio: use zero tensor
@@ -222,7 +220,7 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
 # =============================================================================
 
 def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
-    """Extract features for a split and save each as an individual .pt file.
+    """Extract features for a split and savmel_te each as an individual .pt file.
     
     Saves:
       feature_dir/{split_name}/0.pt, 1.pt, 2.pt, ...

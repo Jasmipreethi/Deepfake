@@ -6,8 +6,7 @@ Audio encoder models for AV Deepfake Detection
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.models as models
-
+from torchvision.models import resnet18, ResNet18_Weights
 
 class SimpleAudioEncoder(nn.Module):
     """Simple CNN for audio spectrogram (original mini pipeline)"""
@@ -68,7 +67,7 @@ class PretrainedAudioEncoder(nn.Module):
     """Pre-trained ResNet18 for audio spectrogram"""
     def __init__(self, feature_dim=256):
         super().__init__()
-        self.backbone = models.resnet18(pretrained=True)
+        self.backbone = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)   
         
         # Change first conv for 1 channel (grayscale spectrogram)
         self.backbone.conv1 = nn.Conv2d(

@@ -5,8 +5,7 @@ Video encoder models for AV Deepfake Detection
 
 import torch
 import torch.nn as nn
-import torchvision.models as models
-
+from torchvision.models.video import r3d_18, R3D_18_Weights
 
 class SimpleVideoEncoder(nn.Module):
     """Simple CNN for video frames (original mini pipeline)"""
@@ -70,7 +69,7 @@ class PretrainedVideoEncoder(nn.Module):
     """Pre-trained ResNet3D-18 for video"""
     def __init__(self, feature_dim=256):
         super().__init__()
-        self.backbone = models.video.r3d_18(pretrained=True)
+        self.backbone = r3d_18(weights=R3D_18_Weights.KINETICS400_V1)
         
         # Replace final FC layer
         in_features = self.backbone.fc.in_features
