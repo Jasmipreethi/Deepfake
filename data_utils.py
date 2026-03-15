@@ -155,7 +155,7 @@ def sample_videos(df, samples_per_type, val_split=0.2, seed=42, use_all=False):
     return train_df, val_df
 
 
-def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG,augment=False, start_sec_override=None):
+def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG, augment=False, start_sec_override=None):
     """Extract synchronized audio and video features from video.
     
     Returns tensors with FIXED shapes regardless of input:
@@ -200,17 +200,17 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
     
     video_tensor = torch.FloatTensor(np.array(frames)).permute(0, 3, 1, 2)
     
+    # Video augmentation — applied after video_tensor is built
     if augment:
-        audio_tensor = spec_augment(audio_tensor)
         # Random horizontal flip applied consistently across all 50 frames
         if random.random() < 0.5:
-            video_tensor = torch.flip(video_tensor, dims=[3])  # flip width dimension
+            video_tensor = torch.flip(video_tensor, dims=[3])
         
         # Random brightness/contrast jitter applied to the whole clip
         brightness = random.uniform(-0.2, 0.2)
         contrast   = random.uniform(0.8, 1.2)
         video_tensor = torch.clamp(video_tensor * contrast + brightness, 0.0, 1.0)
-    D
+
     # Audio extraction using torchaudio
     try:
         # Load full audio, then slice to the 2-second window
@@ -235,19 +235,26 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
             pad_size = cfg['audio_samples'] - waveform.shape[1]
             waveform = torch.nn.functional.pad(waveform, (0, pad_size))
         
-        # Compute mel-spectrogram
+        # Compute mel-spectrogram and convert to dB
         mel_spec = _MEL_TRANSFORM(waveform)
         audio_tensor = _DB_TRANSFORM(mel_spec)
         
-    except Exception as e:
-        # Fallback for corrupted/unreadable audio: use zero tensor
-        # Per-sample mean/std normalisation
+        # Per-sample normalisation
         mean = audio_tensor.mean()
         std  = audio_tensor.std()
         if std > 0:
             audio_tensor = (audio_tensor - mean) / (std + 1e-6)
+        
+        # Audio augmentation — only after audio_tensor is fully built
+        if augment:
+            audio_tensor = spec_augment(audio_tensor)
+
+    except Exception as e:
+        # Fallback for corrupted/unreadable audio: use zero tensor
+        audio_tensor = torch.zeros(1, 128, 63)
     
     return video_tensor, audio_tensor
+        
 
 def extract_multiple_windows(video_path, fake_segments=None, total_frames=0,
                               cfg=FEATURE_CONFIG, n_windows=3):
@@ -417,7 +424,9 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
             'file': row['file'],
             'type': mt,
             'speaker': row['file'].split('/')[1] if '/' in row['file'] else 'unknown',
-            'pt_file': f'{idx}.pt'
+            'pt_file': f'{idx}.pt',
+            'fake_segments': row.get('fake_segments', []),
+            'total_frames':  int(row['video_frames'])
         })
         success += 1
         
@@ -441,7 +450,7 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
     return split_dir, manifest_path
 
 
-def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG, augment=False):
+def extract_all_features(video_path, fake_segments=None, total_frames=0, cfg=FEATURE_CONFIG, augment=False):
     """Extract features for both splits, saving to disk.
     
     Returns (train_dir, train_manifest, val_dir, val_manifest) paths.
@@ -509,7 +518,7 @@ class AVDataset(torch.utils.data.Dataset):
             'type': entry['type'],
             'file': entry['file'],
             'fake_segments': entry.get('fake_segments', []),
-            'total_frames':  entry.get('total_frames', 0)   
+            'total_frames':  entry.get('total_frames', 0)
         }
 
 

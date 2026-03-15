@@ -71,42 +71,6 @@ class OptimConfig:
 MODEL_CONFIG = ModelConfig()
 TRAIN_CONFIG = TrainConfig()
 OPTIM_CONFIG = OptimConfig()
-# =============================================================================
-# TRAINING CONFIGURATION
-# =============================================================================
-
-TRAIN_CONFIG = {
-    "project_name": "av-deepfake-detection",
-    "run_name": "full-val-modular",
-    "architecture": "PretrainedResNet3D_ResNet18",
-    "dataset": "AVDeepfake1M++",
-    "use_all_data": False,  # True = use all videos; False = use samples_per_type subset
-    "samples_per_type": {   # Only used when use_all_data is False (~4.8GB at 40 per type)
-        "real": 40,
-        "both_modified": 40,
-        "audio_modified": 40,
-        "visual_modified": 40
-    },
-    "batch_size": 16,
-    "epochs": 50,
-    "freeze_epochs": 8,
-    "patience": 15,
-    "grad_clip": 1.0,
-    "label_smoothing": 0.05,
-    "val_split": 0.2,
-    "checkpoint_freq": 1,
-    "resume": True
-}
-
-# =============================================================================
-# OPTIMIZER CONFIGURATION
-# =============================================================================
-
-OPTIM_CONFIG = {
-    "learning_rate": 1e-4,
-    "encoder_lr": 1e-5,
-    "weight_decay": 1e-4,
-}
 
 # =============================================================================
 # FEATURE EXTRACTION CONFIGURATION

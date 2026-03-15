@@ -36,9 +36,6 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 import pandas as pd
 import numpy as np
 
-from dataclasses import asdict
-config = {**asdict(TRAIN_CONFIG), **asdict(OPTIM_CONFIG), **asdict(MODEL_CONFIG)}
-
 # Import configuration
 from config import (
     DATA_DIR, VAL_DIR, CHECKPOINT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH,
@@ -222,200 +219,56 @@ def evaluate_model(model, train_loader, val_loader, device):
     print("=" * 60)
     
     model.eval()
-    
-    # Collect all predictions
     all_results = []
     
     from data_utils import extract_multiple_windows
 
-for split_name, loader in [("train", train_loader), ("val", val_loader)]:
-    with torch.no_grad():
-        for batch in loader:
-            batch_size = len(batch['file'])
+    for split_name, loader in [("train", train_loader), ("val", val_loader)]:
+        with torch.no_grad():
+            for batch in loader:
+                batch_size = len(batch['file'])
 
-            for i in range(batch_size):
-                file_path = batch['file'][i]
-                mod_type  = batch['type'][i]
-                labels    = batch['labels'][i]
+                for i in range(batch_size):
+                    file_path = batch['file'][i]
+                    mod_type  = batch['type'][i]
+                    labels    = batch['labels'][i]
 
-                # Reconstruct full path to the original video file
-                video_path = os.path.join(VAL_DIR, file_path)
+                    video_path = os.path.join(VAL_DIR, file_path)
 
-                # Get fake_segments and total_frames from the manifest
-                fake_segments = batch.get('fake_segments', [None])[i]
-                total_frames  = batch.get('total_frames',  [0])[i]
+                    fake_segments = batch.get('fake_segments', [None])[i]
+                    total_frames  = batch.get('total_frames',  [0])[i]
 
-                if os.path.exists(video_path):
-                    # Extract multiple windows from the original video
-                    windows = extract_multiple_windows(
-                        video_path=video_path,
-                        fake_segments=fake_segments,
-                        total_frames=total_frames,
-                        n_windows=3
-                    )
-                else:
-                    # Video file not available — fall back to single pre-extracted window
-                    windows = [(batch['video'][i], batch['audio'][i])]
+                    if os.path.exists(video_path):
+                        windows = extract_multiple_windows(
+                            video_path=video_path,
+                            fake_segments=fake_segments,
+                            total_frames=total_frames,
+                            n_windows=3
+                        )
+                    else:
+                        windows = [(batch['video'][i], batch['audio'][i])]
 
-                # Run model on each window and average predictions
-                window_preds = {'audio': [], 'video': [], 'joint': []}
-                for v, a in windows:
-                    out = model(
-                        v.unsqueeze(0).to(device),
-                        a.unsqueeze(0).to(device)
-                    )
-                    window_preds['audio'].append(out['audio_pred'].item())
-                    window_preds['video'].append(out['video_pred'].item())
-                    window_preds['joint'].append(out['joint_pred'].item())
+                    window_preds = {'audio': [], 'video': [], 'joint': []}
+                    for v, a in windows:
+                        out = model(
+                            v.unsqueeze(0).to(device),
+                            a.unsqueeze(0).to(device)
+                        )
+                        window_preds['audio'].append(out['audio_pred'].item())
+                        window_preds['video'].append(out['video_pred'].item())
+                        window_preds['joint'].append(out['joint_pred'].item())
 
-                # Average across all windows
-                all_results.append({
-                    'split':     split_name,
-                    'file':      file_path,
-                    'type':      mod_type,
-                    'audio_gt':  labels[0].item(),
-                    'video_gt':  labels[1].item(),
-                    'audio_pred': sum(window_preds['audio']) / len(window_preds['audio']),
-                    'video_pred': sum(window_preds['video']) / len(window_preds['video']),
-                    'joint_pred': sum(window_preds['joint']) / len(window_preds['joint']),
-                })
-    
-    df = pd.DataFrame(all_results)
-    
-    # Create visualization
-    fig, axes = plt.subplots(2, 2, figsize=(14, 12))
-    
-    # 1. Prediction space scatter plot
-    ax1 = axes[0, 0]
-    colors = {
-        'real': '#2ecc71',
-        'audio_modified': '#3498db',
-        'visual_modified': '#e67e22',
-        'both_modified': '#e74c3c'
-    }
-    
-    for split in ['train', 'val']:
-        for t in df['type'].unique():
-            subset = df[(df['type'] == t) & (df['split'] == split)]
-            ax1.scatter(
-                subset['audio_pred'], 
-                subset['video_pred'],
-                c=colors.get(t, 'gray'),
-                marker='s' if split == 'val' else 'o',
-                s=150 if split == 'val' else 80,
-                alpha=0.8 if split == 'val' else 0.5,
-                edgecolors='black' if split == 'val' else 'none'
-            )
-    
-    ax1.axhline(0.5, color='k', linestyle='--', alpha=0.3)
-    ax1.axvline(0.5, color='k', linestyle='--', alpha=0.3)
-    ax1.set_xlabel('Audio Prediction (0=Fake, 1=Real)')
-    ax1.set_ylabel('Video Prediction (0=Fake, 1=Real)')
-    ax1.set_title('Audio-Video Prediction Space')
-    ax1.set_xlim(-0.05, 1.05)
-    ax1.set_ylim(-0.05, 1.05)
-    ax1.grid(True, alpha=0.3)
-    
-    # 2. Per-type accuracy
-    ax2 = axes[0, 1]
-    stats = []
-    
-    for t in df['type'].unique():
-        subset = df[df['type'] == t]
-        for m in ['audio', 'video', 'joint']:
-            if m == 'joint':
-                y_true = ((subset['audio_gt'] == 0) | (subset['video_gt'] == 0)).astype(int)
-            else:
-                y_true = subset[f'{m}_gt']
-            y_pred = (subset[f'{m}_pred'] > 0.5).astype(int)
-            acc = accuracy_score(y_true, y_pred)
-            stats.append({'type': t, 'mod': m, 'acc': acc})
-    
-    df_stats = pd.DataFrame(stats).pivot(index='type', columns='mod', values='acc')
-    df_stats.plot(kind='bar', ax=ax2, color=['#3498db', '#2ecc71', '#e67e22'])
-    ax2.set_title('Per-Type Accuracy')
-    ax2.set_ylim(0, 1.1)
-    ax2.axhline(0.5, color='r', linestyle='--', alpha=0.5)
-    plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45, ha='right')
-    
-    # 3. Prediction distribution
-    ax3 = axes[1, 0]
-    val_df = df[df['split'] == 'val']
-    ax3.hist(val_df['joint_pred'], bins=15, alpha=0.7, color='purple', edgecolor='black')
-    ax3.axvline(0.5, color='r', linestyle='--')
-    ax3.set_xlabel('Joint Prediction')
-    ax3.set_title('Validation Prediction Distribution')
-    
-    # 4. Confusion matrix
-    ax4 = axes[1, 1]
-    y_true = ((val_df['audio_gt'] == 0) | (val_df['video_gt'] == 0)).astype(int)
-    y_pred = (val_df['joint_pred'] > 0.5).astype(int)
-    cm = confusion_matrix(y_true, y_pred)
-    
-    im = ax4.imshow(cm, cmap='Blues')
-    ax4.set_xticks([0, 1])
-    ax4.set_yticks([0, 1])
-    ax4.set_xticklabels(['Pred Fake', 'Pred Real'])
-    ax4.set_yticklabels(['Actual Fake', 'Actual Real'])
-    
-    for i in range(2):
-        for j in range(2):
-            ax4.text(j, i, cm[i, j], ha="center", va="center",
-                    color="white" if cm[i, j] > cm.max()/2 else "black",
-                    fontsize=14, fontweight='bold')
-    ax4.set_title('Confusion Matrix')
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(CHECKPOINT_DIR, 'final_results.png'), dpi=150)
-    plt.show()
-    
-    # Print metrics
-    metrics = {}
-    print(f"\nValidation Metrics:")
-    for mod in ['audio', 'video', 'joint']:
-        if mod == 'joint':
-            y_true = ((val_df['audio_gt'] == 0) | (val_df['video_gt'] == 0)).astype(int)
-        else:
-            y_true = val_df[f'{mod}_gt']
-        y_pred = val_df[f'{mod}_pred']
-        auc = calculate_auc(y_true, y_pred)
-        acc = accuracy_score(y_true, (y_pred > 0.5).astype(int))
-        metrics[mod] = {'auc': round(auc, 4), 'accuracy': round(acc, 4)}
-        print(f"  {mod.upper()}: AUC={auc:.3f}, Acc={acc:.3f}")
-    
-    # Save evaluation results as JSON
-    results_json = {
-        'metrics': metrics,
-        'total_videos': len(df),
-        'val_videos': len(val_df),
-        'train_videos': len(df[df['split'] == 'train']),
-        'type_distribution': df['type'].value_counts().to_dict(),
-        'per_type_accuracy': {}
-    }
-    for t in df['type'].unique():
-        subset = val_df[val_df['type'] == t]
-        type_metrics = {}
-        for m in ['audio', 'video', 'joint']:
-            if m == 'joint':
-                yt = ((subset['audio_gt'] == 0) | (subset['video_gt'] == 0)).astype(int)
-            else:
-                yt = subset[f'{m}_gt']
-            yp = (subset[f'{m}_pred'] > 0.5).astype(int)
-            type_metrics[m] = round(accuracy_score(yt, yp), 4)
-        results_json['per_type_accuracy'][t] = type_metrics
-    
-    results_path = os.path.join(RESULTS_DIR, 'evaluation_results.json')
-    with open(results_path, 'w') as f:
-        #import json
-        json.dump(results_json, f, indent=2)
-    print(f"\nResults saved: {results_path}")
-    
-    # Save predictions CSV
-    predictions_path = os.path.join(RESULTS_DIR, 'predictions.csv')
-    df.to_csv(predictions_path, index=False)
-    print(f"Predictions saved: {predictions_path}")
-    
-    return df
+                    # Inside for i loop — one result per video
+                    all_results.append({
+                        'split':      split_name,
+                        'file':       file_path,
+                        'type':       mod_type,
+                        'audio_gt':   labels[0].item(),
+                        'video_gt':   labels[1].item(),
+                        'audio_pred': sum(window_preds['audio']) / len(window_preds['audio']),
+                        'video_pred': sum(window_preds['video']) / len(window_preds['video']),
+                        'joint_pred': sum(window_preds['joint']) / len(window_preds['joint']),
+                    })
 
 
 # =============================================================================
@@ -497,7 +350,8 @@ def main():
 def _run_pipeline(args):
     """Internal pipeline runner."""
     # Merge configs
-    config = {**TRAIN_CONFIG, **OPTIM_CONFIG, **MODEL_CONFIG}
+    from dataclasses import asdict
+    config = {**asdict(TRAIN_CONFIG), **asdict(OPTIM_CONFIG), **asdict(MODEL_CONFIG)}
     config['encoder_type'] = args.encoder_type
     config['fusion_type'] = args.fusion_type
     
