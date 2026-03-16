@@ -705,7 +705,7 @@ def _run_pipeline(args):
     # Test forward pass
     with torch.no_grad():
         test_v = torch.randn(2, 50, 3, 224, 224).to(device)
-        test_a = torch.randn(2, 1, 128, 87).to(device)
+        test_a = torch.randn(2, 1, 128, 63).to(device)
         test_out = model(test_v, test_a)
         print(f"✓ Test forward pass: A={test_out['audio_pred'].shape}, "
               f"V={test_out['video_pred'].shape}, J={test_out['joint_pred'].shape}")
@@ -734,6 +734,9 @@ def _run_pipeline(args):
         wandb_run=wandb_run
     )
     
+    # Save training curves
+    save_training_curves(history, RESULTS_DIR)
+
     # Load best model for evaluation
     print("\nLoading best model for final evaluation...")
     best_checkpoint = checkpoint_manager.load_best_model(model, device)

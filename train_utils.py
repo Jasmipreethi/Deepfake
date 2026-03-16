@@ -125,11 +125,19 @@ def train_epoch(model, train_loader, criterion, criterion_hard, optimizer,
         video = batch['video'].to(device)
         audio = batch['audio'].to(device)
         labels = batch['labels'].to(device)
-        
+
+        # Skip corrupted samples (sentinel labels = [-1, -1])
+        valid_mask = (labels[:, 0] >= 0)
+        if valid_mask.sum() == 0:
+            continue
+        video  = video[valid_mask]
+        audio  = audio[valid_mask]
+        labels = labels[valid_mask]
+
         audio_labels = labels[:, 0:1]
         video_labels = labels[:, 1:2]
         joint_labels = ((audio_labels == 1) & (video_labels == 1)).float()
-        
+
         optimizer.zero_grad()
         outputs = model(video, audio)
         
@@ -160,11 +168,19 @@ def validate(model, val_loader, criterion_hard, device):
             video = batch['video'].to(device)
             audio = batch['audio'].to(device)
             labels = batch['labels'].to(device)
-            
+
+            # Skip corrupted samples
+            valid_mask = (labels[:, 0] >= 0)
+            if valid_mask.sum() == 0:
+                continue
+            video  = video[valid_mask]
+            audio  = audio[valid_mask]
+            labels = labels[valid_mask]
+
             audio_labels = labels[:, 0:1]
             video_labels = labels[:, 1:2]
             joint_labels = ((audio_labels == 1) & (video_labels == 1)).float()
-            
+
             outputs = model(video, audio)
             
             loss = (criterion_hard(outputs['audio_pred'], audio_labels) +
@@ -340,10 +356,11 @@ def train_model(model, train_loader, val_loader, config, device,
             print(f"\n⏹️ Early stopping at epoch {epoch+1} (best AUC: {best_val_auc:.3f})")
             break
     
-    # Final save
+    # Final save — use last completed epoch or start_epoch-1 if loop never ran
+    final_epoch = locals().get('epoch', max(0, start_epoch - 1))
     if checkpoint_manager:
         checkpoint_manager.save_checkpoint(
-            epoch=epoch,
+            epoch=final_epoch,
             model=model,
             optimizer=optimizer,
             scheduler=scheduler,
