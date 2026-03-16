@@ -352,6 +352,24 @@ def extract_multiple_windows(video_path, fake_segments=None, total_frames=0,
 def _extract_one_video(args):
     """Top-level worker for multiprocessing.Pool (must be module-level for pickle)."""
     idx, row_dict, split_dir, val_dir, split_name = args
+
+    # Fix 1: reinitialise torchaudio FFmpeg backend in each forked worker.
+    # fork() copies the parent's FFmpeg state which can deadlock or corrupt
+    # audio. Re-initialising ensures a clean backend per worker.
+    try:
+        torchaudio.set_audio_backend("ffmpeg")
+    except Exception:
+        pass  # backend may already be set or unavailable — non-fatal
+
+    # Fix 3: re-seed RNG per worker using idx as the seed offset.
+    # After fork all workers share the parent's identical random state,
+    # so augmentation would produce the same choices across workers.
+    # Using idx ensures each video gets genuinely independent randomness.
+    worker_seed = idx % (2 ** 32)
+    random.seed(worker_seed)
+    np.random.seed(worker_seed)
+    torch.manual_seed(worker_seed)
+
     pt_path = os.path.join(split_dir, f'{idx}.pt')
 
     # Already extracted — rebuild manifest entry
@@ -456,31 +474,60 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR,
     failed  = 0
     first_errors = []  # capture first 5 failure reasons for diagnosis
 
+    # Submit work in small batches. If a worker crashes hard (segfault, OOM,
+    # unhandled signal), only that batch is lost — the pool restarts the worker
+    # and processing continues. Without batching, one bad crash kills everything.
+    BATCH_SIZE = 50  # videos per submission batch
     ctx = multiprocessing.get_context('fork')  # fork is safe + fast on Linux
-    with ctx.Pool(processes=num_workers) as pool:
-        for i, (idx, status, entry, err_msg) in enumerate(
-            pool.imap_unordered(_extract_one_video, work_items, chunksize=4)
-        ):
-            if status == 'success':
-                manifest.append(entry)
-                success += 1
-            elif status == 'skipped':
-                manifest.append(entry)
-            elif status == 'failed':
-                failed_indices.add(idx)
-                failed += 1
-                if err_msg and len(first_errors) < 5:
-                    first_errors.append(err_msg)
 
-            if (i + 1) % 100 == 0:
-                print(f"  [{split_name}] {i+1}/{len(work_items)} "
-                      f"| new={success} failed={failed}")
+    processed = 0
+    for batch_start in range(0, len(work_items), BATCH_SIZE):
+        batch = work_items[batch_start:batch_start + BATCH_SIZE]
 
-            if success > 0 and success % 500 == 0:
-                with open(manifest_path, 'w') as f:
-                    json.dump(manifest, f)
-                with open(failed_path, 'w') as f:
-                    json.dump(list(failed_indices), f)
+        # Create a fresh pool per batch — isolates crashes to one batch only
+        try:
+            with ctx.Pool(processes=num_workers) as pool:
+                results = pool.imap_unordered(
+                    _extract_one_video, batch, chunksize=4
+                )
+                for idx, status, entry, err_msg in results:
+                    if status == 'success':
+                        manifest.append(entry)
+                        success += 1
+                    elif status == 'skipped':
+                        manifest.append(entry)
+                    elif status == 'failed':
+                        failed_indices.add(idx)
+                        failed += 1
+                        if err_msg and len(first_errors) < 5:
+                            first_errors.append(err_msg)
+
+                    processed += 1
+                    if processed % 100 == 0:
+                        print(f"  [{split_name}] {processed}/{len(work_items)} "
+                              f"| new={success} failed={failed}")
+
+                    if success > 0 and success % 500 == 0:
+                        with open(manifest_path, 'w') as f:
+                            json.dump(manifest, f)
+                        with open(failed_path, 'w') as f:
+                            json.dump(list(failed_indices), f)
+
+        except Exception as pool_err:
+            # A worker crashed hard (e.g. segfault/OOM) — save progress,
+            # mark the whole batch as failed, and continue with the next batch
+            print(f"\n  ⚠ Pool crashed on batch {batch_start}–"
+                  f"{batch_start + len(batch)}: {pool_err}")
+            print(f"  Saving progress and continuing...")
+            for item in batch:
+                idx = item[0]
+                if idx not in {m['idx'] for m in manifest} and idx not in failed_indices:
+                    failed_indices.add(idx)
+                    failed += 1
+            with open(manifest_path, 'w') as f:
+                json.dump(manifest, f)
+            with open(failed_path, 'w') as f:
+                json.dump(list(failed_indices), f)
 
     # Final save
     with open(manifest_path, 'w') as f:
