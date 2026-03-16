@@ -9,11 +9,14 @@ Optimized for large-scale datasets with lazy-loading from disk.
 import os
 import json
 import random
+import warnings
 import numpy as np
 import pandas as pd
 import cv2
 import torchaudio
 import torch
+import multiprocessing
+from functools import partial
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 from config import VAL_DIR, FEATURE_CONFIG
@@ -325,148 +328,182 @@ def extract_multiple_windows(video_path, fake_segments=None, total_frames=0,
 # DISK-BASED FEATURE STORAGE (saves each video as individual .pt file)
 # =============================================================================
 
-def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
-    """Extract features for a split and save each as an individual .pt file.
-    
+def _extract_one_video(args):
+    """Top-level worker function for multiprocessing.Pool.
+
+    Must be defined at module level so it can be pickled by worker processes.
+
+    Args:
+        args: tuple of (idx, row_dict, split_dir, val_dir, split_name, cfg)
+
+    Returns:
+        tuple: (idx, status, manifest_entry_or_none)
+               status is 'success', 'skipped', or 'failed'
+    """
+    idx, row_dict, split_dir, val_dir, split_name, cfg = args
+
+    pt_path = os.path.join(split_dir, f'{idx}.pt')
+
+    # Already extracted
+    if os.path.exists(pt_path):
+        mt = row_dict['modify_type']
+        entry = {
+            'idx': idx,
+            'file': row_dict['file'],
+            'type': mt,
+            'speaker': row_dict['file'].split('/')[1] if '/' in row_dict['file'] else 'unknown',
+            'pt_file': f'{idx}.pt',
+            'fake_segments': row_dict.get('fake_segments', []),
+            'total_frames': int(row_dict['video_frames'])
+        }
+        return idx, 'skipped', entry
+
+    video_path = os.path.join(val_dir, row_dict['file'])
+    if not os.path.exists(video_path):
+        return idx, 'failed', None
+
+    augment = (split_name == 'train')
+    video_tensor, audio_tensor = extract_av_features(
+        video_path=video_path,
+        fake_segments=row_dict.get('fake_segments'),
+        total_frames=row_dict['video_frames'],
+        augment=augment
+    )
+
+    if video_tensor is None:
+        return idx, 'failed', None
+
+    mt = row_dict['modify_type']
+    label_map = {
+        'real':             (1, 1),
+        'both_modified':    (0, 0),
+        'audio_modified':   (0, 1),
+        'visual_modified':  (1, 0)
+    }
+    audio_label, video_label = label_map.get(mt, (0, 0))
+
+    feature_data = {
+        'video':  video_tensor,
+        'audio':  audio_tensor,
+        'labels': torch.FloatTensor([audio_label, video_label]),
+    }
+    torch.save(feature_data, pt_path)
+
+    entry = {
+        'idx': idx,
+        'file': row_dict['file'],
+        'type': mt,
+        'speaker': row_dict['file'].split('/')[1] if '/' in row_dict['file'] else 'unknown',
+        'pt_file': f'{idx}.pt',
+        'fake_segments': row_dict.get('fake_segments', []),
+        'total_frames': int(row_dict['video_frames'])
+    }
+    return idx, 'success', entry
+
+
+def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR,
+                          num_workers=None):
+    """Extract features for a split in parallel using multiprocessing.Pool.
+
     Saves:
       feature_dir/{split_name}/0.pt, 1.pt, 2.pt, ...
       feature_dir/{split_name}_manifest.json  (metadata for each sample)
-    
+
     Supports resuming — skips videos whose .pt files already exist.
+
+    Args:
+        split_df:    DataFrame for this split
+        split_name:  'train' or 'val'
+        feature_dir: root directory for .pt files and manifests
+        val_dir:     root directory containing the raw video files
+        num_workers: number of parallel workers (default: cpu_count - 4)
     """
+    if num_workers is None:
+        num_workers = max(1, multiprocessing.cpu_count() - 4)
+
     split_dir = os.path.join(feature_dir, split_name)
     os.makedirs(split_dir, exist_ok=True)
     manifest_path = os.path.join(feature_dir, f'{split_name}_manifest.json')
-    failed_path = os.path.join(feature_dir, f'{split_name}_failed.json')
-    
-    # Load existing manifest for resume support
+    failed_path   = os.path.join(feature_dir, f'{split_name}_failed.json')
+
+    # Load existing manifest and failed list for resume support
     if os.path.exists(manifest_path):
         with open(manifest_path, 'r') as f:
             manifest = json.load(f)
     else:
         manifest = []
-    
-    # Load previously failed indices to skip them
+
     if os.path.exists(failed_path):
         with open(failed_path, 'r') as f:
             failed_indices = set(json.load(f))
     else:
         failed_indices = set()
-    
+
     existing_indices = {m['idx'] for m in manifest}
-    
-    success = 0
-    skipped = 0
-    failed = 0
-    loop_counter = 0  # Fix 4: explicit counter independent of DataFrame row index
 
-    print(f"\nProcessing {split_name} set ({len(split_df):,} videos)...")
-    if existing_indices:
-        print(f"  Resuming: {len(existing_indices):,} already extracted")
-    if failed_indices:
-        print(f"  Skipping: {len(failed_indices):,} previously failed")
-
+    # Build the work list — skip already extracted and previously failed
+    work_items = []
     for idx, row in split_df.iterrows():
-        loop_counter += 1
-        pt_path = os.path.join(split_dir, f'{idx}.pt')
-
-        # Skip previously failed files
         if idx in failed_indices:
-            failed += 1
             continue
+        if idx in existing_indices and os.path.exists(os.path.join(split_dir, f'{idx}.pt')):
+            continue
+        work_items.append((
+            idx,
+            row.to_dict(),
+            split_dir,
+            val_dir,
+            split_name,
+            FEATURE_CONFIG
+        ))
 
-        # Skip if .pt file already exists on disk
-        if idx in existing_indices and os.path.exists(pt_path):
-            skipped += 1
-            continue
+    already_done = len(existing_indices)
+    print(f"\nProcessing {split_name} set ({len(split_df):,} videos) "
+          f"with {num_workers} workers")
+    print(f"  Resuming: {already_done:,} already extracted")
+    print(f"  Skipping: {len(failed_indices):,} previously failed")
+    print(f"  To process: {len(work_items):,} remaining")
 
-        # Also skip if .pt file exists but wasn't in manifest (rebuild manifest entry)
-        if os.path.exists(pt_path):
-            mt = row['modify_type']
-            manifest.append({
-                'idx': idx,
-                'file': row['file'],
-                'type': mt,
-                'speaker': row['file'].split('/')[1] if '/' in row['file'] else 'unknown',
-                'pt_file': f'{idx}.pt',
-                'fake_segments': row.get('fake_segments', []),
-                'total_frames':  int(row['video_frames'])
-            })
-            skipped += 1
-            continue
+    success = 0
+    failed  = 0
 
-        # Fix 4: use loop_counter (0-based position) not the DataFrame row index
-        if loop_counter % 100 == 1 or loop_counter == 1:
-            print(f"  [{split_name} {loop_counter}/{len(split_df)}] "
-                  f"done={success + skipped} failed={failed}")
-        
-        video_path = os.path.join(val_dir, row['file'])
-        
-        if not os.path.exists(video_path):
-            failed += 1
-            failed_indices.add(idx)
-            continue
-        
-        video_tensor, audio_tensor = extract_av_features(
-            video_path=video_path,
-            fake_segments=row.get('fake_segments'),
-            total_frames=row['video_frames'],
-            augment=(split_name == 'train')
-        )
-        
-        if video_tensor is None:
-            failed += 1
-            failed_indices.add(idx)
-            continue
-        
-        # Create labels
-        mt = row['modify_type']
-        label_map = {
-            'real': (1, 1),
-            'both_modified': (0, 0),
-            'audio_modified': (0, 1),
-            'visual_modified': (1, 0)
-        }
-        audio_label, video_label = label_map.get(mt, (0, 0))
-        
-        # Save individual .pt file
-        feature_data = {
-            'video': video_tensor,
-            'audio': audio_tensor,
-            'labels': torch.FloatTensor([audio_label, video_label]),
-        }
-        pt_path = os.path.join(split_dir, f'{idx}.pt')
-        torch.save(feature_data, pt_path)
-        
-        # Update manifest
-        manifest.append({
-            'idx': idx,
-            'file': row['file'],
-            'type': mt,
-            'speaker': row['file'].split('/')[1] if '/' in row['file'] else 'unknown',
-            'pt_file': f'{idx}.pt',
-            'fake_segments': row.get('fake_segments', []),
-            'total_frames':  int(row['video_frames'])
-        })
-        success += 1
-        
-        # Save manifest and failed list periodically (every 500 videos) for crash safety
-        if success % 500 == 0:
-            with open(manifest_path, 'w') as f:
-                json.dump(manifest, f)
-            with open(failed_path, 'w') as f:
-                json.dump(list(failed_indices), f)
-    
+    # Use spawn context to avoid CUDA/OpenCV fork issues
+    ctx = multiprocessing.get_context('spawn')
+    with ctx.Pool(processes=num_workers) as pool:
+        for i, (idx, status, entry) in enumerate(
+            pool.imap_unordered(_extract_one_video, work_items, chunksize=4)
+        ):
+            if status == 'success':
+                manifest.append(entry)
+                success += 1
+            elif status == 'skipped':
+                manifest.append(entry)
+            elif status == 'failed':
+                failed_indices.add(idx)
+                failed += 1
+
+            # Progress every 200 completions
+            if (i + 1) % 200 == 0:
+                print(f"  [{split_name}] {i+1}/{len(work_items)} processed "
+                      f"| new={success} failed={failed}")
+
+            # Checkpoint manifest every 500 new successes
+            if success > 0 and success % 500 == 0:
+                with open(manifest_path, 'w') as f:
+                    json.dump(manifest, f)
+                with open(failed_path, 'w') as f:
+                    json.dump(list(failed_indices), f)
+
     # Final save
     with open(manifest_path, 'w') as f:
         json.dump(manifest, f)
     with open(failed_path, 'w') as f:
         json.dump(list(failed_indices), f)
-    
-    total = success + skipped
+
+    total = already_done + success
     print(f"\n  {split_name} Summary: {total:,} extracted "
-          f"({skipped:,} cached, {success:,} new, {failed:,} failed)")
-    
+          f"({already_done:,} cached, {success:,} new, {failed:,} failed)")
+
     return split_dir, manifest_path
 
 
@@ -542,9 +579,12 @@ class AVDataset(torch.utils.data.Dataset):
         }
 
 
-def create_dataloaders(train_dir, train_manifest, val_dir, val_manifest, 
-                       batch_size=16, num_workers=2):
+def create_dataloaders(train_dir, train_manifest, val_dir, val_manifest,
+                       batch_size=16, num_workers=None):
     """Create DataLoaders with lazy-loading datasets."""
+    if num_workers is None:
+        # Leave cores free for the main process and GPU transfers
+        num_workers = min(8, max(2, multiprocessing.cpu_count() // 4))
     train_loader = torch.utils.data.DataLoader(
         AVDataset(train_dir, train_manifest),
         batch_size=batch_size,
