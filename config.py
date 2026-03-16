@@ -46,7 +46,7 @@ class TrainConfig:
     run_name: str = "full-val-modular"
     architecture: str = "PretrainedResNet3D_ResNet18"
     dataset: str = "AVDeepfake1M++"
-    use_all_data: bool = False
+    use_all_data: bool = True
     samples_per_type: dict = field(default_factory=lambda: {
         "real": 40,
         "both_modified": 40,
