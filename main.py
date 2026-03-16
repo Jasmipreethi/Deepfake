@@ -113,7 +113,7 @@ class AVDeepfakeDetector(nn.Module):
         
         Args:
             video: (B, T, C, H, W) - video frames
-            audio: (B, 1, 128, 63) - audio spectrogram
+            audio: (B, 1, 128, 87) - audio spectrogram
         
         Returns:
             dict with predictions and features
@@ -175,7 +175,20 @@ def parse_args():
         default=None,
         help='Override feature dimension'
     )
-    
+
+    parser.add_argument(
+        '--sweep',
+        action='store_true',
+        help='Run a W&B Bayesian hyperparameter sweep instead of a single training run'
+    )
+
+    parser.add_argument(
+        '--sweep_count',
+        type=int,
+        default=20,
+        help='Number of sweep trials to run (default: 20)'
+    )
+
     return parser.parse_args()
 
 
@@ -183,13 +196,30 @@ def parse_args():
 # W&B SETUP
 # =============================================================================
 
+# Sweep configuration — Bayesian search over the most impactful hyperparameters.
+# W&B samples combinations intelligently, focusing on promising regions.
+SWEEP_CONFIG = {
+    'method': 'bayes',
+    'metric': {'name': 'val/auc_joint', 'goal': 'maximize'},
+    'parameters': {
+        'focal_gamma':    {'values': [0.5, 1.0, 2.0, 3.0]},
+        'focal_alpha':    {'values': [0.1, 0.25, 0.5, 0.75]},
+        'dropout':        {'min': 0.2,  'max': 0.5},
+        'learning_rate':  {'min': 1e-5, 'max': 1e-3, 'distribution': 'log_uniform_values'},
+        'hidden_dim':     {'values': [256, 512, 1024]},
+        'freeze_epochs':  {'values': [4, 8, 12]},
+        'weight_decay':   {'min': 1e-5, 'max': 1e-3, 'distribution': 'log_uniform_values'},
+    }
+}
+
+
 def setup_wandb(checkpoint_manager, config, disable=False):
     """Initialize W&B with resume support"""
     if disable:
         return None
-    
+
     run_id = checkpoint_manager.get_wandb_run_id()
-    
+
     if run_id:
         try:
             wandb.init(
@@ -202,7 +232,7 @@ def setup_wandb(checkpoint_manager, config, disable=False):
             return wandb.run
         except Exception as e:
             print(f"  ⚠ Could not resume W&B: {e}")
-    
+
     # Start new run
     wandb.init(
         project=config['project_name'],
@@ -212,6 +242,90 @@ def setup_wandb(checkpoint_manager, config, disable=False):
     )
     print(f"  ✓ Started new W&B run: {wandb.run.id}")
     return wandb.run
+
+
+def run_sweep_trial():
+    """Single sweep trial — called by W&B agent for each hyperparameter combination.
+
+    W&B injects the sampled hyperparameters into wandb.config automatically.
+    We read them out, override the base config, and run the full pipeline.
+    """
+    from dataclasses import asdict
+    import argparse
+
+    # Base config from dataclasses
+    config = {**asdict(TRAIN_CONFIG), **asdict(OPTIM_CONFIG), **asdict(MODEL_CONFIG)}
+    config['encoder_type'] = 'pretrained'
+    config['fusion_type']  = 'transformer' if torch.cuda.is_available() else 'pretrained'
+
+    # W&B injects sweep parameters here — override base config with sampled values
+    wandb.init()  # sweep agent calls this; config is populated by W&B
+    sweep_params = wandb.config
+
+    config['focal_gamma']    = sweep_params.get('focal_gamma',   config['focal_gamma'])
+    config['focal_alpha']    = sweep_params.get('focal_alpha',   config['focal_alpha'])
+    config['dropout']        = sweep_params.get('dropout',       config['dropout'])
+    config['learning_rate']  = sweep_params.get('learning_rate', config['learning_rate'])
+    config['hidden_dim']     = sweep_params.get('hidden_dim',    config['hidden_dim'])
+    config['freeze_epochs']  = sweep_params.get('freeze_epochs', config['freeze_epochs'])
+    config['weight_decay']   = sweep_params.get('weight_decay',  config['weight_decay'])
+
+    print(f"\nSweep trial config: {dict(sweep_params)}")
+
+    set_seeds(42)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Reuse existing extracted features — sweep only tunes training, not extraction
+    train_manifest = os.path.join(FEATURES_DIR, 'train_manifest.json')
+    val_manifest   = os.path.join(FEATURES_DIR, 'val_manifest.json')
+
+    if not os.path.exists(train_manifest) or not os.path.exists(val_manifest):
+        raise RuntimeError(
+            "Feature manifests not found. Run the full pipeline once first "
+            "(python main.py) to extract features before launching a sweep."
+        )
+
+    train_dir   = os.path.join(FEATURES_DIR, 'train')
+    val_dir_feat = os.path.join(FEATURES_DIR, 'val')
+
+    train_loader, val_loader = create_dataloaders(
+        train_dir, train_manifest,
+        val_dir_feat, val_manifest,
+        config['batch_size']
+    )
+
+    model = AVDeepfakeDetector(
+        encoder_type=config['encoder_type'],
+        fusion_type=config['fusion_type'],
+        feature_dim=config['feature_dim'],
+        hidden_dim=config['hidden_dim'],
+        dropout=config['dropout']
+    ).to(device)
+
+    # Each sweep trial gets its own checkpoint subdirectory so runs don't collide
+    trial_id = wandb.run.id
+    trial_checkpoint_dir = os.path.join(CHECKPOINT_DIR, f'sweep_{trial_id}')
+    os.makedirs(trial_checkpoint_dir, exist_ok=True)
+
+    trial_checkpoint_manager = CheckpointManager(
+        checkpoint_path=os.path.join(trial_checkpoint_dir, 'checkpoint.pth'),
+        best_model_path=os.path.join(trial_checkpoint_dir, 'best_model.pth'),
+    )
+
+    # Disable resume for sweep trials — each trial starts fresh
+    config['resume'] = False
+
+    train_model(
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        config=config,
+        device=device,
+        checkpoint_manager=trial_checkpoint_manager,
+        wandb_run=wandb.run
+    )
+
+    wandb.finish()
 
 
 # =============================================================================
@@ -412,13 +526,38 @@ def save_training_curves(history, output_dir):
 def main():
     """Main execution function"""
     args = parse_args()
-    
-    # Start logging to file
+
+    if args.sweep:
+        # --- Sweep mode ---
+        # Features must already be extracted. The sweep agent spins up
+        # run_sweep_trial() once per hyperparameter combination.
+        if args.no_wandb:
+            print("ERROR: --sweep requires W&B. Remove --no_wandb.")
+            return
+
+        wandb_api_key = os.environ.get('WANDB_API_KEY', '')
+        if not wandb_api_key or wandb_api_key.startswith('your_'):
+            print("ERROR: WANDB_API_KEY not set in .env")
+            return
+
+        from dataclasses import asdict
+        sweep_id = wandb.sweep(
+            SWEEP_CONFIG,
+            project=asdict(TRAIN_CONFIG)['project_name']
+        )
+        print(f"\n✓ Sweep created: {sweep_id}")
+        print(f"  View at: https://wandb.ai/home → sweeps → {sweep_id}")
+        print(f"  Running {args.sweep_count} trials...\n")
+
+        wandb.agent(sweep_id, function=run_sweep_trial, count=args.sweep_count)
+        return
+
+    # --- Normal single-run mode ---
     log_path = os.path.join(RESULTS_DIR, 'pipeline_log.txt')
     logger = Logger(log_path)
     sys.stdout = logger
     print(f"Logging to: {log_path}")
-    
+
     try:
         _run_pipeline(args)
     finally:

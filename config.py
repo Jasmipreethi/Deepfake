@@ -57,7 +57,8 @@ class TrainConfig:
     freeze_epochs: int = 8
     patience: int = 15
     grad_clip: float = 1.0
-    label_smoothing: float = 0.05
+    focal_gamma: float = 2.0   # focus parameter — 0 = standard BCE, 2 = standard Focal Loss
+    focal_alpha: float = 0.25  # class balance — 0.25 downweights easy negatives
     val_split: float = 0.2
     checkpoint_freq: int = 1
     resume: bool = True
