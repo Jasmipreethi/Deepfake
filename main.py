@@ -238,7 +238,8 @@ def setup_wandb(checkpoint_manager, config, disable=False):
         project=config['project_name'],
         name=f"{config['run_name']}-{config['encoder_type']}-{config['fusion_type']}",
         config=config,
-        tags=[config['encoder_type'], config['fusion_type'], f"{config['samples_per_type']}-samples"]
+        tags=[config['encoder_type'], config['fusion_type'],
+              f"n{sum(config['samples_per_type'].values())}-samples"]
     )
     print(f"  ✓ Started new W&B run: {wandb.run.id}")
     return wandb.run
