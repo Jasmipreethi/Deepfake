@@ -38,7 +38,7 @@ import numpy as np
 
 # Import configuration
 from config import (
-    DATA_DIR, VAL_DIR, CHECKPOINT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH,
+    DATA_DIR, VAL_DIR, METADATA_DIR, CHECKPOINT_DIR, CHECKPOINT_PATH, BEST_MODEL_PATH,
     FEATURES_DIR, WANDB_ID_PATH, RESULTS_DIR,
     MODEL_CONFIG, TRAIN_CONFIG, OPTIM_CONFIG
 )
@@ -617,7 +617,7 @@ def _run_pipeline(args):
     print("DATA LOADING")
     print("=" * 60)
     
-    df = load_metadata(VAL_DIR)
+    df = load_metadata(METADATA_DIR)
     train_df, val_df = sample_videos(
         df, 
         config['samples_per_type'],

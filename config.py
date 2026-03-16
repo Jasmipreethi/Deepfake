@@ -10,7 +10,8 @@ import os
 
 # Defaults are for Google Colab — override in .env for VPS/local
 DATA_DIR = os.environ.get('DATA_DIR', '/content/drive/MyDrive/val')
-VAL_DIR = os.path.join(DATA_DIR, 'extracted_val')
+VAL_DIR      = os.path.join(DATA_DIR, 'extracted_val', 'val')  
+METADATA_DIR = os.path.join(DATA_DIR, 'extracted_val')        
 CHECKPOINT_DIR = os.environ.get('CHECKPOINT_DIR', '/content/drive/MyDrive/checkpoints')
 
 # Create checkpoint directory if it doesn't exist
