@@ -24,7 +24,7 @@ class SimpleAudioEncoder(nn.Module):
         )
     
     def forward(self, x):
-        # x: (B, 1, 128, 87)
+        # x: (B, 1, 128, T)
         return self.encoder(x)
 
 
@@ -56,7 +56,7 @@ class ImprovedAudioEncoder(nn.Module):
         )
 
     def forward(self, x):
-        # x: (B, 1, 128, 87)
+        # x: (B, 1, 128, T)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)

@@ -12,20 +12,50 @@ import time
 from sklearn.metrics import roc_auc_score
 
 
-class LabelSmoothingBCE(nn.Module):
-    """Binary Cross Entropy with label smoothing"""
-    def __init__(self, smoothing=0.05):
+class FocalLoss(nn.Module):
+    """Focal Loss — replaces both LabelSmoothingBCE and hard BCELoss.
+
+    Downweights easy examples via (1-p)^gamma so training focuses on
+    hard, ambiguous samples (subtle manipulations). Subsumes label
+    smoothing: when gamma=0 and alpha=0.5 it reduces to standard BCE.
+
+    Args:
+        gamma: focus parameter. 0 = BCE, 2 = standard Focal Loss.
+        alpha: class balance weight for the positive (real) class.
+               1-alpha is applied to the negative (fake) class.
+    """
+    def __init__(self, gamma=2.0, alpha=0.25):
         super().__init__()
-        self.smoothing = smoothing
-    
+        self.gamma = gamma
+        self.alpha = alpha
+
     def forward(self, pred, target):
-        target = target * (1 - self.smoothing) + 0.5 * self.smoothing
-        return F.binary_cross_entropy(pred, target)
+        # Clamp to avoid log(0)
+        pred = torch.clamp(pred, 1e-6, 1.0 - 1e-6)
+
+        # Per-sample BCE
+        bce = -(target * torch.log(pred) + (1 - target) * torch.log(1 - pred))
+
+        # Focal weight: (1-p)^gamma for positives, p^gamma for negatives
+        p_t = pred * target + (1 - pred) * (1 - target)
+        focal_weight = (1 - p_t) ** self.gamma
+
+        # Alpha weighting
+        alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
+
+        loss = alpha_t * focal_weight * bce
+        return loss.mean()
 
 
-def get_loss_functions(label_smoothing=0.05):
-    """Get training and validation loss functions"""
-    return LabelSmoothingBCE(smoothing=label_smoothing), nn.BCELoss()
+def get_loss_functions(focal_gamma=2.0, focal_alpha=0.25):
+    """Get loss functions for training and validation.
+
+    Both use FocalLoss — validation uses gamma=0 (standard BCE behaviour)
+    so val loss remains comparable across runs and easy to interpret.
+    """
+    train_criterion = FocalLoss(gamma=focal_gamma, alpha=focal_alpha)
+    val_criterion   = FocalLoss(gamma=0.0, alpha=0.5)   # equivalent to BCE
+    return train_criterion, val_criterion
 
 
 def get_optimizer(model, learning_rate=1e-4, encoder_lr=1e-5, 
@@ -159,7 +189,10 @@ def validate(model, val_loader, criterion_hard, device):
 def train_model(model, train_loader, val_loader, config, device, 
                 checkpoint_manager=None, wandb_run=None):
     """Full training loop with checkpointing and logging"""
-    criterion, criterion_hard = get_loss_functions(config.get('label_smoothing', 0.05))
+    criterion, criterion_hard = get_loss_functions(
+        focal_gamma=config.get('focal_gamma', 2.0),
+        focal_alpha=config.get('focal_alpha', 0.25)
+    )
     
     # Determine starting point
     start_epoch = 0

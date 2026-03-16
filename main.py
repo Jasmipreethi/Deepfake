@@ -113,7 +113,7 @@ class AVDeepfakeDetector(nn.Module):
         
         Args:
             video: (B, T, C, H, W) - video frames
-            audio: (B, 1, 128, 87) - audio spectrogram
+            audio: (B, 1, 128, 63) - audio spectrogram
         
         Returns:
             dict with predictions and features
