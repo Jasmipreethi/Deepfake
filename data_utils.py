@@ -18,13 +18,8 @@ from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 from config import VAL_DIR, FEATURE_CONFIG
 
-_MEL_TRANSFORM = torchaudio.transforms.MelSpectrogram(
-    sample_rate=FEATURE_CONFIG['sr'],
-    n_mels=128,
-    n_fft=1024,
-    hop_length=512
-)
-_DB_TRANSFORM = torchaudio.transforms.AmplitudeToDB(top_db=80)
+# Fix 9: transforms moved inside extract_av_features to avoid pickle
+# errors when num_workers > 0 on Windows / some macOS versions.
 
 def set_seeds(seed=42):
     """Set all random seeds for reproducibility"""
@@ -65,6 +60,7 @@ def load_metadata(val_dir=VAL_DIR):
 
 def spec_augment(audio_tensor, freq_mask_param=20, time_mask_param=15):
     """Apply SpecAugment: random frequency and time masking."""
+    audio_tensor = audio_tensor.clone()  # Fix 7: avoid mutating the original tensor
     _, n_mels, n_time = audio_tensor.shape
     
     # Frequency masking: zero out a random band of mel bins
@@ -187,29 +183,34 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (cfg['img_size'], cfg['img_size']))
         frame = frame / 255.0
-        mean = np.array([0.485, 0.456, 0.406])
-        std  = np.array([0.229, 0.224, 0.225])
-        frame = (frame - mean) / std
         frames.append(frame)
     cap.release()
-    
+
     # Pad if needed
     if len(frames) < cfg['num_frames']:
         while len(frames) < cfg['num_frames']:
             frames.append(frames[-1] if frames else np.zeros((cfg['img_size'], cfg['img_size'], 3)))
-    
-    video_tensor = torch.FloatTensor(np.array(frames)).permute(0, 3, 1, 2)
-    
-    # Video augmentation — applied after video_tensor is built
+
+    frames_arr = np.array(frames)  # (T, H, W, 3) float32 in [0, 1]
+
+    # Fix 3: augmentation applied BEFORE ImageNet normalisation so that
+    #         clamp(0, 1) operates on the correct [0, 1] pixel range.
     if augment:
-        # Random horizontal flip applied consistently across all 50 frames
+        # Random horizontal flip — consistent across all frames
         if random.random() < 0.5:
-            video_tensor = torch.flip(video_tensor, dims=[3])
-        
-        # Random brightness/contrast jitter applied to the whole clip
+            frames_arr = frames_arr[:, :, ::-1, :].copy()
+
+        # Random brightness/contrast jitter — stays in [0, 1] before normalisation
         brightness = random.uniform(-0.2, 0.2)
         contrast   = random.uniform(0.8, 1.2)
-        video_tensor = torch.clamp(video_tensor * contrast + brightness, 0.0, 1.0)
+        frames_arr = np.clip(frames_arr * contrast + brightness, 0.0, 1.0)
+
+    # ImageNet normalisation (applied after augmentation)
+    mean = np.array([0.485, 0.456, 0.406])
+    std  = np.array([0.229, 0.224, 0.225])
+    frames_arr = (frames_arr - mean) / std
+
+    video_tensor = torch.FloatTensor(frames_arr).permute(0, 3, 1, 2)
 
     # Audio extraction using torchaudio
     try:
@@ -236,8 +237,16 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
             waveform = torch.nn.functional.pad(waveform, (0, pad_size))
         
         # Compute mel-spectrogram and convert to dB
-        mel_spec = _MEL_TRANSFORM(waveform)
-        audio_tensor = _DB_TRANSFORM(mel_spec)
+        # Fix 9: instantiated locally so workers can pickle them safely
+        mel_transform = torchaudio.transforms.MelSpectrogram(
+            sample_rate=cfg['sr'],
+            n_mels=128,
+            n_fft=1024,
+            hop_length=512
+        )
+        db_transform = torchaudio.transforms.AmplitudeToDB(top_db=80)
+        mel_spec = mel_transform(waveform)
+        audio_tensor = db_transform(mel_spec)
         
         # Per-sample normalisation
         mean = audio_tensor.mean()
@@ -301,6 +310,15 @@ def extract_multiple_windows(video_path, fake_segments=None, total_frames=0,
         if v is not None:
             windows.append((v, a))
 
+    # Fix 6: warn if fewer windows were extracted than requested
+    if len(windows) < n_windows:
+        import warnings
+        warnings.warn(
+            f"extract_multiple_windows: requested {n_windows} windows but "
+            f"only {len(windows)} could be extracted from {video_path}",
+            RuntimeWarning,
+            stacklevel=2
+        )
     return windows
 
 # =============================================================================
@@ -308,7 +326,7 @@ def extract_multiple_windows(video_path, fake_segments=None, total_frames=0,
 # =============================================================================
 
 def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
-    """Extract features for a split and savmel_te each as an individual .pt file.
+    """Extract features for a split and save each as an individual .pt file.
     
     Saves:
       feature_dir/{split_name}/0.pt, 1.pt, 2.pt, ...
@@ -340,26 +358,28 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
     success = 0
     skipped = 0
     failed = 0
-    
+    loop_counter = 0  # Fix 4: explicit counter independent of DataFrame row index
+
     print(f"\nProcessing {split_name} set ({len(split_df):,} videos)...")
     if existing_indices:
         print(f"  Resuming: {len(existing_indices):,} already extracted")
     if failed_indices:
         print(f"  Skipping: {len(failed_indices):,} previously failed")
-    
+
     for idx, row in split_df.iterrows():
+        loop_counter += 1
         pt_path = os.path.join(split_dir, f'{idx}.pt')
-        
+
         # Skip previously failed files
         if idx in failed_indices:
             failed += 1
             continue
-        
+
         # Skip if .pt file already exists on disk
         if idx in existing_indices and os.path.exists(pt_path):
             skipped += 1
             continue
-        
+
         # Also skip if .pt file exists but wasn't in manifest (rebuild manifest entry)
         if os.path.exists(pt_path):
             mt = row['modify_type']
@@ -374,10 +394,10 @@ def process_split_to_disk(split_df, split_name, feature_dir, val_dir=VAL_DIR):
             })
             skipped += 1
             continue
-        
-        # Progress logging (every 100 videos)
-        if (idx + 1) % 100 == 0 or idx == 0:
-            print(f"  [{split_name} {idx+1}/{len(split_df)}] "
+
+        # Fix 4: use loop_counter (0-based position) not the DataFrame row index
+        if loop_counter % 100 == 1 or loop_counter == 1:
+            print(f"  [{split_name} {loop_counter}/{len(split_df)}] "
                   f"done={success + skipped} failed={failed}")
         
         video_path = os.path.join(val_dir, row['file'])
@@ -531,15 +551,15 @@ def create_dataloaders(train_dir, train_manifest, val_dir, val_manifest,
         shuffle=True,
         drop_last=True,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=torch.cuda.is_available()  # Fix 10: no-op overhead on CPU-only machines
     )
-    
+
     val_loader = torch.utils.data.DataLoader(
         AVDataset(val_dir, val_manifest),
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=torch.cuda.is_available()  # Fix 10
     )
     
     return train_loader, val_loader

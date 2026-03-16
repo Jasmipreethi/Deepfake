@@ -172,15 +172,18 @@ def train_model(model, train_loader, val_loader, config, device,
     patience_counter = 0
     
     # Resume from checkpoint if available
+    # Fix 8: load checkpoint once and reuse the same dict for both model
+    #        weights and optimizer/scheduler state — avoids loading the file twice.
+    loaded_checkpoint = None
     if checkpoint_manager and config.get('resume', True):
-        checkpoint = checkpoint_manager.load_checkpoint(model)
-        if checkpoint:
-            start_epoch = checkpoint['epoch'] + 1
-            history = checkpoint['history']
-            best_val_auc = checkpoint['best_val_auc']
-            patience_counter = checkpoint['patience_counter']
-    
-    # Initial optimizer (frozen)
+        loaded_checkpoint = checkpoint_manager.load_checkpoint(model)
+        if loaded_checkpoint:
+            start_epoch = loaded_checkpoint['epoch'] + 1
+            history = loaded_checkpoint['history']
+            best_val_auc = loaded_checkpoint['best_val_auc']
+            patience_counter = loaded_checkpoint['patience_counter']
+
+    # Initial optimizer (frozen or unfrozen depending on resume point)
     freeze_encoders = (start_epoch < config.get('freeze_epochs', 8))
     optimizer = get_optimizer(
         model,
@@ -190,17 +193,18 @@ def train_model(model, train_loader, val_loader, config, device,
         freeze_encoders=freeze_encoders
     )
     scheduler = get_scheduler(optimizer)
-    
-    # Load optimizer state if resuming in same phase
-    if checkpoint_manager and checkpoint_manager.checkpoint_exists() and config.get('resume', True):
-        checkpoint = torch.load(checkpoint_manager.checkpoint_path, map_location=device, weights_only=False)
-        if checkpoint.get('optimizer_state_dict') and \
-           (checkpoint['epoch'] < config.get('freeze_epochs', 8)) == freeze_encoders:
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            print("  ✓ Restored optimizer state")
-        if checkpoint.get('scheduler_state_dict') and \
-           (checkpoint['epoch'] < config.get('freeze_epochs', 8)) == freeze_encoders:
-            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+
+    # Restore optimizer/scheduler state from the already-loaded checkpoint dict
+    if loaded_checkpoint is not None:
+        resumed_in_same_phase = (
+            (loaded_checkpoint['epoch'] < config.get('freeze_epochs', 8)) == freeze_encoders
+        )
+        if resumed_in_same_phase:
+            if loaded_checkpoint.get('optimizer_state_dict'):
+                optimizer.load_state_dict(loaded_checkpoint['optimizer_state_dict'])
+                print("  ✓ Restored optimizer state")
+            if loaded_checkpoint.get('scheduler_state_dict'):
+                scheduler.load_state_dict(loaded_checkpoint['scheduler_state_dict'])
     
     print(f"\nStarting from epoch {start_epoch + 1}/{config['epochs']}")
     print(f"Best AUC so far: {best_val_auc:.3f}")

@@ -93,6 +93,12 @@ class AVDeepfakeDetector(nn.Module):
         super().__init__()
         
         # Modular encoders
+        # Fix 5: both encoders share the same encoder_type string.
+        # get_video_encoder and get_audio_encoder accept the same
+        # type names ('simple', 'improved', 'pretrained') and both
+        # use feature_dim as their output size, so this is correct.
+        # If you ever add encoder types that differ between modalities,
+        # split this into separate video_encoder_type / audio_encoder_type args.
         self.video_encoder = get_video_encoder(encoder_type, feature_dim)
         self.audio_encoder = get_audio_encoder(encoder_type, feature_dim)
         
@@ -202,7 +208,7 @@ def setup_wandb(checkpoint_manager, config, disable=False):
         project=config['project_name'],
         name=f"{config['run_name']}-{config['encoder_type']}-{config['fusion_type']}",
         config=config,
-        tags=[config['encoder_type'], config['fusion_type'], f"{config['samples']}-samples"]
+        tags=[config['encoder_type'], config['fusion_type'], f"{config['samples_per_type']}-samples"]
     )
     print(f"  ✓ Started new W&B run: {wandb.run.id}")
     return wandb.run
@@ -235,7 +241,7 @@ def evaluate_model(model, train_loader, val_loader, device):
 
                     video_path = os.path.join(VAL_DIR, file_path)
 
-                    fake_segments = batch.get('fake_segments', [None])[i]
+                    fake_segments = batch.get('fake_segments', [[]])[i]
                     total_frames  = batch.get('total_frames',  [0])[i]
 
                     if os.path.exists(video_path):
@@ -269,6 +275,80 @@ def evaluate_model(model, train_loader, val_loader, device):
                         'video_pred': sum(window_preds['video']) / len(window_preds['video']),
                         'joint_pred': sum(window_preds['joint']) / len(window_preds['joint']),
                     })
+
+    # --- Build results DataFrame and report metrics ---   # Fix 1: was missing entirely
+    results_df = pd.DataFrame(all_results)
+
+    print("\n--- AUC Scores (val split) ---")
+    val_df_res = results_df[results_df['split'] == 'val']
+    for head, gt_col in [('audio', 'audio_gt'), ('video', 'video_gt'), ('joint', 'audio_gt')]:
+        pred_col = f'{head}_pred'
+        if head == 'joint':
+            gt = ((val_df_res['audio_gt'] == 1) & (val_df_res['video_gt'] == 1)).astype(float)
+        else:
+            gt = val_df_res[gt_col]
+        auc = calculate_auc(gt.values, val_df_res[pred_col].values)
+        print(f"  {head:>6} AUC: {auc:.4f}")
+
+    # Per-type accuracy at 0.5 threshold
+    print("\n--- Per-type joint accuracy (val split, threshold=0.5) ---")
+    for mod_type, grp in val_df_res.groupby('type'):
+        joint_gt  = ((grp['audio_gt'] == 1) & (grp['video_gt'] == 1)).astype(float)
+        joint_acc = accuracy_score(joint_gt, (grp['joint_pred'] >= 0.5).astype(float))
+        print(f"  {mod_type:20s}: {joint_acc:.3f}  (n={len(grp)})")
+
+    # Plots
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    fig.suptitle('Final Evaluation (val split)', fontsize=14, fontweight='bold')
+
+    # 1. Scatter: audio_pred vs video_pred coloured by type
+    ax = axes[0]
+    type_colors = {'real': '#2ecc71', 'audio_modified': '#e74c3c',
+                   'visual_modified': '#3498db', 'both_modified': '#f39c12'}
+    for mt, grp in val_df_res.groupby('type'):
+        ax.scatter(grp['audio_pred'], grp['video_pred'],
+                   label=mt, alpha=0.5, s=10,
+                   color=type_colors.get(mt, '#888888'))
+    ax.set_xlabel('Audio prediction')
+    ax.set_ylabel('Video prediction')
+    ax.set_title('Audio vs Video predictions')
+    ax.legend(fontsize=8)
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+
+    # 2. Joint prediction distribution
+    ax = axes[1]
+    ax.hist(val_df_res['joint_pred'], bins=40, color='#9b59b6', edgecolor='white', alpha=0.8)
+    ax.set_xlabel('Joint prediction score')
+    ax.set_ylabel('Count')
+    ax.set_title('Joint prediction distribution')
+
+    # 3. Confusion matrix (joint, threshold=0.5)
+    ax = axes[2]
+    joint_gt_bin   = ((val_df_res['audio_gt'] == 1) & (val_df_res['video_gt'] == 1)).astype(float)
+    joint_pred_bin = (val_df_res['joint_pred'] >= 0.5).astype(float)
+    cm = confusion_matrix(joint_gt_bin, joint_pred_bin)
+    ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    ax.set_title('Confusion matrix (joint)')
+    ax.set_xlabel('Predicted'); ax.set_ylabel('Actual')
+    ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
+    ax.set_xticklabels(['Fake', 'Real']); ax.set_yticklabels(['Fake', 'Real'])
+    for r in range(cm.shape[0]):
+        for c in range(cm.shape[1]):
+            ax.text(c, r, str(cm[r, c]), ha='center', va='center',
+                    color='white' if cm[r, c] > cm.max() / 2 else 'black')
+
+    plt.tight_layout()
+    plot_path = os.path.join(RESULTS_DIR, 'final_results.png')
+    plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"\nEvaluation plot saved: {plot_path}")
+
+    csv_path = os.path.join(RESULTS_DIR, 'eval_results.csv')
+    results_df.to_csv(csv_path, index=False)
+    print(f"Results CSV saved:     {csv_path}")
+
+    return results_df  # Fix 1: function now returns the DataFrame
 
 
 # =============================================================================
@@ -323,7 +403,6 @@ def save_training_curves(history, output_dir):
     print(f"Training curves saved: {curves_path}")
     
     # Also save history as JSON
-    #import json
     history_path = os.path.join(output_dir, 'training_history.json')
     with open(history_path, 'w') as f:
         json.dump(history, f, indent=2)
@@ -523,16 +602,21 @@ def _run_pipeline(args):
     results_df = evaluate_model(model, train_loader, val_loader, device)
     
     # Log final results
-    if wandb_run:
-        wandb.summary.update({
-            'best_epoch': best_checkpoint['epoch'],
-            'best_auc': best_checkpoint['best_val_auc'],
-            'total_epochs': len(history['train_loss'])
-        })
-        wandb.log({"final_analysis": wandb.Image(os.path.join(CHECKPOINT_DIR, 'final_results.png'))})
-        print(f"\nView run at: {wandb.run.url}")
-        wandb.finish()
-    
+    try:
+        if wandb_run:
+            wandb.summary.update({
+                'best_epoch': best_checkpoint['epoch'],
+                'best_auc': best_checkpoint['best_val_auc'],
+                'total_epochs': len(history['train_loss'])
+            })
+            plot_img_path = os.path.join(RESULTS_DIR, 'final_results.png')
+            if os.path.exists(plot_img_path):
+                wandb.log({"final_analysis": wandb.Image(plot_img_path)})
+            print(f"\nView run at: {wandb.run.url}")
+    finally:
+        if wandb_run:
+            wandb.finish()  # Fix 13: always called even if evaluate_model raised
+
     print("\n" + "=" * 60)
     print("PIPELINE COMPLETE")
     print("=" * 60)
