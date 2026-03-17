@@ -58,36 +58,47 @@ def get_loss_functions(focal_gamma=2.0, focal_alpha=0.25):
     return train_criterion, val_criterion
 
 
-def get_optimizer(model, learning_rate=1e-4, encoder_lr=1e-5, 
+def _unwrap(model):
+    """Unwrap DataParallel to access submodules directly.
+    
+    DataParallel wraps the model so model.video_encoder becomes
+    model.module.video_encoder. This helper handles both cases.
+    """
+    return model.module if isinstance(model, torch.nn.DataParallel) else model
+
+
+def get_optimizer(model, learning_rate=1e-4, encoder_lr=1e-5,
                   weight_decay=1e-4, freeze_encoders=True):
     """Create optimizer with optional encoder freezing"""
+    core = _unwrap(model)  # handles DataParallel transparently
+
     if freeze_encoders:
         # Freeze encoder parameters
-        for param in model.video_encoder.parameters():
+        for param in core.video_encoder.parameters():
             param.requires_grad = False
-        for param in model.audio_encoder.parameters():
+        for param in core.audio_encoder.parameters():
             param.requires_grad = False
-        
+
         optimizer = optim.AdamW(
-            model.fusion_module.parameters(),
+            core.fusion_module.parameters(),
             lr=learning_rate,
             weight_decay=weight_decay
         )
-        trainable = sum(p.numel() for p in model.fusion_module.parameters() if p.requires_grad)
+        trainable = sum(p.numel() for p in core.fusion_module.parameters() if p.requires_grad)
         print(f"✓ Phase 1: Frozen encoders, {trainable:,} params trainable")
     else:
         # Unfreeze all parameters
         for param in model.parameters():
             param.requires_grad = True
-        
+
         optimizer = optim.AdamW([
-            {'params': model.video_encoder.parameters(), 'lr': encoder_lr},
-            {'params': model.audio_encoder.parameters(), 'lr': encoder_lr},
-            {'params': model.fusion_module.parameters(), 'lr': learning_rate}
+            {'params': core.video_encoder.parameters(), 'lr': encoder_lr},
+            {'params': core.audio_encoder.parameters(), 'lr': encoder_lr},
+            {'params': core.fusion_module.parameters(), 'lr': learning_rate}
         ], weight_decay=weight_decay)
         trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"✓ Phase 2: Fine-tuning all, {trainable:,} params trainable")
-    
+
     return optimizer
 
 
@@ -266,7 +277,7 @@ def train_model(model, train_loader, val_loader, config, device,
         if epoch == config.get('freeze_epochs', 8):
             print(f"\n>>> Phase transition: Unfreezing encoders at epoch {epoch + 1}")
             optimizer = get_optimizer(
-                model,
+                model,  # _unwrap() inside get_optimizer handles DataParallel
                 learning_rate=config.get('learning_rate', 1e-4),
                 encoder_lr=config.get('encoder_lr', 1e-5),
                 weight_decay=config.get('weight_decay', 1e-4),

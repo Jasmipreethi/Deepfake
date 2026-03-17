@@ -698,10 +698,20 @@ def _run_pipeline(args):
         hidden_dim=config['hidden_dim'],
         dropout=config['dropout']
     ).to(device)
-    
+
+    # Use all available GPUs via DataParallel — splits each batch across GPUs.
+    # With 2× RTX 3080 (10GB each), effective VRAM doubles to 20GB,
+    # allowing batch_size=8+ without OOM.
+    num_gpus = torch.cuda.device_count()
+    if num_gpus > 1:
+        print(f"  Using {num_gpus} GPUs via DataParallel")
+        model = torch.nn.DataParallel(model)
+        config['batch_size'] = config['batch_size'] * num_gpus  # scale batch with GPU count
+        print(f"  Effective batch size: {config['batch_size']} ({num_gpus} GPUs × {config['batch_size'] // num_gpus})")
+
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Model: {total_params:,} parameters ({total_params * 4 / 1024 / 1024:.2f} MB)")
-    
+
     # Test forward pass
     with torch.no_grad():
         test_v = torch.randn(2, 50, 3, 224, 224).to(device)
