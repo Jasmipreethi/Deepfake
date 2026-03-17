@@ -54,7 +54,7 @@ class TrainConfig:
         "visual_modified": 40
     })
     batch_size: int = 4
-    epochs: int = 50
+    epochs: int = 10
     freeze_epochs: int = 8
     patience: int = 15
     grad_clip: float = 1.0
