@@ -637,18 +637,39 @@ class AVDataset(torch.utils.data.Dataset):
             }
 
 
+def av_collate_fn(batch):
+    """Custom collate function that handles variable-length fake_segments.
+
+    PyTorch's default collator tries to stack every field into a tensor,
+    which fails for fake_segments since each sample has a different number
+    of segments (0, 1, 2, 3...). We stack the tensor fields normally and
+    keep fake_segments and other string fields as plain Python lists.
+    """
+    return {
+        'video':         torch.stack([s['video'] for s in batch]),
+        'audio':         torch.stack([s['audio'] for s in batch]),
+        'labels':        torch.stack([s['labels'] for s in batch]),
+        'type':          [s['type'] for s in batch],
+        'file':          [s['file'] for s in batch],
+        'fake_segments': [s['fake_segments'] for s in batch],  # keep as list
+        'total_frames':  [s['total_frames'] for s in batch],
+    }
+
+
 def create_dataloaders(train_dir, train_manifest, val_dir, val_manifest,
                        batch_size=16, num_workers=None):
     """Create DataLoaders with lazy-loading datasets."""
     if num_workers is None:
         num_workers = min(8, max(2, multiprocessing.cpu_count() // 4))
+
     train_loader = torch.utils.data.DataLoader(
         AVDataset(train_dir, train_manifest),
         batch_size=batch_size,
         shuffle=True,
         drop_last=True,
         num_workers=num_workers,
-        pin_memory=torch.cuda.is_available()  # Fix 10: no-op overhead on CPU-only machines
+        pin_memory=torch.cuda.is_available(),
+        collate_fn=av_collate_fn
     )
 
     val_loader = torch.utils.data.DataLoader(
@@ -656,7 +677,8 @@ def create_dataloaders(train_dir, train_manifest, val_dir, val_manifest,
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=torch.cuda.is_available()  # Fix 10
+        pin_memory=torch.cuda.is_available(),
+        collate_fn=av_collate_fn
     )
-    
+
     return train_loader, val_loader
