@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import time
+from tqdm import tqdm
 
 from sklearn.metrics import roc_auc_score
 
@@ -126,13 +127,17 @@ def calculate_auc(y_true, y_pred):
         return 0.5
 
 
-def train_epoch(model, train_loader, criterion, criterion_hard, optimizer, 
-                device, grad_clip=1.0):
+def train_epoch(model, train_loader, criterion, criterion_hard, optimizer,
+                device, grad_clip=1.0, epoch=None, total_epochs=None):
     """Run one training epoch"""
     model.train()
     total_loss = 0.0
-    
-    for batch in train_loader:
+    num_batches = 0
+
+    desc = f"Epoch {epoch}/{total_epochs} [Train]" if epoch else "Train"
+    pbar = tqdm(train_loader, desc=desc, leave=False, dynamic_ncols=True, unit="batch")
+
+    for batch in pbar:
         video = batch['video'].to(device)
         audio = batch['audio'].to(device)
         labels = batch['labels'].to(device)
@@ -161,21 +166,29 @@ def train_epoch(model, train_loader, criterion, criterion_hard, optimizer,
         optimizer.step()
         
         total_loss += loss.item()
-    
-    return total_loss / len(train_loader)
+        num_batches += 1
+        pbar.set_postfix({'loss': f'{loss.item():.4f}',
+                          'avg':  f'{total_loss / num_batches:.4f}'})
+
+    pbar.close()
+    return total_loss / max(num_batches, 1)
 
 
-def validate(model, val_loader, criterion_hard, device):
+def validate(model, val_loader, criterion_hard, device, epoch=None, total_epochs=None):
     """Run validation"""
     model.eval()
     total_loss = 0.0
-    
+    num_batches = 0
+
     all_preds = {'audio': [], 'video': [], 'joint': []}
     all_labels = {'audio': [], 'video': [], 'joint': []}
     all_types = []
-    
+
+    desc = f"Epoch {epoch}/{total_epochs} [Val]  " if epoch else "Val"
+    pbar = tqdm(val_loader, desc=desc, leave=False, dynamic_ncols=True, unit="batch")
+
     with torch.no_grad():
-        for batch in val_loader:
+        for batch in pbar:
             video = batch['video'].to(device)
             audio = batch['audio'].to(device)
             labels = batch['labels'].to(device)
@@ -199,7 +212,8 @@ def validate(model, val_loader, criterion_hard, device):
                     2.0 * criterion_hard(outputs['joint_pred'], joint_labels))
             
             total_loss += loss.item()
-            
+            num_batches += 1
+
             all_preds['audio'].extend(outputs['audio_pred'].cpu().numpy())
             all_preds['video'].extend(outputs['video_pred'].cpu().numpy())
             all_preds['joint'].extend(outputs['joint_pred'].cpu().numpy())
@@ -207,9 +221,12 @@ def validate(model, val_loader, criterion_hard, device):
             all_labels['video'].extend(video_labels.cpu().numpy())
             all_labels['joint'].extend(joint_labels.cpu().numpy())
             all_types.extend(batch['type'])
-    
-    avg_loss = total_loss / len(val_loader)
-    
+
+            pbar.set_postfix({'loss': f'{loss.item():.4f}'})
+
+    pbar.close()
+    avg_loss = total_loss / max(num_batches, 1)
+
     return avg_loss, all_preds, all_labels, all_types
 
 
@@ -288,12 +305,14 @@ def train_model(model, train_loader, val_loader, config, device,
         # Train
         train_loss = train_epoch(
             model, train_loader, criterion, criterion_hard, optimizer,
-            device, config.get('grad_clip', 1.0)
+            device, config.get('grad_clip', 1.0),
+            epoch=epoch + 1, total_epochs=config['epochs']
         )
-        
+
         # Validate
         val_loss, val_preds, val_labels, val_types = validate(
-            model, val_loader, criterion_hard, device
+            model, val_loader, criterion_hard, device,
+            epoch=epoch + 1, total_epochs=config['epochs']
         )
         
         # Calculate metrics
