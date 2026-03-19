@@ -53,7 +53,7 @@ class TrainConfig:
         "audio_modified": 40,
         "visual_modified": 40
     })
-    batch_size: int = 4
+    batch_size: int = 8
     epochs: int = 10
     freeze_epochs: int = None
     patience: int = None
