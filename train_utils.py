@@ -268,8 +268,20 @@ def train_model(model, train_loader, val_loader, config, device,
             best_val_auc = loaded_checkpoint['best_val_auc']
             patience_counter = loaded_checkpoint['patience_counter']
 
+    # Resolve freeze_epochs — formula: max(1, round(epochs * 0.25))
+    # Override by setting freeze_epochs explicitly in config
+    freeze_epochs = config.get('freeze_epochs') or max(1, round(config['epochs'] * 0.25))
+    config['freeze_epochs'] = freeze_epochs  # store resolved value for phase transition logic
+
+    # Resolve patience — formula: max(5, round(epochs * 0.30))
+    # Override by setting patience explicitly in config
+    patience = config.get('patience') or max(5, round(config['epochs'] * 0.30))
+    config['patience'] = patience
+    print(f"  freeze_epochs={freeze_epochs}, patience={patience} "
+          f"(auto-computed from epochs={config['epochs']})")
+
     # Initial optimizer (frozen or unfrozen depending on resume point)
-    freeze_encoders = (start_epoch < config.get('freeze_epochs', 8))
+    freeze_encoders = (start_epoch < freeze_epochs)
     optimizer = get_optimizer(
         model,
         learning_rate=config.get('learning_rate', 1e-4),

@@ -55,8 +55,8 @@ class TrainConfig:
     })
     batch_size: int = 4
     epochs: int = 10
-    freeze_epochs: int = 8
-    patience: int = 15
+    freeze_epochs: int = None
+    patience: int = None
     grad_clip: float = 1.0
     focal_gamma: float = 2.0   # focus parameter — 0 = standard BCE, 2 = standard Focal Loss
     focal_alpha: float = 0.25  # class balance — 0.25 downweights easy negatives
