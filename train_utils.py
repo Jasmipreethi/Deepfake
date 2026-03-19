@@ -132,6 +132,7 @@ def train_epoch(model, train_loader, criterion, criterion_hard, optimizer,
     """Run one training epoch"""
     model.train()
     total_loss = 0.0
+    total_grad_norm = 0.0
     num_batches = 0
 
     desc = f"Epoch {epoch}/{total_epochs} [Train]" if epoch else "Train"
@@ -162,16 +163,26 @@ def train_epoch(model, train_loader, criterion, criterion_hard, optimizer,
                 2.0 * criterion(outputs['joint_pred'], joint_labels)) # Changed from criterion_hard to criterion for label smoothing
         
         loss.backward()
+
+        # Compute grad norm before clipping for logging
+        grad_norm = sum(
+            p.grad.norm(2).item() ** 2
+            for p in model.parameters() if p.grad is not None
+        ) ** 0.5
+        total_grad_norm += grad_norm
+
         torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         optimizer.step()
-        
+
         total_loss += loss.item()
         num_batches += 1
         pbar.set_postfix({'loss': f'{loss.item():.4f}',
-                          'avg':  f'{total_loss / num_batches:.4f}'})
+                          'avg':  f'{total_loss / num_batches:.4f}',
+                          'gnorm': f'{grad_norm:.2f}'})
 
     pbar.close()
-    return total_loss / max(num_batches, 1)
+    avg_grad_norm = total_grad_norm / max(num_batches, 1)
+    return total_loss / max(num_batches, 1), avg_grad_norm
 
 
 def validate(model, val_loader, criterion_hard, device, epoch=None, total_epochs=None):
@@ -303,7 +314,7 @@ def train_model(model, train_loader, val_loader, config, device,
             scheduler = get_scheduler(optimizer)
         
         # Train
-        train_loss = train_epoch(
+        train_loss, avg_grad_norm = train_epoch(
             model, train_loader, criterion, criterion_hard, optimizer,
             device, config.get('grad_clip', 1.0),
             epoch=epoch + 1, total_epochs=config['epochs']
@@ -334,19 +345,73 @@ def train_model(model, train_loader, val_loader, config, device,
         
         # Logging
         log_dict = {
-            'epoch': epoch,
-            'phase': 'frozen' if epoch < config.get('freeze_epochs', 8) else 'finetune',
-            'train/loss': train_loss,
-            'val/loss': val_loss,
-            'val/auc_joint': val_auc_joint,
-            'val/auc_audio': val_auc_audio,
-            'val/auc_video': val_auc_video,
-            'val/auc_gap': abs(val_auc_audio - val_auc_video),
-            'learning_rate': current_lr,
-            'epoch_time': epoch_time
+            'epoch':          epoch,
+            'phase':          'frozen' if epoch < config.get('freeze_epochs', 8) else 'finetune',
+            'train/loss':     train_loss,
+            'val/loss':       val_loss,
+            'val/auc_joint':  val_auc_joint,
+            'val/auc_audio':  val_auc_audio,
+            'val/auc_video':  val_auc_video,
+            'val/auc_gap':    abs(val_auc_audio - val_auc_video),
+            'learning_rate':  current_lr,
+            'epoch_time':     epoch_time,
+            # Gradient norm — detects exploding/vanishing gradients
+            'train/grad_norm': avg_grad_norm,
         }
-        
+
         if wandb_run:
+            import wandb as _wandb
+
+            # 1. Per-type AUC breakdown
+            mod_types = list(set(val_types))
+            for mod_type in mod_types:
+                mask = [i for i, t in enumerate(val_types) if t == mod_type]
+                if len(mask) > 1:
+                    gt   = [val_labels['joint'][i] for i in mask]
+                    pred = [val_preds['joint'][i]  for i in mask]
+                    log_dict[f'val/auc_{mod_type}'] = calculate_auc(gt, pred)
+
+            # 2. Prediction distribution histograms
+            log_dict['val/hist_joint'] = _wandb.Histogram(
+                [float(p) for p in val_preds['joint']]
+            )
+            log_dict['val/hist_audio'] = _wandb.Histogram(
+                [float(p) for p in val_preds['audio']]
+            )
+            log_dict['val/hist_video'] = _wandb.Histogram(
+                [float(p) for p in val_preds['video']]
+            )
+
+            # 3. Confusion matrix
+            joint_gt_bin   = [int(float(l) > 0.5) for l in val_labels['joint']]
+            joint_pred_bin = [int(float(p) > 0.5) for p in val_preds['joint']]
+            log_dict['val/confusion_matrix'] = _wandb.plot.confusion_matrix(
+                y_true=joint_gt_bin,
+                preds=joint_pred_bin,
+                class_names=['Fake', 'Real']
+            )
+
+            # 4. ROC curve (log every 2 epochs to keep W&B fast)
+            if (epoch + 1) % 2 == 0:
+                joint_gt_flat   = [float(l) for l in val_labels['joint']]
+                joint_pred_flat = [float(p) for p in val_preds['joint']]
+                log_dict['val/roc_curve'] = _wandb.plot.roc_curve(
+                    y_true=joint_gt_flat,
+                    y_probas=[[1 - p, p] for p in joint_pred_flat],
+                    labels=['Fake', 'Real']
+                )
+
+            # 5. GPU memory usage
+            if _wandb and hasattr(_wandb, 'run') and _wandb.run:
+                import torch as _torch
+                if _torch.cuda.is_available():
+                    log_dict['gpu/memory_allocated_gb'] = (
+                        _torch.cuda.memory_allocated() / 1e9
+                    )
+                    log_dict['gpu/memory_reserved_gb'] = (
+                        _torch.cuda.memory_reserved() / 1e9
+                    )
+
             wandb_run.log(log_dict)
         
         # Console output

@@ -96,12 +96,10 @@ def extract_zip_files(data_dir):
     
     extract_dir = os.path.join(data_dir, "extracted_val")
     
-    # Check if already extracted
+    # Check if already extracted — skip automatically, never re-extract
     if os.path.exists(extract_dir) and os.listdir(extract_dir):
-        print(f"✓ Already extracted at: {extract_dir}")
-        user_input = input("  Re-extract? (y/n): ").strip().lower()
-        if user_input != 'y':
-            return extract_dir
+        print(f"✓ Already extracted at: {extract_dir} — skipping.")
+        return extract_dir
     
     os.makedirs(extract_dir, exist_ok=True)
     
@@ -115,12 +113,11 @@ def extract_zip_files(data_dir):
             capture_output=True, text=True
         )
         if result.returncode == 0:
-            print(f"  \u2713 Extracted with p7zip")
-            delete_zip_files(data_dir)
+            print(f"  ✓ Extracted with p7zip")
             return extract_dir
     except FileNotFoundError:
         pass
-
+    
     # Fallback: try unzip
     try:
         result = subprocess.run(
@@ -128,51 +125,13 @@ def extract_zip_files(data_dir):
             capture_output=True, text=True
         )
         if result.returncode == 0:
-            print(f"  \u2713 Extracted with unzip")
-            delete_zip_files(data_dir)
+            print(f"  ✓ Extracted with unzip")
             return extract_dir
     except FileNotFoundError:
         pass
-
-    print("  \u2717 Extraction failed — install p7zip: apt-get install p7zip")
+    
+    print("  ✗ Extraction failed — install p7zip: apt-get install p7zip")
     return None
-
-
-def delete_zip_files(data_dir):
-    """Delete all multi-volume zip parts after successful extraction.
-
-    Finds and removes every val.zip.XXX part file inside data_dir/val/.
-    Prints a summary of how much disk space was freed.
-    """
-    zip_dir = os.path.join(data_dir, "val")
-    if not os.path.exists(zip_dir):
-        return
-
-    zip_parts = sorted(glob.glob(os.path.join(zip_dir, "val.zip.*")))
-    if not zip_parts:
-        print("  No zip parts found to delete.")
-        return
-
-    total_bytes = sum(os.path.getsize(p) for p in zip_parts)
-    total_gb = total_bytes / (1024 ** 3)
-
-    print(f"\nDeleting {len(zip_parts)} zip part(s) ({total_gb:.2f} GB)...")
-    for part in zip_parts:
-        try:
-            os.remove(part)
-            print(f"  \u2713 Deleted: {os.path.basename(part)}")
-        except OSError as e:
-            print(f"  \u2717 Could not delete {os.path.basename(part)}: {e}")
-
-    # Remove the now-empty val/ directory if nothing else remains in it
-    try:
-        if os.path.isdir(zip_dir) and not os.listdir(zip_dir):
-            os.rmdir(zip_dir)
-            print(f"  \u2713 Removed empty directory: {zip_dir}")
-    except OSError:
-        pass
-
-    print(f"  Freed ~{total_gb:.2f} GB of disk space.")
 
 
 def download_and_extract(data_dir):

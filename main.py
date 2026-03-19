@@ -604,11 +604,10 @@ def _run_pipeline(args):
         print("DATA NOT FOUND")
         print("=" * 60)
         print(f"Val directory not found: {VAL_DIR}")
-        dl_input = input("\nDownload val data from Hugging Face? (y/n): ").strip().lower()
-        if dl_input == 'y':
-            extract_dir = download_and_extract(DATA_DIR)
-            if extract_dir:
-                print(f"✓ Data ready at: {extract_dir}")
+        print("\nData not found — downloading automatically from Hugging Face...")
+        extract_dir = download_and_extract(DATA_DIR)
+        if extract_dir:
+            print(f"✓ Data ready at: {extract_dir}")
         else:
             print("Cannot proceed without data. Exiting.")
             return
@@ -647,19 +646,11 @@ def _run_pipeline(args):
     print(f"  Val:   {existing_val:,} / {len(val_df):,} extracted")
     
     if existing_train < len(train_df) or existing_val < len(val_df):
-        user_input = input("\nContinue extracting features? (y = extract more, n = skip to training with existing): ").strip().lower()
-        
-        if user_input == 'y':
-            train_dir, train_manifest, val_dir_feat, val_manifest = extract_all_features(
-                train_df, val_df, VAL_DIR, FEATURES_DIR,
-                use_cache=not args.fresh
-            )
-        else:
-            print("Skipping extraction — using existing features for training.")
-            train_dir = os.path.join(FEATURES_DIR, 'train')
-            val_dir_feat = os.path.join(FEATURES_DIR, 'val')
-            train_manifest = train_manifest_path
-            val_manifest = val_manifest_path
+        print("\nExtracting missing features automatically...")
+        train_dir, train_manifest, val_dir_feat, val_manifest = extract_all_features(
+            train_df, val_df, VAL_DIR, FEATURES_DIR,
+            use_cache=not args.fresh
+        )
     else:
         print("All features already extracted!")
         train_dir = os.path.join(FEATURES_DIR, 'train')
