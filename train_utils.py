@@ -106,10 +106,7 @@ def get_optimizer(model, learning_rate=1e-4, encoder_lr=1e-5,
 def get_scheduler(optimizer, mode='max', factor=0.5, patience=5):
     """Get learning rate scheduler"""
     return optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode=mode,
-        factor=factor,
-        patience=patience
+        optimizer, mode=mode, factor=factor, patience=patience
     )
 
 
@@ -280,7 +277,11 @@ def train_model(model, train_loader, val_loader, config, device,
         weight_decay=config.get('weight_decay', 1e-4),
         freeze_encoders=freeze_encoders
     )
-    scheduler = get_scheduler(optimizer)
+    scheduler = get_scheduler(
+        optimizer,
+        factor=config.get('scheduler_factor', 0.5),
+        patience=config.get('scheduler_patience', 5)
+    )
 
     # Restore optimizer/scheduler state from the already-loaded checkpoint dict
     if loaded_checkpoint is not None:
@@ -311,7 +312,11 @@ def train_model(model, train_loader, val_loader, config, device,
                 weight_decay=config.get('weight_decay', 1e-4),
                 freeze_encoders=False
             )
-            scheduler = get_scheduler(optimizer)
+            scheduler = get_scheduler(
+        optimizer,
+        factor=config.get('scheduler_factor', 0.5),
+        patience=config.get('scheduler_patience', 5)
+    )
         
         # Train
         train_loss, avg_grad_norm = train_epoch(
@@ -371,20 +376,18 @@ def train_model(model, train_loader, val_loader, config, device,
                     pred = [val_preds['joint'][i]  for i in mask]
                     log_dict[f'val/auc_{mod_type}'] = calculate_auc(gt, pred)
 
+            # Helper to safely flatten numpy arrays or scalars to Python floats
+            def _to_float_list(lst):
+                return [float(np.array(x).flat[0]) for x in lst]
+
             # 2. Prediction distribution histograms
-            log_dict['val/hist_joint'] = _wandb.Histogram(
-                [float(p) for p in val_preds['joint']]
-            )
-            log_dict['val/hist_audio'] = _wandb.Histogram(
-                [float(p) for p in val_preds['audio']]
-            )
-            log_dict['val/hist_video'] = _wandb.Histogram(
-                [float(p) for p in val_preds['video']]
-            )
+            log_dict['val/hist_joint'] = _wandb.Histogram(_to_float_list(val_preds['joint']))
+            log_dict['val/hist_audio'] = _wandb.Histogram(_to_float_list(val_preds['audio']))
+            log_dict['val/hist_video'] = _wandb.Histogram(_to_float_list(val_preds['video']))
 
             # 3. Confusion matrix
-            joint_gt_bin   = [int(float(l) > 0.5) for l in val_labels['joint']]
-            joint_pred_bin = [int(float(p) > 0.5) for p in val_preds['joint']]
+            joint_gt_bin   = [int(x > 0.5) for x in _to_float_list(val_labels['joint'])]
+            joint_pred_bin = [int(x > 0.5) for x in _to_float_list(val_preds['joint'])]
             log_dict['val/confusion_matrix'] = _wandb.plot.confusion_matrix(
                 y_true=joint_gt_bin,
                 preds=joint_pred_bin,
@@ -393,8 +396,8 @@ def train_model(model, train_loader, val_loader, config, device,
 
             # 4. ROC curve (log every 2 epochs to keep W&B fast)
             if (epoch + 1) % 2 == 0:
-                joint_gt_flat   = [float(l) for l in val_labels['joint']]
-                joint_pred_flat = [float(p) for p in val_preds['joint']]
+                joint_gt_flat   = _to_float_list(val_labels['joint'])
+                joint_pred_flat = _to_float_list(val_preds['joint'])
                 log_dict['val/roc_curve'] = _wandb.plot.roc_curve(
                     y_true=joint_gt_flat,
                     y_probas=[[1 - p, p] for p in joint_pred_flat],
