@@ -3,28 +3,26 @@ Configuration settings for AV Deepfake Detection Pipeline
 """
 
 import os
+from dataclasses import dataclass, field
+from typing import Optional
 
 # =============================================================================
 # PATHS (configurable via .env or environment variables)
 # =============================================================================
 
-# Defaults are for Google Colab — override in .env for VPS/local
-DATA_DIR = os.environ.get('DATA_DIR', '/content/drive/MyDrive/val')
-VAL_DIR      = os.path.join(DATA_DIR, 'extracted_val', 'val')  
-METADATA_DIR = os.path.join(DATA_DIR, 'extracted_val')        
+DATA_DIR     = os.environ.get('DATA_DIR', '/content/drive/MyDrive/val')
+VAL_DIR      = os.path.join(DATA_DIR, 'extracted_val', 'val')   # raw video files
+METADATA_DIR = os.path.join(DATA_DIR, 'extracted_val')          # val_metadata.json
 CHECKPOINT_DIR = os.environ.get('CHECKPOINT_DIR', '/content/drive/MyDrive/checkpoints')
 
-# Create checkpoint directory if it doesn't exist
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
-# Checkpoint file paths
 CHECKPOINT_PATH = os.path.join(CHECKPOINT_DIR, 'training_checkpoint.pth')
 BEST_MODEL_PATH = os.path.join(CHECKPOINT_DIR, 'best_model.pth')
-FEATURES_DIR = os.path.join(CHECKPOINT_DIR, 'features')
-WANDB_ID_PATH = os.path.join(CHECKPOINT_DIR, 'wandb_run_id.txt')
-RESULTS_DIR = os.path.join(CHECKPOINT_DIR, 'results')
+FEATURES_DIR    = os.path.join(CHECKPOINT_DIR, 'features')
+WANDB_ID_PATH   = os.path.join(CHECKPOINT_DIR, 'wandb_run_id.txt')
+RESULTS_DIR     = os.path.join(CHECKPOINT_DIR, 'results')
 
-# Create directories
 os.makedirs(FEATURES_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
@@ -32,43 +30,41 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # MODEL CONFIGURATION
 # =============================================================================
 
-from dataclasses import dataclass, field
-
 @dataclass
 class ModelConfig:
-    feature_dim: int = 256
-    hidden_dim: int = 512
-    dropout: float = 0.4
+    feature_dim: int   = 256
+    hidden_dim:  int   = 512
+    dropout:     float = 0.4   # applied consistently to all encoders + fusion
 
 @dataclass
 class TrainConfig:
-    project_name: str = "av-deepfake-detection"
-    run_name: str = "full-val-modular"
-    architecture: str = "PretrainedResNet3D_ResNet18"
-    dataset: str = "AVDeepfake1M++"
-    use_all_data: bool = True
-    samples_per_type: dict = field(default_factory=lambda: {
-        "real": 40,
-        "both_modified": 40,
-        "audio_modified": 40,
-        "visual_modified": 40
+    project_name:      str           = "av-deepfake-detection"
+    run_name:          str           = "full-val-modular"
+    architecture:      str           = "PretrainedResNet3D_ResNet18"
+    dataset:           str           = "AVDeepfake1M++"
+    use_all_data:      bool          = True
+    samples_per_type:  dict          = field(default_factory=lambda: {
+        "real": 40, "both_modified": 40,
+        "audio_modified": 40, "visual_modified": 40
     })
-    batch_size: int = 8
-    epochs: int = 10
-    freeze_epochs: int = None
-    patience: int = None
-    grad_clip: float = 1.0
-    focal_gamma: float = 2.0   # focus parameter — 0 = standard BCE, 2 = standard Focal Loss
-    focal_alpha: float = 0.25  # class balance — 0.25 downweights easy negatives
-    val_split: float = 0.2
-    checkpoint_freq: int = 1
-    resume: bool = True
+    batch_size:        int            = 8
+    epochs:            int            = 10
+    freeze_epochs:     Optional[int]  = None  # auto = max(1, round(epochs * 0.25))
+    patience:          Optional[int]  = None  # auto = max(5, round(epochs * 0.30))
+    grad_clip:         float          = 1.0
+    focal_gamma:       float          = 2.0   # 0 = BCE, 2 = standard Focal Loss
+    focal_alpha:       float          = 0.25  # class balance weight
+    val_split:         float          = 0.2
+    checkpoint_freq:   int            = 1
+    resume:            bool           = True
+    scheduler_factor:  float          = 0.5   # LR reduction factor
+    scheduler_patience: int           = 5     # epochs before LR drop
 
 @dataclass
 class OptimConfig:
     learning_rate: float = 1e-4
-    encoder_lr: float = 1e-5
-    weight_decay: float = 1e-4
+    encoder_lr:    float = 1e-5
+    weight_decay:  float = 1e-4
 
 MODEL_CONFIG = ModelConfig()
 TRAIN_CONFIG = TrainConfig()
@@ -79,10 +75,17 @@ OPTIM_CONFIG = OptimConfig()
 # =============================================================================
 
 FEATURE_CONFIG = {
-    'sr': 16000,           # Audio sample rate
-    'fps': 25,             # Video FPS
-    'duration': 2.0,       # Clip duration in seconds
-    'num_frames': 50,      # 2s * 25fps
-    'img_size': 224,       # Video frame size
-    'audio_samples': 32000 # 2s * 16000Hz
+    'sr':            16000,   # audio sample rate
+    'fps':           25,      # video FPS
+    'duration':      2.0,     # clip duration in seconds
+    'num_frames':    50,      # 2s * 25fps
+    'img_size':      224,     # video frame size (ResNet input)
+    'audio_samples': 32000,   # 2s * 16000Hz
+    'n_fft':         1024,    # FFT window size
+    'hop_length':    512,     # FFT hop length
 }
+
+# Derived — do NOT hardcode 63 anywhere else
+FEATURE_CONFIG['target_t'] = (
+    FEATURE_CONFIG['audio_samples'] - FEATURE_CONFIG['n_fft']
+) // FEATURE_CONFIG['hop_length'] + 1  # = 63

@@ -30,7 +30,7 @@ class SimpleAudioEncoder(nn.Module):
 
 class ImprovedAudioEncoder(nn.Module):
     """Improved 2D CNN for audio with batch normalization"""
-    def __init__(self, feature_dim=128):
+    def __init__(self, feature_dim=128, dropout=0.4):
         super().__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1),
@@ -51,7 +51,7 @@ class ImprovedAudioEncoder(nn.Module):
         self.fc = nn.Sequential(
             nn.Flatten(),
             nn.Linear(128 * 4 * 4, feature_dim),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout),
             nn.ReLU()
         )
 
@@ -65,7 +65,7 @@ class ImprovedAudioEncoder(nn.Module):
 
 class PretrainedAudioEncoder(nn.Module):
     """Pre-trained ResNet18 for audio spectrogram"""
-    def __init__(self, feature_dim=256):
+    def __init__(self, feature_dim=256, dropout=0.4):
         super().__init__()
         self.backbone = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)   
         
@@ -79,32 +79,33 @@ class PretrainedAudioEncoder(nn.Module):
         self.backbone.fc = nn.Sequential(
             nn.Linear(in_features, 512),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout),
             nn.Linear(512, feature_dim)
         )
 
     def forward(self, x):
-        # x: (B, 1, 128, 87) -> resize to 224x224 for ResNet
+        # x: (B, 1, 128, T) -> resize to 224x224 for ResNet
         x = F.interpolate(x, size=(224, 224), mode='bilinear', align_corners=False)
         return self.backbone(x)
 
 
-def get_audio_encoder(encoder_type='pretrained', feature_dim=256):
+def get_audio_encoder(encoder_type='pretrained', feature_dim=256, dropout=0.4):
     """
     Factory function to get audio encoder by type
-    
+
     Args:
         encoder_type: 'simple', 'improved', or 'pretrained'
         feature_dim: output feature dimension
-    
+        dropout: dropout rate passed from config
+
     Returns:
         Audio encoder instance
     """
     if encoder_type == 'simple':
         return SimpleAudioEncoder(output_dim=feature_dim)
     elif encoder_type == 'improved':
-        return ImprovedAudioEncoder(feature_dim=feature_dim)
+        return ImprovedAudioEncoder(feature_dim=feature_dim, dropout=dropout)
     elif encoder_type == 'pretrained':
-        return PretrainedAudioEncoder(feature_dim=feature_dim)
+        return PretrainedAudioEncoder(feature_dim=feature_dim, dropout=dropout)
     else:
         raise ValueError(f"Unknown encoder type: {encoder_type}")

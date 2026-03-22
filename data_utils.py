@@ -17,7 +17,7 @@ import torch
 import multiprocessing
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
-from config import VAL_DIR, FEATURE_CONFIG
+from config import VAL_DIR, METADATA_DIR, FEATURE_CONFIG
 
 # Fix 9: transforms moved inside extract_av_features to avoid pickle
 # errors when num_workers > 0 on Windows / some macOS versions.
@@ -251,8 +251,8 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
         mel_transform = torchaudio.transforms.MelSpectrogram(
             sample_rate=cfg['sr'],
             n_mels=128,
-            n_fft=1024,
-            hop_length=512
+            n_fft=cfg['n_fft'],
+            hop_length=cfg['hop_length']
         )
         db_transform = torchaudio.transforms.AmplitudeToDB(top_db=80)
         mel_spec = mel_transform(waveform)
@@ -270,7 +270,7 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
 
         # Force fixed time dimension — mel output can vary by 1-2 frames
         # depending on exact waveform length. Pad or trim to exactly 63.
-        target_t = 63
+        target_t = cfg['target_t']
         t = audio_tensor.shape[2]
         if t < target_t:
             audio_tensor = torch.nn.functional.pad(audio_tensor, (0, target_t - t))
@@ -279,7 +279,7 @@ def extract_av_features(video_path, fake_segments=None, total_frames=0, cfg=FEAT
 
     except Exception as e:
         # Fallback for corrupted/unreadable audio: use zero tensor
-        audio_tensor = torch.zeros(1, 128, 63)
+        audio_tensor = torch.zeros(1, 128, cfg['target_t'])
     
     return video_tensor, audio_tensor
         

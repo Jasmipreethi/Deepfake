@@ -29,7 +29,7 @@ class SimpleVideoEncoder(nn.Module):
 
 class ImprovedVideoEncoder(nn.Module):
     """Improved 3D CNN for video with batch normalization"""
-    def __init__(self, feature_dim=128):
+    def __init__(self, feature_dim=128, dropout=0.4):
         super().__init__()
         self.conv1 = nn.Sequential(
             nn.Conv3d(3, 32, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3)),
@@ -52,7 +52,7 @@ class ImprovedVideoEncoder(nn.Module):
         self.fc = nn.Sequential(
             nn.Flatten(),
             nn.Linear(128 * 4 * 4, feature_dim),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout),
             nn.ReLU()
         )
 
@@ -67,7 +67,7 @@ class ImprovedVideoEncoder(nn.Module):
 
 class PretrainedVideoEncoder(nn.Module):
     """Pre-trained ResNet3D-18 for video"""
-    def __init__(self, feature_dim=256):
+    def __init__(self, feature_dim=256, dropout=0.4):
         super().__init__()
         self.backbone = r3d_18(weights=R3D_18_Weights.KINETICS400_V1)
         
@@ -76,7 +76,7 @@ class PretrainedVideoEncoder(nn.Module):
         self.backbone.fc = nn.Sequential(
             nn.Linear(in_features, 512),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(dropout),
             nn.Linear(512, feature_dim)
         )
 
@@ -108,22 +108,23 @@ class SimpleVideoProcessor(nn.Module):
         return frame_features.mean(dim=1)  # (B, D)
 
 
-def get_video_encoder(encoder_type='pretrained', feature_dim=256):
+def get_video_encoder(encoder_type='pretrained', feature_dim=256, dropout=0.4):
     """
     Factory function to get video encoder by type
-    
+
     Args:
         encoder_type: 'simple', 'improved', or 'pretrained'
         feature_dim: output feature dimension
-    
+        dropout: dropout rate passed from config
+
     Returns:
         Video encoder instance
     """
     if encoder_type == 'simple':
         return SimpleVideoProcessor(output_dim=feature_dim)
     elif encoder_type == 'improved':
-        return ImprovedVideoEncoder(feature_dim=feature_dim)
+        return ImprovedVideoEncoder(feature_dim=feature_dim, dropout=dropout)
     elif encoder_type == 'pretrained':
-        return PretrainedVideoEncoder(feature_dim=feature_dim)
+        return PretrainedVideoEncoder(feature_dim=feature_dim, dropout=dropout)
     else:
         raise ValueError(f"Unknown encoder type: {encoder_type}")

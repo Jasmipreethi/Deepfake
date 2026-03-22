@@ -99,8 +99,8 @@ class AVDeepfakeDetector(nn.Module):
         # use feature_dim as their output size, so this is correct.
         # If you ever add encoder types that differ between modalities,
         # split this into separate video_encoder_type / audio_encoder_type args.
-        self.video_encoder = get_video_encoder(encoder_type, feature_dim)
-        self.audio_encoder = get_audio_encoder(encoder_type, feature_dim)
+        self.video_encoder = get_video_encoder(encoder_type, feature_dim, dropout)
+        self.audio_encoder = get_audio_encoder(encoder_type, feature_dim, dropout)
         
         # Cross-modal fusion
         self.fusion_module = get_fusion_module(

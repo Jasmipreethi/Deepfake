@@ -7,21 +7,25 @@ This pipeline detects deepfake videos using **both audio and video** modalities.
 2. Is the **video** real or fake?
 3. Is the **whole thing** authentic? (joint prediction)
 
+Scores are between 0 and 1 — **1.0 = real, 0.0 = fake**.
+
 ---
 
 ## File Map
 
 | File | Role |
 |---|---|
-| [config.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/config.py) | All paths, hyperparameters, and feature settings |
-| [data_utils.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/data_utils.py) | Metadata loading, speaker-based splitting, feature extraction, dataset class |
-| [audio.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/audio.py) | Audio encoder (ResNet18 on mel-spectrograms) |
-| [video.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/video.py) | Video encoder (ResNet3D-18 on frame sequences) |
-| [cross_modal.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/cross_modal.py) | Fusion module (combines audio + video → predictions) |
-| [train_utils.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/train_utils.py) | Training loop, validation, loss functions, optimizer setup |
-| [checkpoint_utils.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/checkpoint_utils.py) | Save/load checkpoints for resumable training |
-| [download_data.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/download_data.py) | Download val data from Hugging Face + extract zips |
-| [main.py](file:///Users/jasmi/Desktop/AV-Deepfake1M/Try/main.py) | Entry point — ties everything together |
+| `config.py` | All paths, hyperparameters, and feature settings |
+| `data_utils.py` | Metadata loading, speaker-based splitting, parallel feature extraction, dataset class |
+| `audio.py` | Audio encoder (ResNet18 on mel-spectrograms) |
+| `video.py` | Video encoder (ResNet3D-18 on frame sequences) |
+| `cross_modal.py` | Fusion module (combines audio + video → predictions) |
+| `train_utils.py` | Training loop, validation, loss functions, optimizer, W&B logging |
+| `checkpoint_utils.py` | Save/load checkpoints for resumable training |
+| `download_data.py` | Download val data from Hugging Face + extract zips |
+| `main.py` | Entry point — ties everything together |
+| `inference.py` | Standalone inference on new videos (no training dependencies) |
+| `analyze_data.py` | Dataset analysis and distribution plots |
 
 ---
 
@@ -29,376 +33,354 @@ This pipeline detects deepfake videos using **both audio and video** modalities.
 
 ### Step 1 — Load Metadata
 ```
-main.py:344  →  data_utils.load_metadata()
+main.py  →  data_utils.load_metadata(METADATA_DIR)
 ```
-Reads `val_metadata.json` from the validation directory. Each entry has:
-- `file` — relative video path (e.g. `source/speaker_id/clip.mp4`)
+Reads `val_metadata.json`. Each entry has:
+- `file` — relative video path (e.g. `vox_celeb_2/id01234/clip.mp4`)
 - `modify_type` — `real`, `audio_modified`, `visual_modified`, or `both_modified`
 - `audio_frames` / `video_frames` — frame counts
 - `fake_segments` — `[[start_sec, end_sec], ...]` timestamps of manipulated regions
 
 ### Step 2 — Speaker-Based Sampling & Split
 ```
-main.py:345  →  data_utils.sample_videos()
+main.py  →  data_utils.sample_videos()
 ```
 
-```mermaid
-flowchart TD
-    A["All videos in metadata"] --> B["Filter: audio_frames > 0"]
-    B --> C{"use_all_data?"}
-    C -->|True| D["Use all videos"]
-    C -->|False| E["Sample N per type"]
-    D --> F["Extract speaker IDs<br/>from file paths"]
-    E --> F
-    F --> G["GroupShuffleSplit<br/>by speaker (80/20)"]
-    G --> H["Train set<br/>(speakers A, B, C...)"]
-    G --> I["Val set<br/>(speakers X, Y, Z...)<br/>ZERO speaker overlap"]
+```
+All videos → Filter (audio_frames > 0 AND video_frames > 0)
+           → Extract speaker IDs from file paths
+           → GroupShuffleSplit by speaker (80/20)
+           → Train set (speakers A, B, C...)
+           → Val set   (speakers X, Y, Z...) — ZERO speaker overlap
 ```
 
-**Why speaker-based?** If the same person's videos appear in both train and val, the model can "cheat" by recognizing the person's face/voice instead of detecting manipulation. `GroupShuffleSplit` ensures every video from one speaker stays in the **same** split.
+**Why speaker-based?** If the same speaker appears in both train and val, the model cheats by recognising the face/voice instead of detecting manipulation. Speaker-based split forces it to learn actual deepfake artifacts.
 
-The output prints:
-- How many speakers in train vs val
-- Speaker overlap count (should always be **0**)
-- Per-type video counts in each split
-
-### Step 3 — Feature Extraction
+### Step 3 — Feature Extraction (28 CPU cores in parallel)
 ```
-main.py:352  →  data_utils.extract_all_features()  →  process_split()  →  extract_av_features()
+main.py  →  data_utils.extract_all_features()  →  process_split_to_disk()
 ```
 
-For each video, a **2-second window** is extracted:
+For each video, a **2-second window** is extracted and saved as a `.pt` file:
 
 | | How it works | Output shape |
 |---|---|---|
-| **Window** | If fake: starts at first fake segment. If real: takes the middle 2 seconds | — |
-| **Video** | Read 50 frames (2s × 25fps), resize to 224×224, normalize to [0,1] | `(50, 3, 224, 224)` |
-| **Audio** | Load 2s at 16kHz, compute 128-bin mel-spectrogram in dB | `(1, 128, 87)` |
+| **Window** | Fake video: start of first fake segment. Real video: middle 2 seconds | — |
+| **Video** | 50 frames (2s × 25fps) → resize 224×224 → augment → ImageNet normalise | `(50, 3, 224, 224)` |
+| **Audio** | Load at 16kHz → mel-spectrogram (128 bins) → dB → normalise | `(1, 128, 63)` |
 
-Features are **cached to pickle files** — if they exist, extraction is skipped on re-runs. Use `--fresh` flag to force re-extraction.
+**Labels:**
 
-**Labels** per video type:
-
-| Type | Audio label | Video label | Joint label |
+| Type | Audio | Video | Joint |
 |---|---|---|---|
-| `real` | 1 (real) | 1 (real) | 1 (real) |
-| `audio_modified` | 0 (fake) | 1 (real) | 0 (fake) |
-| `visual_modified` | 1 (real) | 0 (fake) | 0 (fake) |
-| `both_modified` | 0 (fake) | 0 (fake) | 0 (fake) |
+| `real` | 1 | 1 | 1 |
+| `audio_modified` | 0 | 1 | 0 |
+| `visual_modified` | 1 | 0 | 0 |
+| `both_modified` | 0 | 0 | 0 |
+
+**Parallelism:** 28 workers (`cpu_count - 4`) extract videos simultaneously using `multiprocessing.Pool` with fork context. Each worker re-seeds its RNG using the video index for independent augmentation.
+
+**Resume safety:** Manifest JSON checkpointed every 500 videos. Failed files tracked in `failed.json` and skipped on restart. Pool submits work in batches of 50 — a single worker crash only loses that batch.
 
 ### Step 4 — Model Architecture
 ```
-main.py:375  →  AVDeepfakeDetector()
+main.py  →  AVDeepfakeDetector()
 ```
 
-```mermaid
-flowchart LR
-    V["Video<br/>(B, 50, 3, 224, 224)"] --> VE["ResNet3D-18<br/>(pretrained Kinetics)"]
-    A["Audio mel-spec<br/>(B, 1, 128, 87)"] --> UP["Resize to<br/>(B, 1, 224, 224)"] --> AE["ResNet18<br/>(pretrained ImageNet)"]
-    VE --> |"256-d"| CAT["Concatenate<br/>512-d"]
-    AE --> |"256-d"| CAT
-    CAT --> FUS["MLP Fusion<br/>512 → ReLU → Drop<br/>512 → ReLU → Drop"]
-    FUS --> AH["Audio Head → sigmoid"]
-    FUS --> VH["Video Head → sigmoid"]
-    FUS --> JH["Joint Head → sigmoid"]
+```
+Video (B, 50, 3, 224, 224) → ResNet3D-18 (Kinetics pretrained) → 256-d
+Audio (B, 1, 128, 63)      → resize (224,224) → ResNet18 (ImageNet pretrained) → 256-d
+                                                                ↓
+                              [CLS], video_proj(512), audio_proj(512) + pos_embed
+                                            ↓
+                              Transformer Encoder (2 layers, 8 heads, GELU, pre-norm)
+                                            ↓
+                              [CLS] output (512-d)
+                              ├→ Audio Head → sigmoid → audio_pred
+                              ├→ Video Head → sigmoid → video_pred
+                              └→ Joint Head → sigmoid → joint_pred
 ```
 
-- All three heads output a value between 0 and 1 (0 = fake, 1 = real)
-- Pretrained backbones provide strong initial features even with limited data
+All architectural dimensions (`num_heads`, `num_layers`, `ff_multiplier`, `encoder_fc_dim`) are set in `config.py` — no hardcodes in model files.
+
+**Fusion auto-selection:**
+- GPU → `TransformerFusion` (cross-modal self-attention)
+- CPU → `PretrainedFusion` (MLP, faster without GPU)
 
 ### Step 5 — Training
 ```
-main.py:408  →  train_utils.train_model()
+main.py  →  train_utils.train_model()
 ```
 
-**Two-phase approach:**
+**Two-phase training:**
 
 | Phase | Epochs | What trains | Why |
 |---|---|---|---|
-| **Phase 1** (Frozen) | 1–8 | Only the fusion MLP | Prevents destroying pretrained features while the fusion layer learns to combine them |
-| **Phase 2** (Fine-tune) | 9–50 | Everything (encoders at low LR) | Adapts pretrained features to deepfake-specific patterns |
+| **Phase 1 (Frozen)** | `1 → freeze_epochs` | Only fusion module | Fusion starts random — noisy gradients would corrupt pretrained encoder features |
+| **Phase 2 (Fine-tune)** | `freeze_epochs → epochs` | Everything | Encoders adapt to deepfake patterns at 10× lower LR than fusion |
+
+`freeze_epochs` and `patience` are auto-computed:
+```python
+freeze_epochs = max(1, round(epochs * 0.25))   # 25% of total
+patience      = max(5, round(epochs * 0.30))   # 30% of total
+```
+Override by setting explicitly in `config.py`.
 
 **Loss function:**
 ```
-Loss = BCE(audio_pred, audio_label)
-     + BCE(video_pred, video_label)  
-     + 2× BCE(joint_pred, joint_label)    ← weighted higher
+Loss = FocalLoss(audio_pred, audio_label)
+     + FocalLoss(video_pred, video_label)
+     + joint_loss_weight × FocalLoss(joint_pred, joint_label)
 ```
-- Training uses **label smoothing** (5%) to prevent overconfidence
-- Validation uses standard BCE (no smoothing)
-- Joint loss is weighted 2× because it's the primary detection target
 
-**Other training details:**
-- **Optimizer:** AdamW (fusion: lr=1e-4, encoders: lr=1e-5, weight_decay=1e-4)
-- **Scheduler:** ReduceLROnPlateau — halves LR after 5 epochs of no val loss improvement
-- **Gradient clipping:** max norm 1.0
-- **Early stopping:** stops after 15 epochs with no AUC improvement
-- **Checkpoints:** saved every epoch — training is fully resumable
+Focal Loss `(1-p)^gamma × BCE` downweights easy examples (obvious fakes/reals) and focuses training on hard ambiguous cases (subtle manipulations). `joint_loss_weight=2.0` by default — joint head is the primary detection target.
+
+**Other details:**
+- **Optimizer:** AdamW (fusion: `learning_rate=1e-4`, encoders: `encoder_lr=1e-5`, `weight_decay=1e-4`)
+- **Scheduler:** ReduceLROnPlateau — halves LR after `scheduler_patience=5` epochs of no val AUC improvement
+- **Gradient clipping:** `grad_clip=1.0` — prevents exploding gradients from 3D convolutions
+- **DataParallel:** automatically uses all available GPUs — batch size scales with GPU count
+- **Progress bars:** tqdm shows live loss, running average, and gradient norm per batch
+- **Checkpoints:** saved every epoch — fully resumable (model + optimizer + scheduler + RNG states)
 
 ### Step 6 — Evaluation
 ```
-main.py:423  →  evaluate_model()
+main.py  →  evaluate_model()
 ```
 
-Loads the **best model** (by joint AUC) and produces:
-1. **Scatter plot** — audio_pred vs video_pred, colored by type (should show 4 distinct clusters)
-2. **Per-type accuracy** — bar chart for audio/video/joint
-3. **Prediction distribution** — histogram of joint_pred on val set
-4. **Confusion matrix** — 2×2 for joint fake/real classification
-5. **AUC scores** — for audio, video, and joint predictions
+Loads `best_model.pth` (best val joint AUC) and runs inference using `eval_n_windows=3` windows averaged per video for robustness. Produces:
+1. **Scatter plot** — audio_pred vs video_pred, coloured by manipulation type
+2. **Prediction distribution** — histogram of joint predictions (bimodal = confident model)
+3. **Confusion matrix** — true/false positives and negatives
+4. **AUC scores** — audio, video, and joint
+5. **Per-type accuracy** — breakdown by `real`, `audio_modified`, `visual_modified`, `both_modified`
+6. `eval_results.csv` — every prediction saved for offline analysis
 
 ---
 
-## The Speaker-Based Split — Why It Matters
+## W&B Monitoring Guide
 
-### Before (random split)
-```
-Train: [speaker_A_vid1, speaker_B_vid1, speaker_A_vid2, speaker_C_vid1]
-Val:   [speaker_A_vid3, speaker_B_vid2]
-                ↑ LEAK: speaker A is in both splits
-```
-The model could score high by recognizing faces/voices it saw during training, not by detecting manipulation.
+The pipeline logs rich metrics to Weights & Biases. Here is what each graph tells you and how to interpret it.
 
-### After (speaker-based split)
-```
-Train: [speaker_A_vid1, speaker_A_vid2, speaker_A_vid3, speaker_B_vid1]
-Val:   [speaker_C_vid1, speaker_C_vid2, speaker_D_vid1]
-                ✓ ZERO overlap: val speakers are completely new
-```
-The model **must** learn manipulation artifacts, because it has never seen these speakers before.
+### Training Dynamics
 
-> [!IMPORTANT]
-> The accuracy numbers with speaker-based split will likely be **lower** than with random split. This is expected — it means the random split was giving an **inflated** score. The speaker-based numbers are the honest ones.
+| W&B Metric | What it measures | How to interpret |
+|---|---|---|
+| `train/loss` vs `val/loss` | Loss per epoch for train and val | Growing gap = overfitting. Should converge together. |
+| `val/overfit_gap` | `train_loss - val_loss` | > 0.1 = overfitting. Negative = underfitting. Ideal: near 0. |
+| `train/grad_norm` | Average gradient magnitude per epoch | > 5 = exploding gradients (increase `grad_clip`). Near 0 = vanishing (LR too low). Healthy range: 0.1–2.0. |
+| `learning_rate` | Current LR over time | Drops show when ReduceLROnPlateau fired. Each drop = model near a plateau. |
+| `epoch_time_s` | Seconds per epoch | Useful for estimating total training time. |
+| `phase` | `frozen` or `finetune` | Shows the phase transition point — expect a temporary loss spike here as encoders unfreeze. |
+
+### Detection Quality
+
+| W&B Metric | What it measures | How to interpret |
+|---|---|---|
+| `val/auc_joint` | Primary metric — overall deepfake detection | > 0.9 = excellent, 0.7–0.9 = good, 0.5–0.7 = poor, 0.5 = random chance. |
+| `val/auc_audio` | Audio-only detection | Compares to video — large gap means one modality is ignored. |
+| `val/auc_video` | Video-only detection | Should improve alongside audio for balanced learning. |
+| `val/accuracy_joint` | Accuracy at `eval_threshold=0.5` | More interpretable than AUC but threshold-dependent. AUC is more reliable. |
+| `val/auc_gap` | `|audio_auc - video_auc|` | > 0.1 = model leaning on one modality. Ideally < 0.05. |
+| `val/confidence` | Mean `|pred - 0.5| × 2` | 0 = always predicting exactly 0.5 (not learning). 1 = always decisive. Should increase over training. |
+
+### Dataset & Per-Type Insights
+
+| W&B Graph | What it shows | How to interpret |
+|---|---|---|
+| `val/auc_type/real` | AUC for correctly identifying real videos | Low = model has false positive problem (flagging real videos as fake). |
+| `val/auc_type/audio_modified` | AUC for detecting audio-only fakes | Low = model struggles with audio manipulation specifically. Improve audio encoder or augmentation. |
+| `val/auc_type/visual_modified` | AUC for detecting video-only fakes | Low = model struggles with visual manipulation. ResNet3D features may need more fine-tuning. |
+| `val/auc_type/both_modified` | AUC for detecting both-modality fakes | Usually highest — both modalities are fake so it's the easiest case. |
+| `val/accuracy_type/*` | Per-type accuracy alongside AUC | Cross-reference with AUC — if accuracy is high but AUC is low, the threshold may need adjustment. |
+| `val/per_type_auc` bar chart | All four types side-by-side | Quickly shows which type is hardest. The shortest bar is your weakest area. |
+| `val/prediction_scatter` | Audio score vs video score, coloured by type | 4 distinct clusters = model correctly distinguishes all manipulation types. Overlapping clusters = confusion between types. This is the most informative single graph. |
+
+### Prediction Distributions
+
+| W&B Graph | What it shows | How to interpret |
+|---|---|---|
+| `val/predictions/joint` histogram | Distribution of joint predictions | **Bimodal** (peaks near 0 and 1) = confident, well-trained model. **Unimodal at 0.5** = model is uncertain and not learning. Should become more bimodal as training progresses. |
+| `val/predictions/audio` histogram | Distribution of audio predictions | Same interpretation as joint. Should have peaks near 0 (for fakes) and 1 (for reals). |
+| `val/predictions/video` histogram | Distribution of video predictions | Same. Compare to audio histogram — if one is flatter, that modality needs more work. |
+
+### Model Diagnostics
+
+| W&B Graph | What it shows | How to interpret |
+|---|---|---|
+| `val/confusion_matrix` | True/false positives and negatives | High false negatives = missing deepfakes (dangerous). High false positives = over-flagging real videos. Adjust `eval_threshold` to trade off between the two. |
+| `val/roc_curve` (every 2 epochs) | Performance across all thresholds | Area under curve = AUC. A curve hugging the top-left corner is ideal. If the curve barely rises above the diagonal, the model is near random. |
+| `val/training_health` table | All key metrics with plain-English status | Single table per epoch showing Good/Low/Balanced/Overfitting/OK for each metric. Check this first for a quick health check. |
+
+### Hardware
+
+| W&B Metric | What it shows | How to interpret |
+|---|---|---|
+| `gpu/memory_allocated_gb` | VRAM actively used | If increasing epoch-over-epoch = memory leak. Stable = healthy. |
+| `gpu/memory_reserved_gb` | VRAM held by PyTorch allocator | Higher than allocated is normal (PyTorch caches). If reserved ≈ total VRAM = OOM risk. |
+
+---
+
+## Reading a Training Run — Checklist
+
+After each run, check these in order:
+
+1. **Did `val/auc_joint` improve?** If stuck at 0.5 after 3+ epochs, something is wrong (check data loading, labels, loss).
+2. **Is `val/overfit_gap` growing?** If train loss drops but val loss rises, reduce `batch_size`, increase `dropout`, or add more data.
+3. **Is `val/auc_gap` large?** If > 0.1, one modality is being ignored. Check augmentation balance and encoder learning rates.
+4. **Are predictions bimodal?** Open `val/predictions/joint` histogram. Flat distribution = model not converging.
+5. **Which type has lowest AUC?** Open `val/per_type_auc` bar chart. The lowest bar tells you where to focus improvement.
+6. **Is the scatter plot showing 4 clusters?** Open `val/prediction_scatter`. If clusters overlap, the model can't distinguish between types.
+7. **Did grad norm explode?** If `train/grad_norm` spikes above 5, reduce `grad_clip` or `learning_rate`.
+
+---
+
+## Config Quick Reference
+
+All values configurable in `config.py` — no hardcodes in model files.
+
+### Model Architecture
+
+| Setting | Default | Effect |
+|---|---|---|
+| `feature_dim` | 256 | Encoder output size — larger = more expressive but slower |
+| `hidden_dim` | 512 | Fusion module width — 2× feature_dim is standard |
+| `dropout` | 0.4 | Applied to all encoders and fusion — increase if overfitting |
+| `encoder_fc_dim` | 512 | Intermediate FC inside encoder heads |
+| `num_heads` | 8 | Transformer attention heads — must divide `hidden_dim` evenly |
+| `num_layers` | 2 | Transformer encoder depth — more layers = more capacity |
+| `ff_multiplier` | 4 | Feedforward dim = `hidden_dim × ff_multiplier` |
+| `n_mels` | 128 | Mel frequency bins — more = finer frequency resolution |
+| `top_db` | 80 | Audio dynamic range in dB — lower = more compression |
+
+### Training
+
+| Setting | Default | Effect |
+|---|---|---|
+| `epochs` | 10 | Max training epochs |
+| `freeze_epochs` | auto (25%) | Epochs with frozen encoders — set `None` for formula |
+| `patience` | auto (30%) | Early stopping patience — set `None` for formula |
+| `batch_size` | 8 | Per-GPU batch size — DataParallel scales this × num_gpus |
+| `focal_gamma` | 2.0 | Focus on hard examples — 0 = standard BCE |
+| `focal_alpha` | 0.25 | Class balance weight |
+| `joint_loss_weight` | 2.0 | Relative weight of joint head in total loss |
+| `learning_rate` | 1e-4 | Fusion module learning rate |
+| `encoder_lr` | 1e-5 | Encoder learning rate (10× lower to preserve pretrained features) |
+| `weight_decay` | 1e-4 | L2 regularisation |
+| `grad_clip` | 1.0 | Max gradient norm before clipping |
+| `scheduler_factor` | 0.5 | LR multiplier when plateau detected |
+| `scheduler_patience` | 5 | Epochs before LR reduction |
+
+### Evaluation
+
+| Setting | Default | Effect |
+|---|---|---|
+| `eval_threshold` | 0.5 | Decision boundary for real/fake verdict |
+| `eval_n_windows` | 3 | Windows averaged per video — more = more accurate, slower |
+
+### Augmentation
+
+| Setting | Default | Effect |
+|---|---|---|
+| `aug_freq_mask` | 20 | SpecAugment max frequency mask (mel bins) |
+| `aug_time_mask` | 15 | SpecAugment max time mask (frames) |
+| `aug_brightness` | 0.2 | Video brightness jitter ± range |
+| `aug_contrast_min` | 0.8 | Video contrast jitter min multiplier |
+| `aug_contrast_max` | 1.2 | Video contrast jitter max multiplier |
+
+### Feature Extraction
+
+| Setting | Default | Effect |
+|---|---|---|
+| `sr` | 16000 | Audio sample rate (Hz) |
+| `fps` | 25 | Video frames per second |
+| `num_frames` | 50 | Frames per clip (2s × 25fps) |
+| `img_size` | 224 | Frame resize resolution |
+| `n_fft` | 1024 | FFT window size |
+| `hop_length` | 512 | FFT hop length — `target_t` is derived automatically |
 
 ---
 
 ## How to Run
 
 ```bash
-# Full dataset, no W&B logging
+# Full pipeline (download → extract → train → evaluate)
+python main.py --fresh
+
+# Resume training from last checkpoint
+python main.py
+
+# Without W&B logging
 python main.py --no_wandb
 
-# 20-video test mode (set use_all_data: False in config.py first)
-python main.py --no_wandb
+# Force a specific fusion type
+python main.py --fusion_type transformer
 
-# Start fresh (clear checkpoints and cached features)
-python main.py --no_wandb --fresh
+# Run W&B hyperparameter sweep (features must be extracted first)
+python main.py --sweep --sweep_count 20
 
-# Custom settings
-python main.py --encoder_type pretrained --fusion_type attention --epochs 30
+# Analyse dataset before training
+python analyze_data.py --metadata_path /path/to/val_metadata.json
+
+# Run inference on a single video
+python inference.py --model checkpoints/best_model.pth --video test.mp4
+
+# Run inference on a folder
+python inference.py --model checkpoints/best_model.pth --video_dir ./videos/ --output results.csv
 ```
-
-## Config Quick Reference
-
-| Setting | Current Value | What it does |
-|---|---|---|
-| `use_all_data` | `True` | Use full val set (set `False` for 20-video test) |
-| `batch_size` | `16` | Decrease to 4–8 if GPU runs out of memory |
-| `epochs` | `50` | Max epochs (early stopping usually triggers sooner) |
-| `patience` | `15` | Early stop after this many epochs with no AUC gain |
-| `freeze_epochs` | `8` | Epochs with frozen encoders before fine-tuning |
-| `val_split` | `0.2` | 80% train / 20% val |
 
 ---
 
-## Changes: Disk-Based Lazy-Loading Optimization
+## Hardware Requirements
 
-### Problem
-The original pipeline held **all video features in RAM** as a Python list before pickling to disk. Each video tensor is ~30MB, so 60K videos required ~1.8TB of RAM — causing Colab to crash at ~1,700 videos with 51GB usage.
+| Component | Minimum | Recommended |
+|---|---|---|
+| **GPU VRAM** | 8 GB | 24 GB |
+| **RAM** | 32 GB | 64 GB |
+| **CPU Cores** | 8 | 32+ |
+| **Storage** | 600 GB SSD | 1 TB NVMe |
 
-### Solution — 3 Files Modified
+**GPU usage:** Both GPUs used via DataParallel during training. Feature extraction is CPU-only (OpenCV bottleneck).
 
-#### `data_utils.py` (rewritten)
-- **Individual `.pt` files**: Each video's features (video tensor, audio tensor, labels) are saved as a separate `.pt` file under `features/train/` and `features/val/`
-- **Lazy-loading `AVDataset`**: The DataLoader loads one `.pt` file at a time per worker during training — RAM stays constant (~2-3GB) regardless of dataset size
-- **Resumable extraction**: A `manifest.json` is saved every 500 videos. If extraction crashes, re-running skips already-extracted videos and picks up where it left off
-- **Audio shape fixed**: Changed `n_fft` from 2048 to 1024 so mel-spectrogram output is a consistent `(1, 128, 63)` regardless of input audio length
-- **PySoundFile warnings suppressed**: Wrapped `librosa.load()` with `warnings.catch_warnings()` to silence the fallback warning
+**CPU usage:** 28 cores during feature extraction (`cpu_count - 4`). 8 cores for DataLoader workers during training.
 
-#### `config.py`
-- Replaced `FEATURES_TRAIN_PATH` / `FEATURES_VAL_PATH` (pickle files) with `FEATURES_DIR` (directory for `.pt` files)
+---
 
-#### `main.py`
-- Updated imports and function calls to match new signatures
-- `--fresh` flag now uses `shutil.rmtree()` to clear the entire features directory
-- Added `import shutil`
+## Feature Storage Structure
 
-### Feature Storage Structure
 ```
 checkpoints/
   features/
     train/
-      0.pt, 1.pt, 2.pt, ...    ← one per video (~30MB each)
+      0.pt, 1.pt, 2.pt, ...     ← one per video (~30MB each)
     val/
       0.pt, 1.pt, ...
-    train_manifest.json         ← metadata index (file, type, speaker)
+    train_manifest.json          ← metadata index (file, type, speaker)
     val_manifest.json
-```
-
-### How Resuming Works
-1. On first run, `process_split_to_disk()` extracts features and writes `.pt` files + manifest
-2. If the process crashes at video N, the manifest has entries 0 to N-1
-3. On re-run (without `--fresh`), it loads the manifest and **skips** all already-extracted indices
-4. Extraction continues from video N onward
-
----
-
-## Changes: Replaced librosa with torchaudio
-
-### Problem
-`librosa` relied on PySoundFile/audioread for loading audio from video files, producing frequent `PySoundFile failed` warnings and occasional crashes on corrupted MP4 files.
-
-### Solution — `data_utils.py`
-- Replaced `librosa.load()` + `librosa.feature.melspectrogram()` with `torchaudio.load()` + `torchaudio.transforms.MelSpectrogram()`
-- Audio pipeline is now fully PyTorch-native: load → resample → mono → slice → mel-spectrogram → AmplitudeToDB
-- No more PySoundFile/audioread dependency chain
-- `librosa` no longer needed as a dependency
-
----
-
-## Changes: Failed File Tracking
-
-### Problem
-Corrupted MP4 files (e.g. `moov atom not found`) would fail extraction but not get a `.pt` file saved. On every restart, the pipeline would retry these files — wasting time.
-
-### Solution — `data_utils.py`
-- Added `{split_name}_failed.json` that records indices of files that failed extraction
-- On resume, failed indices are loaded and **instantly skipped**
-- Failed list is saved alongside the manifest every 500 videos for crash safety
-- Both `video_tensor is None` and `file not found` failures are tracked
-
----
-
-## Changes: User Input Prompt Before Extraction
-
-### Problem
-Google Drive storage can run out before all 77K features are extracted (~30MB per `.pt` file). Users need the ability to stop extraction early and train with whatever features are available.
-
-### Solution — `main.py`
-- After data loading, shows extraction progress:
-  ```
-  FEATURE EXTRACTION STATUS
-    Train: 30,412 / 60,726 extracted
-    Val:   8,200 / 16,389 extracted
-  
-  Continue extracting features? (y = extract more, n = skip to training with existing):
-  ```
-- **`y`** → continues extracting more features
-- **`n`** → skips to training using only the already-extracted `.pt` files
-- If all features are already extracted, skips the prompt entirely
-
----
-
-## Changes: Hugging Face Data Download
-
-### Problem
-Setting up the pipeline on a new machine (VPS, fresh Colab) required manually downloading and extracting the 56GB val dataset.
-
-### Solution — New file `download_data.py` + `main.py` integration
-
-#### `download_data.py`
-- Uses `huggingface_hub` API to download val zip parts and `val_metadata.json`
-- Handles Hugging Face login (gated dataset requires accepted terms)
-- Extracts multi-volume zips using 7z, unzip, or Python zipfile fallback
-- **Resume support** — skips already-downloaded files
-- Can be run standalone: `python download_data.py --data_dir /path/to/data`
-
-#### `main.py`
-- Auto-detects if `VAL_DIR` is missing or empty on startup
-- Prompts: `Download val data from Hugging Face? (y/n)`
-- If yes, runs the full download + extraction pipeline before proceeding
-- If no, exits gracefully
-
-### Prerequisites
-```bash
-pip install huggingface_hub
-huggingface-cli login  # one-time, need to accept dataset terms first
-apt-get install p7zip-full  # for multi-volume zip extraction
+    train_failed.json            ← indices of corrupted/missing files
+    val_failed.json
+  best_model.pth                 ← best val joint AUC checkpoint
+  training_checkpoint.pth        ← latest epoch checkpoint (for resuming)
+  wandb_run_id.txt               ← W&B run ID for resuming logged runs
+  results/
+    final_results.png
+    eval_results.csv
+    training_curves.png
+    training_history.json
+    pipeline_log.txt
 ```
 
 ---
 
-## Changes: Transformer Fusion (GPU Auto-Selected)
+## Common Issues and Fixes
 
-### Problem
-The MLP-based `PretrainedFusion` concatenates audio and video embeddings and passes them through linear layers — it cannot learn **cross-modal interactions** between the two modalities.
-
-### Solution — `cross_modal.py` + `main.py`
-
-#### New `TransformerFusion` class
-Uses a full transformer encoder to let audio and video embeddings **attend to each other**:
-
-```mermaid
-flowchart LR
-    V["Video 256-d"] --> VP["Linear → 512-d"]
-    A["Audio 256-d"] --> AP["Linear → 512-d"]
-    CLS["[CLS] token"] --> T
-    VP --> T["Transformer Encoder\n2 layers, 8 heads\nGELU, pre-norm"]
-    AP --> T
-    T --> CO["[CLS] output\n512-d"]
-    CO --> AH["Audio Head → σ"]
-    CO --> VH["Video Head → σ"]
-    CO --> JH["Joint Head → σ"]
-```
-
-**Architecture details:**
-- Input sequence: `[CLS, video_embedding, audio_embedding]` (3 tokens)
-- Learnable positional embeddings
-- 2 transformer encoder layers with 8-head self-attention
-- GELU activation, pre-norm (LayerNorm before attention)
-- [CLS] token output used for classification
-
-#### Device-based auto-selection (`main.py`)
-Default `--fusion_type` is now `auto`:
-- **GPU** → `TransformerFusion` (self-attention across modalities)
-- **CPU** → `PretrainedFusion` (MLP, faster on CPU)
-
-Can still be forced manually: `python main.py --fusion_type pretrained`
-
----
-
-## Changes: Portable Paths via `.env`
-
-### Problem
-All paths were hardcoded for Google Colab (`/content/drive/MyDrive/...`), making it impossible to run on a VPS without editing `config.py`.
-
-### Solution — `config.py` + `.env`
-- `config.py` now reads `DATA_DIR` and `CHECKPOINT_DIR` from environment variables
-- Defaults to Colab paths if not set (backward compatible)
-- For VPS, just uncomment in `.env`:
-  ```
-  DATA_DIR=/workspace/Deepfake/data
-  CHECKPOINT_DIR=/workspace/Deepfake/checkpoints
-  ```
-- `main.py` loads `.env` at startup with a built-in parser (no `python-dotenv` needed)
-
----
-
-## Changes: Dataset Analysis Script
-
-### New file `analyze_data.py`
-- Standalone script to analyze `val_metadata.json` before training
-- Prints: total videos, type distribution, video/audio frame stats, speaker stats, fake segment durations
-- Generates a 4-panel plot (`analysis/dataset_analysis.png`):
-  1. Videos by modification type
-  2. Videos per speaker distribution
-  3. Video frame count histogram
-  4. Modification types per speaker
-
-Run: `python analyze_data.py --metadata_path /path/to/val_metadata.json`
-
----
-
-## Changes: Dual Modality Filter
-
-### Problem
-Videos with only audio or only video could pass through to training, causing shape mismatches or zero-tensor inputs that degrade model performance.
-
-### Solution — `data_utils.py`
-- Previously filtered: `audio_frames > 0` only
-- Now filters: `audio_frames > 0 AND video_frames > 0`
-- Logs how many videos were dropped:
-  ```
-  Videos with both audio and video: 75,412 (dropped 1,703)
-  ```
-
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| `CUDA out of memory` | `batch_size` too large for VRAM | Reduce `batch_size` in `config.py`. With DataParallel it scales × num_gpus. |
+| `val/auc_joint` stuck at 0.5 | Labels wrong or data not loading | Check `fake_segments` collation, sentinel label filtering, and per-type label map. |
+| `each element in batch should be of equal size` | Variable `fake_segments` length | Ensure `av_collate_fn` is being used in DataLoaders. |
+| All predictions cluster near 0.5 | Model not learning | Check `focal_gamma` — try reducing to 1.0. Check `learning_rate`. |
+| `overfit_gap` growing fast | Overfitting | Increase `dropout`, reduce `epochs`, increase augmentation strength. |
+| `auc_gap` > 0.1 | One modality ignored | Lower `encoder_lr` for the stronger modality or increase augmentation on the weaker one. |
+| Feature extraction all failing | Wrong `VAL_DIR` path | Check `.env` — `VAL_DIR` must point to folder containing `vox_celeb_2/...` subfolders. |
+| Pool crashes mid-extraction | OOM or corrupted video | Work is batched in groups of 50 — crash only loses that batch. Restart to continue. |

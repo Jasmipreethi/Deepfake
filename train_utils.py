@@ -10,7 +10,7 @@ import numpy as np
 import time
 from tqdm import tqdm
 
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score
 
 
 class FocalLoss(nn.Module):
@@ -360,72 +360,135 @@ def train_model(model, train_loader, val_loader, config, device,
         history['learning_rate'].append(current_lr)
         history['epoch_time'].append(epoch_time)
         
-        # Logging
+        # -------------------------------------------------------
+        # METRICS COMPUTATION
+        # -------------------------------------------------------
+        def _fl(lst):
+            return [float(np.array(x).flat[0]) for x in lst]
+
+        joint_gt_f   = _fl(val_labels['joint'])
+        audio_gt_f   = _fl(val_labels['audio'])
+        video_gt_f   = _fl(val_labels['video'])
+        joint_pred_f = _fl(val_preds['joint'])
+        audio_pred_f = _fl(val_preds['audio'])
+        video_pred_f = _fl(val_preds['video'])
+
+        joint_gt_bin   = [int(x > 0.5) for x in joint_gt_f]
+        joint_pred_bin = [int(x > 0.5) for x in joint_pred_f]
+        val_acc_joint  = accuracy_score(joint_gt_bin, joint_pred_bin)
+
+        per_type_auc = {}
+        per_type_acc = {}
+        for mod_type in set(val_types):
+            mask = [i for i, t in enumerate(val_types) if t == mod_type]
+            if len(mask) < 2:
+                continue
+            gt_t   = [joint_gt_f[i]   for i in mask]
+            pred_t = [joint_pred_f[i] for i in mask]
+            pred_b = [int(x > 0.5) for x in pred_t]
+            gt_b   = [int(x > 0.5) for x in gt_t]
+            per_type_auc[mod_type] = calculate_auc(gt_t, pred_t)
+            per_type_acc[mod_type] = accuracy_score(gt_b, pred_b)
+
+        overfit_gap = train_loss - val_loss
+        confidence  = float(np.mean([abs(p - 0.5) * 2 for p in joint_pred_f]))
+
+        # Base log dict
         log_dict = {
-            'epoch':          epoch,
-            'phase':          'frozen' if epoch < config.get('freeze_epochs', 8) else 'finetune',
-            'train/loss':     train_loss,
-            'val/loss':       val_loss,
-            'val/auc_joint':  val_auc_joint,
-            'val/auc_audio':  val_auc_audio,
-            'val/auc_video':  val_auc_video,
-            'val/auc_gap':    abs(val_auc_audio - val_auc_video),
-            'learning_rate':  current_lr,
-            'epoch_time':     epoch_time,
-            # Gradient norm — detects exploding/vanishing gradients
-            'train/grad_norm': avg_grad_norm,
+            'epoch':               epoch,
+            'phase':               'frozen' if epoch < config.get('freeze_epochs', 8) else 'finetune',
+            'train/loss':          train_loss,
+            'val/loss':            val_loss,
+            'train/grad_norm':     avg_grad_norm,
+            'learning_rate':       current_lr,
+            'epoch_time_s':        epoch_time,
+            'val/auc_joint':       val_auc_joint,
+            'val/auc_audio':       val_auc_audio,
+            'val/auc_video':       val_auc_video,
+            'val/accuracy_joint':  val_acc_joint,
+            'val/auc_gap':         abs(val_auc_audio - val_auc_video),
+            'val/overfit_gap':     overfit_gap,
+            'val/confidence':      confidence,
         }
+
+        for mt, auc in per_type_auc.items():
+            log_dict[f'val/auc_type/{mt}']      = auc
+        for mt, acc in per_type_acc.items():
+            log_dict[f'val/accuracy_type/{mt}'] = acc
 
         if wandb_run:
             import wandb as _wandb
 
-            # 1. Per-type AUC breakdown
-            mod_types = list(set(val_types))
-            for mod_type in mod_types:
-                mask = [i for i, t in enumerate(val_types) if t == mod_type]
-                if len(mask) > 1:
-                    gt   = [val_labels['joint'][i] for i in mask]
-                    pred = [val_preds['joint'][i]  for i in mask]
-                    log_dict[f'val/auc_{mod_type}'] = calculate_auc(gt, pred)
+            # 1. Prediction distributions
+            log_dict['val/predictions/joint'] = _wandb.Histogram(joint_pred_f)
+            log_dict['val/predictions/audio'] = _wandb.Histogram(audio_pred_f)
+            log_dict['val/predictions/video'] = _wandb.Histogram(video_pred_f)
 
-            # Helper to safely flatten numpy arrays or scalars to Python floats
-            def _to_float_list(lst):
-                return [float(np.array(x).flat[0]) for x in lst]
-
-            # 2. Prediction distribution histograms
-            log_dict['val/hist_joint'] = _wandb.Histogram(_to_float_list(val_preds['joint']))
-            log_dict['val/hist_audio'] = _wandb.Histogram(_to_float_list(val_preds['audio']))
-            log_dict['val/hist_video'] = _wandb.Histogram(_to_float_list(val_preds['video']))
-
-            # 3. Confusion matrix
-            joint_gt_bin   = [int(x > 0.5) for x in _to_float_list(val_labels['joint'])]
-            joint_pred_bin = [int(x > 0.5) for x in _to_float_list(val_preds['joint'])]
+            # 2. Confusion matrix
             log_dict['val/confusion_matrix'] = _wandb.plot.confusion_matrix(
-                y_true=joint_gt_bin,
-                preds=joint_pred_bin,
+                y_true=joint_gt_bin, preds=joint_pred_bin,
                 class_names=['Fake', 'Real']
             )
 
-            # 4. ROC curve (log every 2 epochs to keep W&B fast)
+            # 3. ROC curve every 2 epochs
             if (epoch + 1) % 2 == 0:
-                joint_gt_flat   = _to_float_list(val_labels['joint'])
-                joint_pred_flat = _to_float_list(val_preds['joint'])
                 log_dict['val/roc_curve'] = _wandb.plot.roc_curve(
-                    y_true=joint_gt_flat,
-                    y_probas=[[1 - p, p] for p in joint_pred_flat],
+                    y_true=joint_gt_f,
+                    y_probas=[[1 - p, p] for p in joint_pred_f],
                     labels=['Fake', 'Real']
                 )
 
-            # 5. GPU memory usage
-            if _wandb and hasattr(_wandb, 'run') and _wandb.run:
-                import torch as _torch
-                if _torch.cuda.is_available():
-                    log_dict['gpu/memory_allocated_gb'] = (
-                        _torch.cuda.memory_allocated() / 1e9
-                    )
-                    log_dict['gpu/memory_reserved_gb'] = (
-                        _torch.cuda.memory_reserved() / 1e9
-                    )
+            # 4. Audio vs video scatter coloured by type
+            scatter_data = _wandb.Table(
+                columns=['audio_score', 'video_score', 'joint_score', 'type', 'correct'],
+                data=[
+                    [audio_pred_f[i], video_pred_f[i], joint_pred_f[i],
+                     val_types[i],
+                     'correct' if joint_pred_bin[i] == joint_gt_bin[i] else 'wrong']
+                    for i in range(len(val_types))
+                ]
+            )
+            log_dict['val/prediction_scatter'] = _wandb.plot.scatter(
+                scatter_data, 'audio_score', 'video_score',
+                title='Audio vs Video Predictions by Manipulation Type'
+            )
+
+            # 5. Per-type AUC bar chart
+            type_rows = [[mt, per_type_auc.get(mt, 0), per_type_acc.get(mt, 0)]
+                         for mt in ['real','audio_modified','visual_modified','both_modified']
+                         if mt in per_type_auc]
+            type_table = _wandb.Table(columns=['type', 'auc', 'accuracy'], data=type_rows)
+            log_dict['val/per_type_auc'] = _wandb.plot.bar(
+                type_table, 'type', 'auc', title='AUC by Manipulation Type'
+            )
+
+            # 6. Training health summary
+            health_rows = [
+                ['Joint AUC',    f'{val_auc_joint:.3f}',
+                 'Good' if val_auc_joint > 0.7 else 'Low'],
+                ['Audio AUC',   f'{val_auc_audio:.3f}',
+                 'Good' if val_auc_audio > 0.7 else 'Low'],
+                ['Video AUC',   f'{val_auc_video:.3f}',
+                 'Good' if val_auc_video > 0.7 else 'Low'],
+                ['Accuracy',    f'{val_acc_joint:.3f}',
+                 'Good' if val_acc_joint > 0.7 else 'Low'],
+                ['AUC Gap',     f'{abs(val_auc_audio-val_auc_video):.3f}',
+                 'Balanced' if abs(val_auc_audio-val_auc_video) < 0.1 else 'Imbalanced'],
+                ['Overfit Gap', f'{overfit_gap:.3f}',
+                 'Overfitting' if overfit_gap > 0.1 else 'OK'],
+                ['Confidence',  f'{confidence:.3f}',
+                 'Confident' if confidence > 0.4 else 'Uncertain'],
+                ['Grad Norm',   f'{avg_grad_norm:.3f}',
+                 'Exploding' if avg_grad_norm > 5 else 'OK'],
+            ]
+            log_dict['val/training_health'] = _wandb.Table(
+                columns=['metric', 'value', 'status'], data=health_rows
+            )
+
+            # 7. GPU memory
+            if torch.cuda.is_available():
+                log_dict['gpu/memory_allocated_gb'] = torch.cuda.memory_allocated() / 1e9
+                log_dict['gpu/memory_reserved_gb']  = torch.cuda.memory_reserved()  / 1e9
 
             wandb_run.log(log_dict)
         
