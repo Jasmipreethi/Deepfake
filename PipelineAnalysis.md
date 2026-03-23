@@ -26,6 +26,8 @@ Scores are between 0 and 1 — **1.0 = real, 0.0 = fake**.
 | `main.py` | Entry point — ties everything together |
 | `inference.py` | Standalone inference on new videos (no training dependencies) |
 | `analyze_data.py` | Dataset analysis and distribution plots |
+| `create_test_data.py` | Sample test videos from extracted_val/ for model evaluation |
+| `evaluate_models.py` | Compare two trained models — metrics, plots, CSV results |
 
 ---
 
@@ -67,7 +69,7 @@ For each video, a **2-second window** is extracted and saved as a `.pt` file:
 |---|---|---|
 | **Window** | Fake video: start of first fake segment. Real video: middle 2 seconds | — |
 | **Video** | 50 frames (2s × 25fps) → resize 224×224 → augment → ImageNet normalise | `(50, 3, 224, 224)` |
-| **Audio** | Load at 16kHz → mel-spectrogram (128 bins) → dB → normalise | `(1, 128, 63)` |
+| **Audio** | Load at 16kHz → mel-spectrogram (`n_mels` bins) → dB → normalise | `(1, n_mels, target_t)` |
 
 **Labels:**
 
@@ -322,11 +324,33 @@ python main.py --sweep --sweep_count 20
 # Analyse dataset before training
 python analyze_data.py --metadata_path /path/to/val_metadata.json
 
+# Generate a 100-video test dataset from extracted_val/
+# NOTE: always pass --metadata explicitly — val_metadata.json lives one level
+#       above extracted_val/, not inside it
+python create_test_data.py \
+    --val_dir /content/drive/MyDrive/val/extracted_val/val \
+    --metadata /content/drive/MyDrive/val/val_metadata.json \
+    --output_dir ./test/
+
+# Larger test set (200 videos, 50 per type)
+python create_test_data.py \
+    --val_dir /content/drive/MyDrive/val/extracted_val/val \
+    --metadata /content/drive/MyDrive/val/val_metadata.json \
+    --output_dir ./test_large/ \
+    --per_type 50
+
 # Run inference on a single video
 python inference.py --model checkpoints/best_model.pth --video test.mp4
 
-# Run inference on a folder
-python inference.py --model checkpoints/best_model.pth --video_dir ./videos/ --output results.csv
+# Run inference on a test folder
+python inference.py --model checkpoints/best_model.pth \
+    --video_dir ./test/ --output results.csv
+
+# Compare two trained models
+python evaluate_models.py \
+    --model1 run1_best_model.pth --name1 "Run 1" \
+    --model2 run2_best_model.pth --name2 "Run 2" \
+    --video_dir ./test/ --output_dir eval_results/
 ```
 
 ---
@@ -372,6 +396,24 @@ checkpoints/
 
 ---
 
+## Dataset Facts
+
+| Fact | Value |
+|---|---|
+| Total entries in val_metadata.json | 77,326 |
+| Found on disk (after extraction) | 68,851 (89%) |
+| Missing from disk | 8,475 (11% — corrupted or skipped during extraction) |
+| real videos | 18,037 |
+| visual_modified videos | 17,020 |
+| both_modified videos | 16,946 |
+| audio_modified videos | 16,848 |
+| Metadata location | One level above `extracted_val/` — **not** inside it |
+| Video location | `extracted_val/val/vox_celeb_2/...` |
+
+> **Key gotcha:** `val_metadata.json` is at `DATA_DIR/val_metadata.json`, but videos are at `DATA_DIR/extracted_val/val/`. Always pass `--metadata` explicitly when using `create_test_data.py`.
+
+---
+
 ## Common Issues and Fixes
 
 | Symptom | Likely Cause | Fix |
@@ -384,3 +426,5 @@ checkpoints/
 | `auc_gap` > 0.1 | One modality ignored | Lower `encoder_lr` for the stronger modality or increase augmentation on the weaker one. |
 | Feature extraction all failing | Wrong `VAL_DIR` path | Check `.env` — `VAL_DIR` must point to folder containing `vox_celeb_2/...` subfolders. |
 | Pool crashes mid-extraction | OOM or corrupted video | Work is batched in groups of 50 — crash only loses that batch. Restart to continue. |
+| `create_test_data.py` — 0 videos found on disk | Wrong `--val_dir` or metadata path mismatch | Pass `--metadata` explicitly. `val_metadata.json` is one level above `extracted_val/`. Use `--val_dir extracted_val/val/` not `extracted_val/`. |
+| `val_metadata.json` not found | Script searching wrong location | Always use `--metadata /path/to/val_metadata.json` explicitly with `create_test_data.py`. |

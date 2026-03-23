@@ -22,8 +22,8 @@ CHECKPOINT_DIR = os.environ.get('CHECKPOINT_DIR', '/content/drive/MyDrive/checkp
 | `feature_dim` | 256 | Encoder output size — balanced between expressiveness and overfitting |
 | `hidden_dim` | 512 | Fusion layer width — 2× feature_dim gives enough capacity |
 | `dropout` | 0.4 | Higher than typical (0.2-0.3) because the dataset is large and we want generalization |
-| `freeze_epochs` | 8 | Enough time for fusion to stabilize before unfreezing encoders |
-| `patience` | 15 | Generous, since AUC can plateau then improve when LR drops |
+| `freeze_epochs` | auto (25% of epochs) | Set to `None` for formula `max(1, round(epochs * 0.25))`, or set explicitly |
+| `patience` | auto (30% of epochs) | Set to `None` for formula `max(5, round(epochs * 0.30))`, or set explicitly |
 
 ---
 
@@ -226,7 +226,7 @@ loss = BCE(audio_pred, audio_label)      # is audio real?
 
 > **Why three separate losses?** Each head specializes in one detection task. The joint head is weighted 2× because it's the primary detection target — "is this video a deepfake?"
 
-> **Why label smoothing (5%)?** Instead of hard labels (0 or 1), uses soft labels (0.025 or 0.975). Prevents the model from being overconfident, which improves generalization — especially important with subtle deepfakes.
+> **Why Focal Loss?** `(1-p)^gamma × BCE` downweights easy examples so training focuses on hard, ambiguous cases — subtle manipulations near the decision boundary. `gamma=2.0` by default. When `gamma=0` it reduces to standard BCE, subsuming label smoothing.
 
 ### Two-Phase Training
 
@@ -284,3 +284,44 @@ Loads the best model (by joint AUC) and produces:
 5. **AUC scores** — for audio, video, and joint predictions
 
 > **Why AUC over accuracy?** AUC measures ranking quality across all thresholds. Accuracy depends on a threshold choice and can be misleading with imbalanced classes. AUC tells you: "If I pick a random real and a random fake video, how often does the model rank them correctly?"
+
+---
+
+## Step 11: Standalone Testing (`create_test_data.py` + `evaluate_models.py`)
+
+After training, use these two scripts to test and compare models without the training pipeline.
+
+### Generate a test dataset
+```bash
+python create_test_data.py \
+    --val_dir /content/drive/MyDrive/val/extracted_val/val \
+    --metadata /content/drive/MyDrive/val/val_metadata.json \
+    --output_dir ./test/
+```
+
+Samples 25 videos per manipulation type (100 total) from `extracted_val/` into:
+```
+test/
+    real/    ← 25 videos
+    fake/    ← 75 videos (25 per fake type)
+    test_manifest.json
+```
+
+> **Why 75 fake and 25 real?** The dataset has 3 fake types — to sample equally from each and maintain balance within fake types, you naturally get 3× more fake than real. AUC handles this imbalance correctly.
+
+### Compare two models
+```bash
+python evaluate_models.py \
+    --model1 run1_best_model.pth \
+    --model2 run2_best_model.pth \
+    --video_dir ./test/ \
+    --output_dir eval_results/
+```
+
+Produces:
+- `model_comparison.png` — 6-panel figure (metrics bar chart, ROC curves, score distributions, confusion matrices, audio vs video scatter)
+- `training_history.png` — AUC and loss curves from checkpoint history
+- `model1_predictions.csv` / `model2_predictions.csv` — every prediction with scores
+- `metrics_summary.json` — all metrics in JSON
+
+> **Key insight:** `best_model.pth` is for testing. `training_checkpoint.pth` is for resuming training. Always use `best_model.pth` for accuracy evaluation."
