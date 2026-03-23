@@ -95,30 +95,96 @@ The test set has 25 real and 75 fake (3:1 ratio). This mirrors the dataset's str
 
 ---
 
-## Next Steps — Model Evaluation
+## Testing Guidelines
 
-Once you have `best_model.pth` files from your training runs:
+### Which script to use?
 
-**Single model on test set:**
-```bash
-python inference.py \
-    --model best_model.pth \
-    --video_dir ./test/ \
-    --output results.csv
+| Situation | Script | Notes |
+|---|---|---|
+| Test a **single video** | `inference.py --video` | No ground truth needed |
+| Test a **single folder** of videos | `inference.py --video_dir` | No ground truth needed |
+| **Measure accuracy** of one model | `evaluate_models.py` (same model twice) | Needs real/fake folders |
+| **Compare two models** | `evaluate_models.py` | Needs real/fake folders |
+
+### `inference.py` vs `evaluate_models.py` — key difference
+
+**`inference.py`** — run one model, get predictions. No accuracy metrics. Works on any video with no ground truth needed.
+```
+one model → raw predictions (score + verdict) → CSV
 ```
 
-**Compare two models:**
+**`evaluate_models.py`** — compare two models against known labels. Computes AUC, accuracy, confusion matrix, plots.
+```
+two models + ground truth folders → metrics + plots + CSV
+```
+
+> **Note:** The folder names `real/` and `fake/` do **not** affect what the model predicts — the model only sees raw pixels and audio. The folders exist purely so `evaluate_models.py` knows the ground truth label to compute accuracy after prediction.
+
+---
+
+## Testing Commands
+
+### Single video — any model
+```bash
+python inference.py \
+    --model /content/drive/MyDrive/best_model_1.pth \
+    --video ./test/real/id01234_0001_real.mp4
+```
+
+### Single folder — get predictions for all videos in it
+```bash
+# Real videos only
+python inference.py \
+    --model /content/drive/MyDrive/best_model_1.pth \
+    --video_dir ./test/real/ \
+    --output results_real.csv
+
+# Fake videos only
+python inference.py \
+    --model /content/drive/MyDrive/best_model_1.pth \
+    --video_dir ./test/fake/ \
+    --output results_fake.csv
+```
+
+### Single model accuracy — full metrics on the test set
+```bash
+# Pass the same model as both --model1 and --model2
+python evaluate_models.py \
+    --model1 /content/drive/MyDrive/best_model_1.pth \
+    --model2 /content/drive/MyDrive/best_model_1.pth \
+    --name1 "Model 1" \
+    --name2 "Model 1" \
+    --video_dir ./test/ \
+    --output_dir eval_results_model1/
+```
+
+### Compare two models — side-by-side metrics and plots
 ```bash
 python evaluate_models.py \
-    --model1 run1_best_model.pth \
-    --model2 run2_best_model.pth \
+    --model1 /content/drive/MyDrive/best_model_1.pth \
+    --model2 /content/drive/MyDrive/best_model_2.pth \
     --name1 "Run 1 (10 epochs)" \
     --name2 "Run 2 (20 epochs)" \
     --video_dir ./test/ \
     --output_dir eval_results/
 ```
 
-**Regenerate with a different random seed (different 100 videos):**
+### Known issue — inference.py finds 0 videos from test/ root
+`inference.py` does not recurse into subfolders. Always point it at `test/real/` or `test/fake/` directly, not `test/`. `evaluate_models.py` handles subfolders automatically.
+
+```bash
+# Wrong — finds 0 videos
+python inference.py --video_dir ./test/
+
+# Correct — point at subfolder
+python inference.py --video_dir ./test/real/
+```
+
+---
+
+## Regenerating the Test Dataset
+
+**Different random seed (different 100 videos):**
 ```bash
 python create_test_data.py \
     --val_dir /content/drive/MyDrive/val/extracted_val/val \
@@ -127,7 +193,7 @@ python create_test_data.py \
     --seed 123
 ```
 
-**Larger test set (200 videos):**
+**Larger test set (200 videos, 50 per type):**
 ```bash
 python create_test_data.py \
     --val_dir /content/drive/MyDrive/val/extracted_val/val \
