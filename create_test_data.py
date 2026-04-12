@@ -391,6 +391,9 @@ def parse_args():
                    help='Videos per manipulation type (default: 25 → 100 total)')
     p.add_argument('--seed',       type=int, default=42,
                    help='Random seed for reproducibility (default: 42)')
+    # Symlinks = shortcuts that point to the original file instead of copying it.
+    # Saves disk space (~0 bytes vs full copy) but breaks if original files are deleted.
+    # Use on the server where data stays around. Use copy (default) for portable test sets.
     p.add_argument('--symlinks',   action='store_true',
                    help='Use symlinks instead of copying (saves disk space, '
                         'requires val_dir to remain accessible)')
