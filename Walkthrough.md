@@ -291,23 +291,28 @@ Loads the best model (by joint AUC) and produces:
 
 After training, use these two scripts to test and compare models without the training pipeline.
 
-### Generate a test dataset
+### Generate a leak-free test dataset
 ```bash
 python create_test_data.py \
-    --val_dir /content/drive/MyDrive/val/extracted_val/val \
-    --metadata /content/drive/MyDrive/val/val_metadata.json \
+    --val_dir /path/to/extracted_val \
+    --metadata /path/to/val_metadata.json \
     --output_dir ./test/
 ```
 
-Samples 25 videos per manipulation type (100 total) from `extracted_val/` into:
+The script **recreates the exact train/val split** from training (`GroupShuffleSplit(seed=42)`) and only samples from val speakers. This guarantees zero data leakage.
+
+Output:
 ```
 test/
-    real/    ← 25 videos
-    fake/    ← 75 videos (25 per fake type)
+    real/    ← 25 videos (val speakers only)
+    fake/    ← 75 videos (val speakers only)
     test_manifest.json
+    split_info.json   ← full train/val speaker lists for audit
 ```
 
-> **Why 75 fake and 25 real?** The dataset has 3 fake types — to sample equally from each and maintain balance within fake types, you naturally get 3× more fake than real. AUC handles this imbalance correctly.
+> **Why val-speakers only?** If test videos include training speakers, the model recognises faces/voices it trained on, inflating metrics. By restricting to val speakers, we test only on identities the model has never seen.
+
+> **Why is this reproducible without saving manifests?** The split is deterministic: same `val_metadata.json` + same `seed=42` + same `GroupShuffleSplit` = exact same speaker assignments every time.
 
 ### Compare two models
 ```bash
@@ -324,4 +329,34 @@ Produces:
 - `model1_predictions.csv` / `model2_predictions.csv` — every prediction with scores
 - `metrics_summary.json` — all metrics in JSON
 
-> **Key insight:** `best_model.pth` is for testing. `training_checkpoint.pth` is for resuming training. Always use `best_model.pth` for accuracy evaluation."
+> **Key insight:** `best_model.pth` is for testing. `training_checkpoint.pth` is for resuming training. Always use `best_model.pth` for accuracy evaluation.
+
+---
+
+## Step 12: Web Interface (`web/app.py`)
+
+A browser-based tool for checking individual videos. Wraps `inference.py` in a Flask server.
+
+```bash
+cd web
+python app.py --model /path/to/best_model.pth
+# Open http://localhost:5000
+```
+
+### How it works
+1. User drags & drops a video onto the page
+2. Flask saves it to a temp file, calls `predict_video()` from `inference.py`
+3. Returns JSON with audio/video/joint scores + verdict
+4. Frontend displays animated REAL/FAKE badge, score bars, and plain-English interpretation
+5. Temp file is deleted immediately after processing
+
+### Architecture
+```
+Browser → POST /api/analyze (multipart video)
+    → Flask saves temp file
+    → inference.py → load_model() + predict_video()
+    → JSON response
+    → Frontend renders verdict + scores
+```
+
+> **Why Flask?** Lightweight, same Python environment as training, and directly imports `inference.py` — no code duplication. The model loads once at startup and stays in memory for all requests."

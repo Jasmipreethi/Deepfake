@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Deepfake Detector</title>
+    <meta name="description" content="Upload a video to check if it's a deepfake using audio-visual AI analysis">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">AV Deepfake Detector</h1>
+            <p class="subtitle">Upload a video to analyze if it's real or AI-generated</p>
+        </header>
+
+        <!-- Upload Section -->
+        <section id="upload-section" class="card">
+            <div id="drop-zone" class="drop-zone">
+                <div class="drop-zone-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p class="drop-zone-text">Drag & drop your video here</p>
+                <p class="drop-zone-hint">or click to browse</p>
+                <p class="drop-zone-formats">MP4, AVI, MOV, MKV, WEBM • Max 500MB</p>
+                <input type="file" id="file-input" accept=".mp4,.avi,.mov,.mkv,.webm,.m4v" hidden>
+            </div>
+
+            <!-- File info (hidden until file selected) -->
+            <div id="file-info" class="file-info hidden">
+                <div class="file-info-row">
+                    <span class="file-name" id="file-name"></span>
+                    <span class="file-size" id="file-size"></span>
+                </div>
+                <button id="clear-btn" class="btn-clear" title="Remove file">&times;</button>
+            </div>
+
+            <!-- Analyze button -->
+            <button id="analyze-btn" class="btn-primary hidden">
+                <span class="btn-text">Analyze Video</span>
+                <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+            </button>
+        </section>
+
+        <!-- Progress Section -->
+        <section id="progress-section" class="card hidden">
+            <div class="progress-header">
+                <span class="progress-label" id="progress-label">Uploading video...</span>
+                <span class="progress-pct" id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="hidden">
+            <!-- Verdict Card -->
+            <div class="card verdict-card" id="verdict-card">
+                <div class="verdict-badge" id="verdict-badge">
+                    <span class="verdict-text" id="verdict-text"></span>
+                </div>
+                <div class="confidence-row">
+                    <span class="confidence-label">Confidence</span>
+                    <span class="confidence-value" id="confidence-value"></span>
+                </div>
+                <div class="confidence-bar-track">
+                    <div class="confidence-bar-fill" id="confidence-bar"></div>
+                </div>
+            </div>
+
+            <!-- Scores Card -->
+            <div class="card scores-card">
+                <h3 class="card-title">Score Breakdown</h3>
+                <div class="score-row">
+                    <div class="score-label">
+                        <span class="score-icon">🔊</span>
+                        <span>Audio</span>
+                    </div>
+                    <div class="score-bar-track">
+                        <div class="score-bar-fill" id="audio-bar"></div>
+                    </div>
+                    <span class="score-value" id="audio-value"></span>
+                </div>
+                <div class="score-row">
+                    <div class="score-label">
+                        <span class="score-icon">🎬</span>
+                        <span>Video</span>
+                    </div>
+                    <div class="score-bar-track">
+                        <div class="score-bar-fill" id="video-bar"></div>
+                    </div>
+                    <span class="score-value" id="video-value"></span>
+                </div>
+                <div class="score-row">
+                    <div class="score-label">
+                        <span class="score-icon">🎯</span>
+                        <span>Joint</span>
+                    </div>
+                    <div class="score-bar-track">
+                        <div class="score-bar-fill" id="joint-bar"></div>
+                    </div>
+                    <span class="score-value" id="joint-value"></span>
+                </div>
+                <p class="score-legend">Score: 0.0 = Fake → 1.0 = Real</p>
+            </div>
+
+            <!-- Interpretation Card -->
+            <div class="card interpretation-card">
+                <h3 class="card-title">Analysis</h3>
+                <p class="interpretation-text" id="interpretation-text"></p>
+                <div class="meta-row">
+                    <span id="meta-file"></span>
+                    <span id="meta-time"></span>
+                    <span id="meta-windows"></span>
+                </div>
+            </div>
+
+            <!-- Try Another -->
+            <button id="reset-btn" class="btn-secondary">Analyze Another Video</button>
+        </section>
+
+        <!-- Error -->
+        <section id="error-section" class="card error-card hidden">
+            <p class="error-text" id="error-text"></p>
+            <button id="error-reset-btn" class="btn-secondary">Try Again</button>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <p>Powered by ResNet3D-18 + ResNet18 + Transformer Fusion</p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

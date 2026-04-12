@@ -120,9 +120,27 @@ python main.py --fusion_type transformer
 
 # Analyze dataset before training
 python analyze_data.py
+
+# Generate leak-free test set (val speakers only)
+python create_test_data.py \
+    --val_dir /path/to/extracted_val \
+    --metadata /path/to/val_metadata.json \
+    --output_dir ./test/
 ```
 
 The pipeline will auto-detect missing data and offer to download from Hugging Face.
+Test data is sampled **only from val speakers** — zero overlap with training data.
+
+### 4. Web Interface
+
+```bash
+cd web
+pip install flask
+python app.py --model /path/to/best_model.pth
+# Open http://localhost:5000
+```
+
+Drag & drop any video to get a REAL/FAKE verdict with audio, video, and joint scores.
 
 ---
 
@@ -151,10 +169,17 @@ The pipeline will auto-detect missing data and offer to download from Hugging Fa
 ├── checkpoint_utils.py  # Checkpoint save/load for resumable training
 ├── download_data.py     # Download dataset from Hugging Face
 ├── analyze_data.py      # Dataset analysis and visualization
+├── create_test_data.py  # Generate leak-free test sets (val speakers only)
+├── evaluate_models.py   # Compare two models with full metrics
+├── inference.py         # Standalone single-video inference
 ├── main.py              # Entry point — orchestrates the full pipeline
 ├── requirements.txt     # Python dependencies
 ├── .env                 # API keys and configurable paths (git-ignored)
-└── PipelineAnalysis.md  # Detailed technical documentation
+├── PipelineAnalysis.md  # Detailed technical documentation
+└── web/                 # Web interface
+    ├── app.py           # Flask server (wraps inference.py)
+    ├── templates/index.html
+    └── static/          # CSS + JS
 ```
 
 ---

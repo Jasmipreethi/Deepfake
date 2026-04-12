@@ -428,3 +428,62 @@ checkpoints/
 | Pool crashes mid-extraction | OOM or corrupted video | Work is batched in groups of 50 — crash only loses that batch. Restart to continue. |
 | `create_test_data.py` — 0 videos found on disk | Wrong `--val_dir` or metadata path mismatch | Pass `--metadata` explicitly. `val_metadata.json` is one level above `extracted_val/`. Use `--val_dir extracted_val/val/` not `extracted_val/`. |
 | `val_metadata.json` not found | Script searching wrong location | Always use `--metadata /path/to/val_metadata.json` explicitly with `create_test_data.py`. |
+
+---
+
+## Changes: Val-Speaker-Only Test Set
+
+### Problem
+`create_test_data.py` sampled test videos from **all** speakers randomly, including speakers the model trained on. This creates data leakage — inflated metrics that don't reflect real-world performance.
+
+### Solution — `create_test_data.py`
+- **New `get_val_speakers()`** — recreates the exact `GroupShuffleSplit(seed=42)` from `data_utils.py` to identify which speakers were in the val split during training
+- **`sample_videos()`** now accepts `val_speakers` and only samples from those speakers
+- **Saves `split_info.json`** — contains full train/val speaker lists for audit
+- **New CLI flags:** `--use_all` (matches training config), `--train_seed` (default 42)
+
+### Why it works
+The split is deterministic: same `val_metadata.json` + same `seed=42` + same `GroupShuffleSplit` = exact same speaker assignments every time. No manifests from the server needed.
+
+### Usage
+```bash
+# Default (subset mode, matches config.py defaults)
+python create_test_data.py \
+    --val_dir /path/to/extracted_val \
+    --metadata /path/to/val_metadata.json \
+    --output_dir ./test/
+
+# If training used use_all_data=True
+python create_test_data.py --use_all \
+    --val_dir /path/to/extracted_val \
+    --output_dir ./test/
+```
+
+---
+
+## Changes: Web Interface
+
+### What was added
+A browser-based UI for testing individual videos, built on Flask + vanilla HTML/CSS/JS.
+
+### Files
+| File | Purpose |
+|---|---|
+| `web/app.py` | Flask server — loads model at startup, accepts video uploads via `POST /api/analyze`, returns JSON |
+| `web/templates/index.html` | Single-page app with drag-and-drop upload, progress bar, verdict display |
+| `web/static/style.css` | Dark glassmorphism theme, animated score bars, responsive layout |
+| `web/static/app.js` | Upload with XHR progress, animated results rendering |
+
+### How it works
+- **Backend** imports `load_model()` and `predict_video()` directly from `inference.py` — no code duplication
+- Model loads once at startup and stays in GPU/CPU memory for all requests
+- Uploaded videos are saved to a temp directory and deleted immediately after processing
+- Returns JSON with audio/video/joint scores, verdict, confidence, and a plain-English interpretation
+
+### Usage
+```bash
+cd web
+pip install flask
+python app.py --model /path/to/best_model.pth --device auto
+# Open http://localhost:5000
+```
