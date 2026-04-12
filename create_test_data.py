@@ -56,12 +56,14 @@ from collections import defaultdict
 try:
     import pandas as pd
     from tqdm import tqdm
+    from sklearn.model_selection import GroupShuffleSplit
 except ImportError:
     print("Installing required packages...")
     import subprocess
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pandas', 'tqdm'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pandas', 'tqdm', 'scikit-learn'])
     import pandas as pd
     from tqdm import tqdm
+    from sklearn.model_selection import GroupShuffleSplit
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -134,39 +136,115 @@ def load_metadata(val_dir, metadata_path=None):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SAMPLING
+# TRAIN/VAL SPLIT RECREATION (must match data_utils.py exactly)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def sample_videos(df, per_type=25, seed=42):
+def get_val_speakers(metadata_path, train_seed=42, val_split=0.2, use_all=False, samples_per_type=None):
+    """
+    Recreate the exact train/val speaker split used during training.
+
+    Uses the same logic as data_utils.sample_videos():
+    1. Load full metadata
+    2. Filter to videos with both audio and video
+    3. Optionally subsample by type (if use_all=False)
+    4. GroupShuffleSplit by speaker with seed=42
+
+    Returns: (set of val speaker IDs, set of train speaker IDs)
+    """
+    with open(metadata_path, 'r') as f:
+        data = json.load(f)
+    full_df = pd.DataFrame(data)
+
+    # Same filter as data_utils.py
+    df_valid = full_df[(full_df['audio_frames'] > 0) & (full_df['video_frames'] > 0)].copy()
+    print(f"\n  Recreating training split (seed={train_seed})...")
+    print(f"  Videos with both audio+video: {len(df_valid):,}")
+
+    if use_all:
+        mini_df = df_valid.reset_index(drop=True)
+    else:
+        # Subset mode — same as training
+        if samples_per_type is None:
+            samples_per_type = {
+                'real': 40, 'both_modified': 40,
+                'audio_modified': 40, 'visual_modified': 40
+            }
+        random.seed(train_seed)
+        samples = []
+        for mod_type, count in samples_per_type.items():
+            subset = df_valid[df_valid['modify_type'] == mod_type]
+            if len(subset) >= count:
+                samples.append(subset.sample(count, random_state=train_seed))
+            else:
+                samples.append(subset)
+        mini_df = pd.concat(samples).reset_index(drop=True)
+
+    # Extract speaker IDs (same logic as data_utils.py)
+    mini_df['speaker'] = mini_df['file'].apply(
+        lambda f: f.split('/')[1] if '/' in f and len(f.split('/')) > 1 else 'unknown'
+    )
+
+    # Same GroupShuffleSplit as training
+    gss = GroupShuffleSplit(n_splits=1, test_size=val_split, random_state=train_seed)
+    train_idx, val_idx = next(gss.split(mini_df, groups=mini_df['speaker']))
+
+    train_speakers = set(mini_df.iloc[train_idx]['speaker'].unique())
+    val_speakers = set(mini_df.iloc[val_idx]['speaker'].unique())
+
+    print(f"  Train speakers: {len(train_speakers):,}")
+    print(f"  Val speakers:   {len(val_speakers):,}")
+    print(f"  Overlap:        {len(train_speakers & val_speakers)} (should be 0)")
+
+    return val_speakers, train_speakers
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SAMPLING (val-speakers only)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def sample_videos(df, per_type=25, seed=42, val_speakers=None):
     """
     Sample per_type videos from each modify_type.
 
+    If val_speakers is provided, ONLY samples from those speakers
+    to prevent data leakage from the training set.
+
     Ensures:
     - Equal representation of all 4 manipulation types
-    - Balanced real vs fake overall (1 real type × per_type = real count,
-      3 fake types × per_type = fake count — set per_type to get desired balance)
+    - No overlap with training speakers
     - Reproducible via seed
     """
     random.seed(seed)
 
+    # Filter to val speakers only
+    if val_speakers is not None:
+        df['speaker'] = df['file'].apply(
+            lambda f: f.split('/')[1] if '/' in f and len(f.split('/')) > 1 else 'unknown'
+        )
+        before = len(df)
+        df = df[df['speaker'].isin(val_speakers)].reset_index(drop=True)
+        print(f"\n  Filtered to val speakers only: {len(df):,} videos (excluded {before - len(df):,} training videos)")
+    else:
+        print("\n  WARNING: No val_speakers provided — sampling from ALL videos (risk of data leakage!)")
+
     all_types = ['real', 'audio_modified', 'visual_modified', 'both_modified']
     sampled = []
 
-    print(f"\nSampling {per_type} videos per type:")
+    print(f"\nSampling {per_type} videos per type (val speakers only):")
     for mod_type in all_types:
         subset = df[df['modify_type'] == mod_type]
         available = len(subset)
 
         if available == 0:
-            print(f"  ⚠ {mod_type:20s}: not found in dataset — skipping")
+            print(f"  ⚠ {mod_type:20s}: not found in val split — skipping")
             continue
 
         if available < per_type:
-            print(f"  ⚠ {mod_type:20s}: only {available} available — taking all")
+            print(f"  ⚠ {mod_type:20s}: only {available} available in val split — taking all")
             chosen = subset
         else:
             chosen = subset.sample(per_type, random_state=seed)
-            print(f"  ✓ {mod_type:20s}: {per_type} sampled from {available:,}")
+            print(f"  ✓ {mod_type:20s}: {per_type} sampled from {available:,} (val speakers)")
 
         sampled.append(chosen)
 
@@ -178,8 +256,7 @@ def sample_videos(df, per_type=25, seed=42):
     print(f"\n  Total sampled: {len(result)}")
     print(f"    Real:  {real_count}  (1 type × {per_type})")
     print(f"    Fake:  {fake_count}  (3 types × {per_type})")
-    print(f"\n  Note: there are 3× more fake than real by design.")
-    print(f"  The evaluate_models.py script handles this correctly via AUC.")
+    print(f"\n  All test videos are from val speakers — zero leakage from training.")
 
     return result
 
@@ -317,6 +394,10 @@ def parse_args():
     p.add_argument('--symlinks',   action='store_true',
                    help='Use symlinks instead of copying (saves disk space, '
                         'requires val_dir to remain accessible)')
+    p.add_argument('--use_all',    action='store_true',
+                   help='Set if training used use_all_data=True (affects split recreation)')
+    p.add_argument('--train_seed', type=int, default=42,
+                   help='Seed used during training (default: 42)')
     return p.parse_args()
 
 
@@ -324,12 +405,14 @@ def main():
     args = parse_args()
 
     print(f"\n{'='*55}")
-    print("TEST DATASET GENERATOR")
+    print("TEST DATASET GENERATOR (val-speakers only)")
     print(f"{'='*55}")
     print(f"  val_dir:    {args.val_dir}")
     print(f"  output_dir: {args.output_dir}")
     print(f"  per_type:   {args.per_type}  ({args.per_type * 4} total videos)")
     print(f"  seed:       {args.seed}")
+    print(f"  train_seed: {args.train_seed}")
+    print(f"  use_all:    {args.use_all}")
     print(f"  mode:       {'symlinks' if args.symlinks else 'copy'}")
 
     # Check val_dir exists
@@ -343,7 +426,7 @@ def main():
             len(files) for _, _, files in os.walk(args.output_dir)
         )
         if existing > 0:
-            print(f"\n⚠ output_dir already exists with {existing} files: {args.output_dir}")
+            print(f"\n  output_dir already exists with {existing} files: {args.output_dir}")
             ans = input("  Overwrite? (y/n): ").strip().lower()
             if ans != 'y':
                 print("Aborted.")
@@ -356,11 +439,23 @@ def main():
     print(f"{'─'*55}")
     df = load_metadata(args.val_dir, args.metadata)
 
-    # Sample
+    # Recreate training split to identify val speakers
     print(f"\n{'─'*55}")
-    print("SAMPLING")
+    print("RECREATING TRAIN/VAL SPLIT")
     print(f"{'─'*55}")
-    sampled = sample_videos(df, per_type=args.per_type, seed=args.seed)
+    metadata_path = args.metadata or find_metadata(args.val_dir)
+    val_speakers, train_speakers = get_val_speakers(
+        metadata_path,
+        train_seed=args.train_seed,
+        use_all=args.use_all
+    )
+
+    # Sample — only from val speakers
+    print(f"\n{'─'*55}")
+    print("SAMPLING (val speakers only)")
+    print(f"{'─'*55}")
+    sampled = sample_videos(df, per_type=args.per_type, seed=args.seed,
+                           val_speakers=val_speakers)
 
     # Copy
     print(f"\n{'─'*55}")
@@ -373,8 +468,22 @@ def main():
     with open(manifest_path, 'w') as f:
         json.dump(manifest, f, indent=2)
 
+    # Also save the speaker lists for reference
+    split_info = {
+        'train_seed': args.train_seed,
+        'use_all': args.use_all,
+        'n_train_speakers': len(train_speakers),
+        'n_val_speakers': len(val_speakers),
+        'val_speakers': sorted(list(val_speakers)),
+        'train_speakers': sorted(list(train_speakers)),
+    }
+    split_path = os.path.join(args.output_dir, 'split_info.json')
+    with open(split_path, 'w') as f:
+        json.dump(split_info, f, indent=2)
+
     # Summary
     print_summary(manifest, args.output_dir)
+    print(f"  Split info: {split_path}")
 
     print(f"\n{'─'*55}")
     print("NEXT STEPS")
