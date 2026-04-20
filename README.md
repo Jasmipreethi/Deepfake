@@ -131,16 +131,18 @@ python create_test_data.py \
 The pipeline will auto-detect missing data and offer to download from Hugging Face.
 Test data is sampled **only from val speakers** — zero overlap with training data.
 
-### 4. Web Interface
+### 4. Web Interface (DeepScan)
 
 ```bash
 cd web
-pip install flask
-python app.py --model /path/to/best_model.pth
-# Open http://localhost:5000
+pip install flask flask-cors reportlab matplotlib
+export MODEL1_PATH=/path/to/best_model_1.pth
+export MODEL2_PATH=/path/to/best_model_2.pth
+python app.py
+# Open http://localhost:5000 (or --port 8080)
 ```
 
-Drag & drop any video to get a REAL/FAKE verdict with audio, video, and joint scores.
+Features: batch upload, model comparison, adjustable threshold, mel spectrogram display, SQLite history, and PDF report generation.
 
 ---
 

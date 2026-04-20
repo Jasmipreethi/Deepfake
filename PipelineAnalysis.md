@@ -464,26 +464,45 @@ python create_test_data.py --use_all \
 ## Changes: Web Interface
 
 ### What was added
-A browser-based UI for testing individual videos, built on Flask + vanilla HTML/CSS/JS.
+A full-featured web application for deepfake detection — "DeepScan". Built on Flask + vanilla HTML/CSS/JS with SQLite history.
 
-### Files
-| File | Purpose |
+### Pages
+
+| Page | Features |
 |---|---|
-| `web/app.py` | Flask server — loads model at startup, accepts video uploads via `POST /api/analyze`, returns JSON |
-| `web/templates/index.html` | Single-page app with drag-and-drop upload, progress bar, verdict display |
-| `web/static/style.css` | Dark glassmorphism theme, animated score bars, responsive layout |
-| `web/static/app.js` | Upload with XHR progress, animated results rendering |
+| **Analyse** | Single or batch video upload, model selector, adjustable threshold slider, window count, score bars, explanation panel, mel spectrogram display, PDF report download |
+| **Compare** | Upload one video, run through both models side-by-side with per-model verdicts and scores |
+| **History** | SQLite-backed table of all past analyses, per-entry PDF reports, individual/bulk delete |
 
-### How it works
-- **Backend** imports `load_model()` and `predict_video()` directly from `inference.py` — no code duplication
-- Model loads once at startup and stays in GPU/CPU memory for all requests
-- Uploaded videos are saved to a temp directory and deleted immediately after processing
-- Returns JSON with audio/video/joint scores, verdict, confidence, and a plain-English interpretation
+### Backend (`web/app.py`)
+- Self-contained architecture (duplicates model classes from `inference.py` — no import dependency)
+- Thread-safe model cache — loads each model once, shares across requests
+- Multi-window inference with per-window score breakdown
+- Mel spectrogram rendering as base64 PNG for explanation panel
+- Automated modality-based explanation (audio / video / both / mismatch)
+- PDF report generation via `reportlab`
+- SQLite history database (`history.db`)
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/analyse` | POST | Upload + classify videos (single or batch) |
+| `/api/compare` | POST | Compare two models on one video |
+| `/api/models` | GET | List loaded models with epoch/AUC info |
+| `/api/history` | GET/DELETE | Fetch or clear analysis history |
+| `/api/history/<id>` | GET/DELETE | Fetch or delete a single entry |
+| `/api/report/<id>` | GET | Download PDF report for an analysis |
 
 ### Usage
 ```bash
 cd web
-pip install flask
-python app.py --model /path/to/best_model.pth --device auto
+pip install flask flask-cors reportlab matplotlib
+
+# Set model paths
+export MODEL1_PATH=/path/to/best_model_1.pth
+export MODEL2_PATH=/path/to/best_model_2.pth
+
+python app.py
 # Open http://localhost:5000
 ```

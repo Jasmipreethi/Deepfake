@@ -335,28 +335,42 @@ Produces:
 
 ## Step 12: Web Interface (`web/app.py`)
 
-A browser-based tool for checking individual videos. Wraps `inference.py` in a Flask server.
+A full-featured web app ("DeepScan") for deepfake detection with three pages:
 
 ```bash
 cd web
-python app.py --model /path/to/best_model.pth
+pip install flask flask-cors reportlab matplotlib
+export MODEL1_PATH=/path/to/best_model_1.pth
+export MODEL2_PATH=/path/to/best_model_2.pth
+python app.py
 # Open http://localhost:5000
 ```
 
+### Features
+- **Analyse** — single or batch video upload with adjustable threshold, model selector, and window count
+- **Compare** — run one video through both models side-by-side
+- **History** — SQLite-backed dashboard of all past analyses with PDF report download
+
 ### How it works
-1. User drags & drops a video onto the page
-2. Flask saves it to a temp file, calls `predict_video()` from `inference.py`
-3. Returns JSON with audio/video/joint scores + verdict
-4. Frontend displays animated REAL/FAKE badge, score bars, and plain-English interpretation
-5. Temp file is deleted immediately after processing
+1. User uploads video(s) via drag & drop
+2. Flask saves to temp, runs multi-window inference on selected model
+3. Returns per-window scores, mel spectrograms (base64), and modality-based explanation
+4. Frontend renders score bars, window timeline, mel images, and verdict
+5. Analysis saved to SQLite — downloadable as PDF report
+6. Temp files deleted immediately after processing
 
 ### Architecture
 ```
-Browser → POST /api/analyze (multipart video)
-    → Flask saves temp file
-    → inference.py → load_model() + predict_video()
-    → JSON response
-    → Frontend renders verdict + scores
+Browser → POST /api/analyse (multipart, single or batch)
+    → Flask saves temp → multi-window inference → per-window scores
+    → Mel spectrogram rendering → explanation generation
+    → Save to SQLite → JSON response → Frontend renders results
+
+Browser → POST /api/compare (one video, two models)
+    → Run both models → side-by-side JSON → Frontend renders comparison
+
+Browser → GET /api/report/<id>
+    → Fetch from SQLite → Generate PDF → Download
 ```
 
-> **Why Flask?** Lightweight, same Python environment as training, and directly imports `inference.py` — no code duplication. The model loads once at startup and stays in memory for all requests."
+> **Why self-contained?** The backend duplicates model architecture classes instead of importing from `inference.py`, avoiding path issues and making the web app independently deployable.
