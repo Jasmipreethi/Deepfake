@@ -121,29 +121,39 @@ python main.py --fusion_type transformer
 # Analyze dataset before training
 python analyze_data.py
 
-# Generate leak-free test set (val speakers only)
-python create_test_data.py \
-    --val_dir /path/to/extracted_val \
-    --metadata /path/to/val_metadata.json \
-    --output_dir ./test/
-```
+# Compare multiple models
+python compare_models.py \
+    --models logs/logs_1/best_model.pth logs/logs_2/best_model.pth \
+    --names "Model 1" "Model 2" \
+    --video_dir ./test/ \
+    --output_dir comparison_results/
 
-The pipeline will auto-detect missing data and offer to download from Hugging Face.
-Test data is sampled **only from val speakers** — zero overlap with training data.
+# Run web interface
+python web/app.py
+```
 
 ### 4. Web Interface
-
-```bash
-cd web
-pip install flask torch torchvision torchaudio opencv-python-headless
-python app.py
-# Open http://localhost:5000
-```
-
-Three self-contained tabs:
+Open **http://localhost:5000** to access the browser-based tool.
 - **Analyze** — drag-and-drop upload, model selector, real-time verdict + audio/video/joint scores
 - **Compare** — run one video through both models side-by-side with agree/disagree summary
 - **History** — SQLite-backed table of all past analyses with per-entry delete and bulk clear
+
+---
+
+### 5. Generate Dissertation Figures
+
+```bash
+# Training history — loss/AUC curves from per-epoch metrics
+python plot_training_history.py
+
+# Per-type accuracy bar chart — from model prediction CSVs
+python plot_per_type_accuracy.py
+
+# Mel-spectrogram comparison — real vs fake audio side-by-side
+python plot_mel_spectrogram.py
+```
+
+All outputs go to `figures/`. Requires `matplotlib`, `torch`, `torchaudio`. `plot_mel_spectrogram.py` also needs `ffmpeg`.
 
 ---
 
@@ -151,11 +161,11 @@ Three self-contained tabs:
 
 | Setting | Value |
 |---|---|
-| **Two-Phase Training** | Phase 1: frozen encoders (8 epochs), Phase 2: fine-tune all |
-| **Loss** | BCE with label smoothing (5%), joint loss weighted 2× |
+| **Two-Phase Training** | Phase 1: frozen encoders (2 epochs), Phase 2: fine-tune all (LR 10× lower) |
+| **Loss** | Focal Loss (γ=2.0, α=0.25), joint head weighted 2× |
 | **Optimizer** | AdamW (fusion: 1e-4, encoders: 1e-5) |
-| **Scheduler** | ReduceLROnPlateau (patience=5) |
-| **Early Stopping** | 15 epochs without AUC improvement |
+| **Scheduler** | ReduceLROnPlateau (patience=5, factor=0.5) |
+| **Early Stopping** | 30% of total epoch budget without AUC improvement |
 | **Speaker-Based Split** | Zero speaker overlap between train/val |
 
 ---
@@ -173,12 +183,24 @@ Three self-contained tabs:
 ├── download_data.py     # Download dataset from Hugging Face
 ├── analyze_data.py      # Dataset analysis and visualization
 ├── create_test_data.py  # Generate leak-free test sets (val speakers only)
-├── evaluate_models.py   # Compare two models with full metrics
+├── compare_models.py    # Multi-model comparison with full metrics/plots
+├── evaluate_models.py   # [DEPRECATED] superseded by compare_models.py
 ├── inference.py         # Standalone single-video inference
+├── plot_training_history.py   # Generate training curves from output.txt
+├── plot_per_type_accuracy.py  # Generate per-type accuracy bar chart
+├── plot_mel_spectrogram.py    # Generate real vs fake mel-spectrogram comparison
 ├── main.py              # Entry point — orchestrates the full pipeline
 ├── requirements.txt     # Python dependencies
 ├── .env                 # API keys and configurable paths (git-ignored)
-├── PipelineAnalysis.md  # Detailed technical documentation
+├── Walkthrough.md       # Detailed code walkthrough
+├── WebInterface.md      # Web API specification
+├── PipelineAnalysis.md  # Pipeline technical documentation
+├── comparison_results/  # Model comparison outputs (CSVs, plots, metrics)
+├── figures/             # Generated figures for dissertation
+│   ├── training_history_model4.png
+│   ├── per_type_accuracy_bar_chart.png
+│   └── mel_spectrogram_comparison.png
+├── logs/                # Training checkpoints and run logs
 └── web/                 # Web interface
     ├── app.py           # Flask server (wraps inference.py)
     ├── templates/index.html

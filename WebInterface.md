@@ -35,14 +35,14 @@ The interface wraps `inference.py` in a minimal Flask app. All model architectur
 
 ```
 web/
-├── app.py              # Flask server — 3 API endpoints + history DB
+├── app.py              # Flask server — 5 API endpoints + SQLite history + model cache
 ├── templates/
-│   └── index.html      # Single-page app with 3 tabs (Analyze/Compare/History)
-├── static/             # Not used — static files orphaned
-│   ├── app.js
-│   └── style.css
-├── history.db          # SQLite history (created at runtime)
-└── Dockerfile/         # (unused, can be removed)
+│   └── index.html      # Single-page app with 3 tabs (Analyze/Compare/History), ~400 lines
+├── static/             # Legacy static assets — not loaded by index.html
+│   ├── app.js          # (orphaned)
+│   └── style.css       # (orphaned)
+├── history.db          # SQLite database created automatically at first run
+└── .gitignore          # Ignores history.db
 ```
 
 The frontend is entirely self-contained in `templates/index.html` (~400 lines). No external JS/CSS files are loaded.
@@ -97,6 +97,8 @@ Table of all past analyses stored in `history.db`.
 
 History is saved automatically on every analysis. Each entry stores: `id`, `filename`, `model_key`, `joint_score`, `audio_score`, `video_score`, `confidence`, `threshold`, `verdict`, `timestamp`.
 
+**Schema migration:** On startup, `init_db()` checks the actual column count of the `analyses` table against the expected number (10). If they differ — e.g., because `history.db` was created by an older version of the code — the old table is dropped and recreated with the current schema. The INSERT in `save_analysis()` also uses explicit column names rather than positional `VALUES`, making it resilient to future column reordering.
+
 ---
 
 ## API Endpoints
@@ -108,11 +110,23 @@ List available models and device info.
 **Response:**
 ```json
 {
-  "model1": {"path": "/path/to/model1.pth", "available": true},
-  "model2": {"path": "/path/to/model2.pth", "available": false},
+  "model1": {
+    "path": ".../logs/logs_2/best_model.pth",
+    "available": true,
+    "label": "Model 2 — Val AUC 0.994 (5 epochs)",
+    "note": "Best validation AUC; use threshold 0.795+ for balanced accuracy"
+  },
+  "model2": {
+    "path": ".../logs/logs_3/best_model.pth",
+    "available": true,
+    "label": "Model 3 — Test AUC 0.937 (3 epochs)",
+    "note": "Best practical model: 93% accuracy, zero false positives"
+  },
   "device": "cuda"
 }
 ```
+
+Model paths are hardcoded to `logs/logs_2/best_model.pth` and `logs/logs_3/best_model.pth` (the two best models from training runs). The `MODEL1_PATH` and `MODEL2_PATH` environment variables override these defaults.
 
 ### `POST /api/analyze`
 
@@ -238,7 +252,8 @@ back to upload
 ## Running
 
 ```bash
-# Set model paths
+# Model paths are hardcoded by default (logs/logs_2, logs/logs_3).
+# Override with env vars if needed:
 export MODEL1_PATH=/path/to/model1.pth
 export MODEL2_PATH=/path/to/model2.pth
 

@@ -55,6 +55,26 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+
+plt.style.use('default')
+plt.rcParams.update({
+    'figure.facecolor': 'white',
+    'axes.facecolor': 'white',
+    'axes.edgecolor': '#1e293b',
+    'axes.labelcolor': '#1e293b',
+    'text.color': '#1e293b',
+    'xtick.color': '#334155',
+    'ytick.color': '#334155',
+    'grid.color': '#e2e8f0',
+    'grid.alpha': 0.6,
+    'axes.grid': True,
+    'axes.spines.top': False,
+    'axes.spines.right': False,
+    'figure.dpi': 100,
+    'savefig.dpi': 150,
+    'savefig.bbox': 'tight',
+    'savefig.pad_inches': 0.1,
+})
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

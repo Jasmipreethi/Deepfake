@@ -1,0 +1,51 @@
+Python-dotenv could not parse statement starting at line 56
+Python-dotenv could not parse statement starting at line 57
+Python-dotenv could not parse statement starting at line 58
+Python-dotenv could not parse statement starting at line 59
+Python-dotenv could not parse statement starting at line 60
+Python-dotenv could not parse statement starting at line 61
+Python-dotenv could not parse statement starting at line 64
+Python-dotenv could not parse statement starting at line 65
+Python-dotenv could not parse statement starting at line 67
+Python-dotenv could not parse statement starting at line 71
+Python-dotenv could not parse statement starting at line 72
+Python-dotenv could not parse statement starting at line 74
+Python-dotenv could not parse statement starting at line 77
+Python-dotenv could not parse statement starting at line 82
+Python-dotenv could not parse statement starting at line 87
+Python-dotenv could not parse statement starting at line 92
+Python-dotenv could not parse statement starting at line 97
+Python-dotenv could not parse statement starting at line 102
+Python-dotenv could not parse statement starting at line 107
+Python-dotenv could not parse statement starting at line 116
+Python-dotenv could not parse statement starting at line 123
+Python-dotenv could not parse statement starting at line 130
+Python-dotenv could not parse statement starting at line 137
+Python-dotenv could not parse statement starting at line 144
+Python-dotenv could not parse statement starting at line 151
+Python-dotenv could not parse statement starting at line 158
+
+==================================================
+ AV Deepfake Detection — Web App
+==================================================
+ Device  : cpu
+ Model 1 : logs/logs_2/best_model.pth
+ Model 2 : logs/logs_3/best_model.pth
+ URL     : http://localhost:5000
+==================================================
+
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.244:5000
+Press CTRL+C to quit
+127.0.0.1 - - [05/May/2026 22:32:29] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [05/May/2026 22:32:29] "GET /api/models HTTP/1.1" 200 -
+127.0.0.1 - - [05/May/2026 22:32:46] "POST /api/analyze HTTP/1.1" 500 -
+127.0.0.1 - - [05/May/2026 22:40:09] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [05/May/2026 22:40:09] "GET /api/models HTTP/1.1" 200 -
+127.0.0.1 - - [05/May/2026 22:41:09] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [05/May/2026 22:41:10] "GET /api/models HTTP/1.1" 200 -
+127.0.0.1 - - [05/May/2026 22:41:28] "POST /api/analyze HTTP/1.1" 500 -

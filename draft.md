@@ -577,7 +577,19 @@ The near-identical loss values across Models 2, 4, and 5 further confirm that Ru
 
 ## 4.3 Test Set Evaluation — All Four Models
 
-Evaluation was conducted using `compare_models.py` on the 100-video test set (25 real, 75 fake), comprising all four loadable checkpoints (Models 2–5). Model 1's checkpoint was corrupted and could not be loaded. Each video was processed with one 2-second analysis window on CPU. All results below are measured directly from inference on the test set; no numbers are estimated.
+Evaluation was conducted using `compare_models.py` on the 100-video test set (25 real, 75 fake), comprising all four loadable checkpoints (Models 2–5). The comparison was initiated using the following command:
+
+```bash
+python compare_models.py \
+    --models logs/logs_2/best_model.pth logs/logs_3/best_model.pth \
+             logs/logs_4/best_model.pth logs/logs_5/best_model.pth \
+    --names "Model 2 (5ep, best)" "Model 3 (3ep)" \
+            "Model 4 (5ep)" "Model 5 (5ep)" \
+    --video_dir ./test/ \
+    --output_dir comparison_results/
+```
+
+Model 1's checkpoint was corrupted and could not be loaded. Each video was processed with one 2-second analysis window on CPU. All results below are measured directly from inference on the test set; no numbers are estimated.
 
 ### 4.3.1 Overall Metrics — All Four Models
 

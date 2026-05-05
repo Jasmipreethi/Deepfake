@@ -359,6 +359,39 @@ Loads the best model (by joint AUC) and produces:
 
 > **Why AUC over accuracy?** AUC measures ranking quality across all thresholds. Accuracy depends on a threshold choice and can be misleading with imbalanced classes. AUC tells you: "If I pick a random real and a random fake video, how often does the model rank them correctly?"
 
+### Generated Figures
+
+Three standalone plotting scripts produce publication-ready figures from saved outputs:
+
+**`plot_training_history.py`** — Reads per-epoch metrics from `logs/logs_5/output.txt`:
+```bash
+python plot_training_history.py
+python plot_training_history.py logs/logs_5/output.txt  # custom path
+```
+Generates `figures/training_history_model4.png`:
+- Three panels: loss (Focal train vs BCE val), validation AUC per head, learning rate schedule
+- Phase transition line at epoch 3 (frozen → unfrozen)
+- Summary stats printed to console
+
+**`plot_per_type_accuracy.py`** — Reads prediction CSVs from `comparison_results/`:
+```bash
+python plot_per_type_accuracy.py
+```
+Generates `figures/per_type_accuracy_bar_chart.png`:
+- Grouped bar chart: accuracy by manipulation type for Models 2, 3, 4
+- Value labels on each bar, 100% reference line
+
+**`plot_mel_spectrogram.py`** — Reads real and fake test videos and extracts mel-spectrograms:
+```bash
+python plot_mel_spectrogram.py
+```
+Generates `figures/mel_spectrogram_comparison.png`:
+- Side-by-side mel-spectrograms (inferno colormap): real vs audio-modified audio
+- Annotations highlighting natural harmonic structure vs over-smoothed synthetic patterns
+- Parameter panel below: 16kHz, 1024-FFT, 128 mel bins, 63 time frames
+
+All scripts use the same matplotlib theme as `compare_models.py`.
+
 ---
 
 ## Step 11: Standalone Testing (`create_test_data.py` + `evaluate_models.py`)
@@ -388,19 +421,19 @@ test/
 
 > **Why is this reproducible without saving manifests?** The split is deterministic: same `val_metadata.json` + same `seed=42` + same `GroupShuffleSplit` = exact same speaker assignments every time.
 
-### Compare two models
+### Compare multiple models
 ```bash
-python evaluate_models.py \
-    --model1 run1_best_model.pth \
-    --model2 run2_best_model.pth \
+python compare_models.py \
+    --models logs/logs_1/best_model.pth logs/logs_2/best_model.pth \
+    --names "Model 1" "Model 2" \
     --video_dir ./test/ \
-    --output_dir eval_results/
+    --output_dir comparison_results/
 ```
 
 Produces:
-- `model_comparison.png` — 6-panel figure (metrics bar chart, ROC curves, score distributions, confusion matrices, audio vs video scatter)
+- `model_comparison.png` — Comprehensive multi-panel figure (metrics bar chart, ROC curves, score distributions, confusion matrices, audio vs video scatter)
 - `training_history.png` — AUC and loss curves from checkpoint history
-- `model1_predictions.csv` / `model2_predictions.csv` — every prediction with scores
+- `Model_1_predictions.csv` / `Model_2_predictions.csv` — every prediction with scores
 - `metrics_summary.json` — all metrics in JSON
 
 > **Key insight:** `best_model.pth` is for testing. `training_checkpoint.pth` is for resuming training. Always use `best_model.pth` for accuracy evaluation.

@@ -24,8 +24,6 @@ from inference import load_model, predict_video
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", tempfile.gettempdir())
 
 # Default model paths — point to the two best models from the training runs.
-# Model 2: logs/logs_2 — peak validation AUC 0.994, 5 epochs. Best for precision/recall balance.
-# Model 3: logs/logs_3 — test AUC 0.937, 93% accuracy, F1 0.837, zero false positives.
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL1_PATH = os.environ.get("MODEL1_PATH", os.path.join(_PROJECT_ROOT, "logs", "logs_2", "best_model.pth"))
 MODEL2_PATH = os.environ.get("MODEL2_PATH", os.path.join(_PROJECT_ROOT, "logs", "logs_3", "best_model.pth"))
@@ -35,6 +33,24 @@ MAX_MB = int(os.environ.get("MAX_UPLOAD_MB", 500))
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["MAX_CONTENT_LENGTH"] = MAX_MB * 1024 * 1024
+
+# Global error handlers to ensure we always return JSON
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({"error": f"File too large (max {MAX_MB}MB)"}), 413
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Endpoint not found"}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({"error": "Internal server error"}), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    print(f"Unhandled Exception: {str(e)}")
+    return jsonify({"error": str(e)}), 500
 
 _model_cache = {}
 
@@ -55,8 +71,13 @@ def allowed(filename):
 
 # ── SQLite history ───────────────────────────────────────────────────────────
 
+EXPECTED_COLS = 10
+
 def init_db():
     con = sqlite3.connect(DB_PATH)
+    existing = con.execute("PRAGMA table_info(analyses)").fetchall()
+    if len(existing) != EXPECTED_COLS:
+        con.execute("DROP TABLE IF EXISTS analyses")
     con.execute("""CREATE TABLE IF NOT EXISTS analyses (
         id TEXT PRIMARY KEY,
         filename TEXT,
@@ -74,7 +95,10 @@ def init_db():
 
 def save_analysis(rec):
     con = sqlite3.connect(DB_PATH)
-    con.execute("""INSERT INTO analyses VALUES (?,?,?,?,?,?,?,?,?,?)""", (
+    con.execute("""INSERT INTO analyses
+        (id, filename, model_key, joint_score, audio_score, video_score,
+         confidence, threshold, verdict, timestamp)
+        VALUES (?,?,?,?,?,?,?,?,?,?)""", (
         rec["id"], rec["filename"], rec["model_key"],
         rec["joint_score"], rec["audio_score"], rec["video_score"],
         rec["confidence"], rec["threshold"], rec["verdict"], rec["timestamp"]
