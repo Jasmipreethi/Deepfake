@@ -1,158 +1,33 @@
 # Web Interface — AV Deepfake Detector
 
-A browser-based tool that lets users upload a video and get a real-time deepfake analysis.
+A browser-based tool for selecting a model, uploading a video, checking accuracy metrics, and comparing models. Wraps `inference.py` — no ML knowledge required.
 
 ---
 
 ## Overview
 
 ```
-User uploads video → Server extracts features → Model predicts → Results displayed
+Select model → Upload video → Get verdict + scores
+                ↓
+           (Optional) Compare both models side-by-side
+                ↓
+           (Optional) Review history of past analyses
 ```
 
-The interface wraps `inference.py` in a web app. No ML knowledge required to use it.
-
----
-
-## Pages
-
-### 1. Upload Page (Home)
-
-**Layout:** Centered card on a dark gradient background.
-
-| Element | Description |
-|---|---|
-| **Title** | "AV Deepfake Detector" with subtitle "Upload a video to check if it's real or fake" |
-| **Upload area** | Drag-and-drop zone with file picker button. Accepts `.mp4`, `.avi`, `.mov`, `.mkv`, `.webm` |
-| **File info** | Shows filename, size, and duration after selection |
-| **Analyze button** | Large primary button — "Analyze Video" |
-| **Progress bar** | Appears during processing with stages: "Extracting features..." → "Running model..." → "Done" |
-| **Model selector** | Dropdown to pick which `.pth` model to use (if multiple available) |
-
-### 2. Results Page
-
-**Layout:** Two-column layout — video preview on left, results on right.
-
-#### Left Column — Video Preview
-- Embedded video player with playback controls
-- Clickable timeline showing which 2-second window was analyzed (highlighted region)
-
-#### Right Column — Verdict & Scores
-
-| Section | Content |
-|---|---|
-| **Verdict badge** | Large "REAL" (green) or "FAKE" (red) badge with confidence percentage |
-| **Confidence meter** | Horizontal gauge from 0-100% showing how certain the model is |
-| **Score breakdown** | Three progress bars: Audio score, Video score, Joint score (0.0 to 1.0 each) |
-| **Interpretation** | Plain-English explanation: "The audio appears manipulated (score: 0.12) while the video appears authentic (score: 0.89). The overall assessment is FAKE." |
-
-#### Score Visualization
-```
-Audio:  ████████░░░░░░░░░░░░  0.12  ← FAKE
-Video:  █████████████████░░░  0.89  ← REAL  
-Joint:  ██████░░░░░░░░░░░░░░  0.31  ← FAKE (overall verdict)
-```
-
-#### Detailed Analysis (collapsible)
-- Number of windows analyzed (default: 3)
-- Per-window scores table
-- Processing time
-
-### 3. History Page (optional)
-
-- Table of previously analyzed videos with verdict, scores, and timestamp
-- Re-analyze or download results as CSV
-- Clear history button
+The interface wraps `inference.py` in a minimal Flask app. All model architecture and inference logic is imported directly from `inference.py` — no duplication.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Why |
+| Layer | Technology | Notes |
 |---|---|---|
-| **Frontend** | HTML + CSS + JavaScript | Simple, no build step needed |
-| **Backend** | Flask or FastAPI | Lightweight Python server, shares code with `inference.py` |
+| **Frontend** | Single self-contained HTML | No build step, CSS inline in HTML |
+| **Backend** | Flask | Lightweight, Python server |
 | **Model serving** | PyTorch (CPU or GPU) | Same weights as training |
+| **Inference** | Imported from `inference.py` | `load_model()`, `predict_video()` |
+| **History** | SQLite | Lightweight, no separate service needed |
 | **File handling** | Temp directory | Uploaded videos deleted after analysis |
-
----
-
-## API Endpoints
-
-### `POST /api/analyze`
-Upload a video for analysis.
-
-**Request:** `multipart/form-data` with video file  
-**Response:**
-```json
-{
-  "verdict": "FAKE",
-  "confidence": 0.87,
-  "scores": {
-    "audio": 0.12,
-    "video": 0.89,
-    "joint": 0.31
-  },
-  "windows_analyzed": 3,
-  "processing_time_sec": 4.2,
-  "per_window": [
-    {"audio": 0.11, "video": 0.88, "joint": 0.30},
-    {"audio": 0.13, "video": 0.91, "joint": 0.32},
-    {"audio": 0.12, "video": 0.87, "joint": 0.31}
-  ]
-}
-```
-
-### `GET /api/models`
-List available model files.
-
-**Response:**
-```json
-{
-  "models": [
-    {"name": "best_model_run1.pth", "fusion": "transformer", "epoch": 20, "auc": 0.94},
-    {"name": "best_model_run2.pth", "fusion": "transformer", "epoch": 35, "auc": 0.96}
-  ],
-  "active": "best_model_run2.pth"
-}
-```
-
-### `GET /api/health`
-Health check — confirms model is loaded and ready.
-
----
-
-## UI Flow
-
-```mermaid
-flowchart TD
-    A[User opens page] --> B[Upload / drag-drop video]
-    B --> C[Click 'Analyze']
-    C --> D[Show progress bar]
-    D --> E{Server processes}
-    E --> F[Extract 3 windows]
-    F --> G[Run model on each]
-    G --> H[Average predictions]
-    H --> I[Return JSON]
-    I --> J[Display verdict + scores]
-    J --> K{User action}
-    K --> L[Upload another video]
-    K --> M[Download results CSV]
-    K --> N[View detailed breakdown]
-```
-
----
-
-## Design Guidelines
-
-| Aspect | Guideline |
-|---|---|
-| **Color scheme** | Dark background (#1a1a2e), green for REAL (#2ecc71), red for FAKE (#e74c3c) |
-| **Typography** | Inter or Roboto, large verdict text (48px), scores in monospace |
-| **Animations** | Smooth progress bar, verdict badge fade-in with slight scale animation |
-| **Responsive** | Works on mobile — single column layout on small screens |
-| **Max file size** | 500MB (configurable via server) |
-| **Timeout** | 60 seconds per video (configurable) |
 
 ---
 
@@ -160,32 +35,241 @@ flowchart TD
 
 ```
 web/
-├── app.py              # Flask/FastAPI server
+├── app.py              # Flask server — 3 API endpoints + history DB
 ├── templates/
-│   └── index.html      # Single-page app
-├── static/
-│   ├── style.css       # Styles
-│   └── app.js          # Upload handling, results display
-└── models/             # Symlink or copy of .pth files
+│   └── index.html      # Single-page app with 3 tabs (Analyze/Compare/History)
+├── static/             # Not used — static files orphaned
+│   ├── app.js
+│   └── style.css
+├── history.db          # SQLite history (created at runtime)
+└── Dockerfile/         # (unused, can be removed)
+```
+
+The frontend is entirely self-contained in `templates/index.html` (~400 lines). No external JS/CSS files are loaded.
+
+---
+
+## Pages
+
+### 1. Analyze Tab (default)
+
+**Layout:** Single centered card on dark background.
+
+| Element | Description |
+|---|---|
+| **Dropzone** | Drag-and-drop or click to upload. Accepts `.mp4`, `.avi`, `.mov`, `.mkv`, `.webm`, `.m4v` |
+| **File info** | Shows filename and size after selection |
+| **Model selector** | Dropdown — pick Model 1 or Model 2 (configured via `MODEL1_PATH` / `MODEL2_PATH` env vars) |
+| **Analyze button** | Disabled until a file is selected |
+| **Verdict + scores** | Shows after analysis: REAL/FAKE badge, confidence %, audio/video/joint scores |
+| **Device badge** | Shows CPU or CUDA at bottom of card |
+| **Reset button** | Returns to upload state |
+
+**Result display:**
+```
+VERDICT: REAL         Confidence: 85%
+Audio    ████████████  0.892
+Video    ██████████░░  0.734
+Joint    ████████████  0.892
+```
+
+### 2. Compare Tab
+
+Upload a single video and run it through **both** models simultaneously for side-by-side comparison.
+
+| Element | Description |
+|---|---|
+| **Dropzone** | Accepts one video file |
+| **Compare button** | Disabled until file selected |
+| **Side-by-side columns** | Model 1 results and Model 2 results, each with audio/video/joint scores and verdict |
+| **Summary line** | Shows whether models agree or disagree on the verdict |
+
+### 3. History Tab
+
+Table of all past analyses stored in `history.db`.
+
+| Element | Description |
+|---|---|
+| **Count** | Shows total number of stored analyses |
+| **Table columns** | File, Verdict tag, Joint score, Model used, Delete button |
+| **Clear All** | Wipes entire history after confirmation |
+| **Per-row delete** | Click ✕ to delete individual entries |
+
+History is saved automatically on every analysis. Each entry stores: `id`, `filename`, `model_key`, `joint_score`, `audio_score`, `video_score`, `confidence`, `threshold`, `verdict`, `timestamp`.
+
+---
+
+## API Endpoints
+
+### `GET /api/models`
+
+List available models and device info.
+
+**Response:**
+```json
+{
+  "model1": {"path": "/path/to/model1.pth", "available": true},
+  "model2": {"path": "/path/to/model2.pth", "available": false},
+  "device": "cuda"
+}
+```
+
+### `POST /api/analyze`
+
+Upload a video for analysis with a selected model.
+
+**Request:** `multipart/form-data`
+- `video` — video file
+- `model` — `"model1"` or `"model2"` (default: `"model1"`)
+- `threshold` — float (default: `0.5`)
+- `n_windows` — int, number of windows to average (default: `3`)
+
+**Response:**
+```json
+{
+  "file": "video.mp4",
+  "audio_score": 0.8921,
+  "video_score": 0.7342,
+  "joint_score": 0.8921,
+  "verdict": "REAL",
+  "confidence": 0.7842,
+  "threshold": 0.5,
+  "model_key": "model1",
+  "id": "uuid-of-analysis"
+}
+```
+
+### `POST /api/compare`
+
+Run the same video through both models side-by-side.
+
+**Request:** `multipart/form-data`
+- `video` — video file
+- `threshold` — float (default: `0.5`)
+- `n_windows` — int (default: `3`)
+
+**Response:**
+```json
+{
+  "filename": "video.mp4",
+  "threshold": 0.5,
+  "results": {
+    "model1": {
+      "audio_score": 0.8921, "video_score": 0.7342,
+      "joint_score": 0.8921, "verdict": "REAL", "confidence": 0.7842
+    },
+    "model2": {
+      "audio_score": 0.1234, "video_score": 0.5678,
+      "joint_score": 0.1234, "verdict": "FAKE", "confidence": 0.7532
+    }
+  }
+}
+```
+
+### `GET /api/history`
+
+Fetch past analyses.
+
+**Response:**
+```json
+{
+  "analyses": [
+    {
+      "id": "uuid", "filename": "video.mp4", "model_key": "model1",
+      "joint_score": 0.8921, "audio_score": 0.8921, "video_score": 0.7342,
+      "confidence": 0.7842, "threshold": 0.5, "verdict": "REAL",
+      "timestamp": "2026-04-28T20:00:00"
+    }
+  ]
+}
+```
+
+### `DELETE /api/history/<id>`
+
+Delete a single history entry.
+
+### `DELETE /api/history`
+
+Clear all history.
+
+---
+
+## UI Flow
+
+```
+User opens page
+      ↓
+tab: Analyze ──────────────────────────────→ tab: Compare ──→ tab: History
+      ↓                                         ↓                    ↓
+drag/drop or click                            drag/drop           table of past
+to upload video                               single video        analyses
+      ↓                                         ↓                    ↓
+pick model from dropdown                      click Compare       delete individual
+click Analyze                                 Models button       or Clear All
+      ↓                                         ↓                    ↓
+show loader                                   run both models     (no re-analysis
+      ↓                                         side-by-side       in history tab)
+show VERDICT + scores                   show side-by-side
+click "Analyze Another"                    agree/disagree
+      ↓                                      summary
+back to upload
 ```
 
 ---
 
-## Deployment Options
+## Design
 
-| Option | Pros | Cons |
-|---|---|---|
-| **Local** (`python app.py`) | Simple, GPU access | Not shareable |
-| **Docker** | Portable, reproducible | Larger image (~5GB with PyTorch) |
-| **Hugging Face Spaces** | Free hosting, GPU available | File size limits, cold starts |
-| **Cloud VM** (same as training) | Full control, GPU | Costs money |
+| Aspect | Value |
+|---|---|
+| **Background** | `#0f172a` (deep navy) |
+| **Surface** | `#1e293b` (card background) |
+| **REAL color** | `#22c55e` (green) |
+| **FAKE color** | `#ef4444` (red) |
+| **Accent** | `#38bdf8` (sky blue) |
+| **Audio score color** | `#a78bfa` (purple) |
+| **Video score color** | `#f472b6` (pink) |
+| **Joint score color** | `#38bdf8` (sky blue) |
+| **Typography** | System UI / -apple-system / sans-serif |
+| **Max file size** | 500MB (configurable via `MAX_UPLOAD_MB` env var) |
+| **Responsive** | Single column, works on mobile |
+
+---
+
+## Running
+
+```bash
+# Set model paths
+export MODEL1_PATH=/path/to/model1.pth
+export MODEL2_PATH=/path/to/model2.pth
+
+# Optional: set DB path and upload limits
+export DB_PATH=web/history.db
+export MAX_UPLOAD_MB=500
+
+# Run
+python web/app.py
+# → http://localhost:5000
+```
+
+---
+
+## What Was Removed (v1 → v2 simplification)
+
+| Feature | Reason |
+|---|---|
+| PDF report generation | Not required for core use case |
+| Per-window score breakdown UI | Kept multi-window inference on backend, simplified frontend |
+| Mel spectrogram display | Added visual complexity, low value for simple metrics check |
+| Explanation panel | Overhead for simple verdict display |
+| Model architecture in `app.py` | Now imported from `inference.py` |
+| `/api/health` endpoint | Redundant with basic fetch |
+| Per-model epoch/AUC metadata in UI | Not critical for simple usage |
 
 ---
 
 ## Security Considerations
 
-- Validate file type server-side (check magic bytes, not just extension)
+- Validate file extension server-side
 - Limit upload size (default 500MB)
-- Delete uploaded files after processing
-- Rate limiting (prevent abuse)
-- No user data stored permanently
+- Uploaded videos deleted immediately after processing (temp directory)
+- No user data stored permanently beyond history (which can be cleared)

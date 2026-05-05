@@ -1,48 +1,48 @@
 """
 Model Evaluation Script — AV Deepfake Detection
+[DEPRECATED — use compare_models.py instead]
 
-Compares two trained models on a folder of test videos.
-Computes accuracy, AUC, confusion matrix, per-type breakdown,
-and generates comparison plots. Results saved to CSV and PNG.
+This script has been superseded by compare_models.py, which is a strict
+superset: it supports any number of models (not just two), adds per-type
+AUC breakdown, a confidence field, a richer N-model comparison figure, and
+an overlaid training history plot.
 
-Folder structure expected:
-    test_videos/
-        real/
-            video1.mp4
-            video2.mp4
-        fake/
-            video3.mp4
-            video4.mp4
+Equivalent commands:
 
-    OR flat folder (all videos, labelled by filename containing 'real' or 'fake'):
-    test_videos/
-        real_001.mp4
-        fake_001.mp4
+  # Old (two-model comparison via evaluate_models.py):
+  python evaluate_models.py \\
+      --model1 run1_best_model.pth \\
+      --model2 run2_best_model.pth \\
+      --name1 "Run 1" --name2 "Run 2" \\
+      --video_dir test_videos/
 
-Usage:
-    python evaluate_models.py \\
-        --model1 run1_best_model.pth \\
-        --model2 run2_best_model.pth \\
-        --video_dir test_videos/ \\
-        --output_dir eval_results/
+  # New (same comparison via compare_models.py):
+  python compare_models.py \\
+      --models run1_best_model.pth run2_best_model.pth \\
+      --names "Run 1" "Run 2" \\
+      --video_dir test_videos/
 
-    # With custom names for the models
-    python evaluate_models.py \\
-        --model1 run1_best_model.pth  --name1 "Run 1 (10 epochs)" \\
-        --model2 run2_best_model.pth  --name2 "Run 2 (20 epochs)" \\
-        --video_dir test_videos/
-
-    # Use GPU
-    python evaluate_models.py \\
-        --model1 run1_best_model.pth \\
-        --model2 run2_best_model.pth \\
-        --video_dir test_videos/ \\
-        --device cuda
-
-Requirements:
-    pip install torch torchvision torchaudio opencv-python-headless tqdm
-    pip install scikit-learn pandas matplotlib numpy
+  # Five-model comparison (not possible in evaluate_models.py):
+  python compare_models.py \\
+      --models logs/logs_1/best_model.pth logs/logs_2/best_model.pth \\
+                logs/logs_3/best_model.pth logs/logs_4/best_model.pth \\
+                logs/logs_5/best_model.pth \\
+      --names "Run 1" "Run 2" "Run 3" "Run 4" "Run 5" \\
+      --video_dir test/ \\
+      --output_dir comparison_results/
 """
+
+import sys
+
+def main():
+    print("[DEPRECATED] evaluate_models.py has been superseded by compare_models.py.")
+    print("See the docstring at the top of this file for equivalent commands.")
+    print("Run: python compare_models.py --help")
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()
+
 
 import os
 import sys

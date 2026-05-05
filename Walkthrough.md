@@ -4,17 +4,59 @@ A step-by-step explanation of how the entire pipeline works and why each design 
 
 ---
 
+## File Overview
+
+| File | Purpose |
+|------|---------|
+| `config.py` | Centralized configuration — paths, hyperparameters, dataclass configs |
+| `data_utils.py` | Data loading, speaker-based splitting, feature extraction, lazy-loading dataset |
+| `audio.py` | Audio encoder models (simple, improved, pretrained ResNet18) |
+| `video.py` | Video encoder models (simple, improved, pretrained ResNet3D-18) |
+| `cross_modal.py` | Cross-modal fusion modules (MLP, attention, transformer) |
+| `train_utils.py` | Training loop, FocalLoss, optimizer/scheduler setup, evaluation metrics |
+| `checkpoint_utils.py` | Checkpoint saving/loading for resumable training |
+| `main.py` | Full pipeline orchestration — data loading → training → evaluation |
+| `inference.py` | Standalone inference on trained models (no training dependencies) |
+| `compare_models.py` | Multi-model comparison on test data with comprehensive metrics/plots |
+| `create_test_data.py` | Generate leak-free test dataset from validation speakers only |
+| `evaluate_models.py` | **DEPRECATED** — superseded by `compare_models.py` |
+| `web/app.py` | Flask web server ("DeepScan") for deepfake detection via browser |
+| `download_data.py` | Download AV-Deepfake1M++ from Hugging Face |
+
+---
+
 ## Step 1: Configuration (`config.py`)
 
-All paths and hyperparameters are centralized here.
+All paths and hyperparameters are centralized in dataclass configs:
 
-**Paths read from environment variables:**
 ```python
-DATA_DIR = os.environ.get('DATA_DIR', '/content/drive/MyDrive/val')
-CHECKPOINT_DIR = os.environ.get('CHECKPOINT_DIR', '/content/drive/MyDrive/checkpoints')
+DATA_DIR = os.environ.get('DATA_DIR', '.')
+VAL_DIR = os.path.join(DATA_DIR, 'extracted_val', 'val')
+CHECKPOINT_DIR = os.environ.get('CHECKPOINT_DIR', './checkpoints')
 ```
 
 > **Why env vars?** Makes the pipeline portable — same code works on Colab, VPS, or local by just changing `.env`.
+
+**Dataclass configs:**
+```python
+MODEL_CONFIG = ModelConfig(feature_dim=256, hidden_dim=512, dropout=0.4)
+TRAIN_CONFIG = TrainConfig(epochs=10, batch_size=8, freeze_epochs=None, patience=None, ...)
+OPTIM_CONFIG = OptimConfig(learning_rate=1e-4, encoder_lr=1e-5, weight_decay=1e-4)
+```
+
+**Feature extraction constants:**
+```python
+FEATURE_CONFIG = {
+    'sr': 16000,      # audio sample rate
+    'fps': 25,        # video FPS
+    'duration': 2.0,  # clip duration in seconds
+    'num_frames': 50, # 2s × 25fps
+    'img_size': 224,  # ResNet input
+    'audio_samples': 32000, # 2s × 16000Hz
+    'n_fft': 1024, hop_length': 512,
+    'target_t': 63,   # derived: fixed mel time dimension
+}
+```
 
 **Key hyperparameters:**
 | Setting | Value | Why |
@@ -57,9 +99,9 @@ train_df, val_df = sample_videos(df, samples_per_type, val_split=0.2)
 Extracts **speaker IDs** from file paths (e.g. `source/id00015/clip.mp4` → `id00015`), then splits using `GroupShuffleSplit`:
 
 ```
-Train speakers: {A, B, C, D, E}    ← 80% of speakers
-Val speakers:   {X, Y, Z}          ← 20% of speakers
-                Zero overlap ✓
+Train speakers: {A, B, C, D, E} ← 80% of speakers
+Val speakers: {X, Y, Z} ← 20% of speakers
+Zero overlap ✓
 ```
 
 > **Why speaker-based, not random?** Random splits cause **identity leakage** — the model learns faces/voices instead of manipulation artifacts. With speaker-based splitting, the model has never seen the val speakers during training, so it must detect actual deepfake artifacts.
@@ -72,10 +114,11 @@ For each video, a **2-second window** is extracted:
 
 ### Window Selection
 ```python
-if fake_segments:           # manipulated video
-    start_sec = fake_segments[0][0]    # start of first fake segment
-else:                        # real video
-    start_sec = total_duration / 2 - 1 # middle 2 seconds
+if fake_segments:  # manipulated video
+    start_sec = fake_segments[0][0]  # start of first fake segment
+else:  # real video
+    total_sec = total_frames / cfg['fps']
+    start_sec = max(0, (total_sec / 2) - (cfg['duration'] / 2))  # middle 2 seconds
 ```
 
 > **Why 2 seconds?** Most deepfake artifacts are subtle and localized. 2 seconds captures enough temporal context (50 frames) without requiring massive tensors.
@@ -84,13 +127,14 @@ else:                        # real video
 
 ### Video Features
 ```python
-frames = []
-for i in range(num_frames):              # 50 frames
-    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start + i)
+for _ in range(cfg['num_frames']):  # 50 frames
     ret, frame = cap.read()
-    frame = cv2.resize(frame, (224, 224)) # resize for ResNet
-    frame = frame[:, :, ::-1] / 255.0     # BGR→RGB, normalize to [0,1]
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = cv2.resize(frame, (cfg['img_size'], cfg['img_size']))
+    frame = frame / 255.0  # normalize to [0,1]
     frames.append(frame)
+# ImageNet normalisation: (frames - mean) / std
+video_tensor = torch.FloatTensor(frames_arr).permute(0, 3, 1, 2)
 # Output: (50, 3, 224, 224)
 ```
 
@@ -98,14 +142,21 @@ for i in range(num_frames):              # 50 frames
 
 > **Why 50 frames?** 2 seconds × 25 fps = 50 frames. Captures motion patterns that deepfakes often get wrong (temporal inconsistencies).
 
+> **Why ImageNet normalization?** Matches the distribution the pretrained ResNet was trained on.
+
 ### Audio Features
 ```python
-waveform, sr = torchaudio.load(video_path)    # load from the video file
-waveform = resample(waveform, sr, 16000)       # resample to 16kHz
-waveform = waveform[:, start:end]              # slice 2 seconds
-mel_spec = MelSpectrogram(n_mels=128, n_fft=1024, hop_length=512)(waveform)
-audio = AmplitudeToDB()(mel_spec)
-# Output: (1, 128, T)
+waveform, orig_sr = torchaudio.load(video_path)  # load from video file
+if orig_sr != cfg['sr']:
+    resampler = torchaudio.transforms.Resample(orig_sr, cfg['sr'])
+    waveform = resampler(waveform)
+waveform = waveform[:, start_sample:end_sample]  # slice 2 seconds
+mel_spec = torchaudio.transforms.MelSpectrogram(
+    sample_rate=cfg['sr'], n_mels=128, n_fft=cfg['n_fft'], hop_length=cfg['hop_length']
+)(waveform)
+audio_tensor = torchaudio.transforms.AmplitudeToDB(top_db=80)(mel_spec)
+# Per-sample normalisation: (audio - mean) / (std + 1e-6)
+# Output: (1, 128, 63) — fixed time dimension via padding/trimming
 ```
 
 > **Why torchaudio over librosa?** Librosa uses PySoundFile/audioread which caused crashes on corrupted MP4s. Torchaudio uses FFmpeg directly — more robust, no Python-level crashes.
@@ -114,6 +165,13 @@ audio = AmplitudeToDB()(mel_spec)
 
 > **Why 128 mel bins?** Standard for speech tasks — captures enough frequency detail without being excessive.
 
+### Augmentation (`spec_augment()`)
+Applied to training videos only:
+- Random frequency masking (zero out a band of mel bins)
+- Random time masking (zero out a band of time steps)
+- Random horizontal flip on video frames
+- Random brightness/contrast jitter
+
 ---
 
 ## Step 5: Disk Storage (`data_utils.py → process_split_to_disk()`)
@@ -121,9 +179,9 @@ audio = AmplitudeToDB()(mel_spec)
 Each video's features are saved as individual `.pt` files:
 ```python
 torch.save({
-    'video': video_tensor,    # (50, 3, 224, 224)
-    'audio': audio_tensor,    # (1, 128, T)
-    'labels': [audio_label, video_label]
+    'video': video_tensor,   # (50, 3, 224, 224)
+    'audio': audio_tensor,   # (1, 128, 63)
+    'labels': torch.FloatTensor([audio_label, video_label])
 }, f'{idx}.pt')
 ```
 
@@ -133,12 +191,28 @@ torch.save({
 
 ### Resume & Failed Tracking
 ```python
-# Skip if already extracted
-if idx in failed_indices:  skip   # corrupted files
-if os.path.exists(pt_path):  skip  # already done
+# Skip if already extracted (check manifest + .pt file existence)
+if idx in failed_indices: skip  # corrupted files tracked in failed.json
+if os.path.exists(pt_path): skip  # already done
 ```
 
 > **Why track failures?** Corrupted MP4s (e.g. `moov atom not found`) would be retried on every restart. The `failed.json` file remembers them so they're skipped instantly.
+
+### Lazy-Loading Dataset (`AVDataset`)
+```python
+class AVDataset(torch.utils.data.Dataset):
+    def __getitem__(self, idx):
+        data = torch.load(pt_path, map_location='cpu', weights_only=True)
+        return {
+            'video': data['video'],
+            'audio': data['audio'],
+            'labels': data['labels'],
+            'type': entry['type'],
+            'file': entry['file'],
+            'fake_segments': entry.get('fake_segments', []),
+        }
+```
+One `.pt` file loaded per sample — RAM stays constant regardless of dataset size.
 
 ---
 

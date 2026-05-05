@@ -10,12 +10,12 @@ from typing import Optional
 # PATHS (configurable via .env or environment variables)
 # =============================================================================
 
-DATA_DIR     = os.environ.get('DATA_DIR', '/content/drive/MyDrive/val')
+DATA_DIR     = os.environ.get('DATA_DIR', '.')
 VAL_DIR      = os.path.join(DATA_DIR, 'extracted_val', 'val')   # raw video files
-METADATA_DIR = os.path.join(DATA_DIR, 'extracted_val')          # val_metadata.json
-CHECKPOINT_DIR = os.environ.get('CHECKPOINT_DIR', '/content/drive/MyDrive/checkpoints')
+METADATA_DIR = DATA_DIR                                         # val_metadata.json
+CHECKPOINT_DIR = os.environ.get('CHECKPOINT_DIR', './checkpoints')
 
-os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+# os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 CHECKPOINT_PATH = os.path.join(CHECKPOINT_DIR, 'training_checkpoint.pth')
 BEST_MODEL_PATH = os.path.join(CHECKPOINT_DIR, 'best_model.pth')
@@ -23,8 +23,8 @@ FEATURES_DIR    = os.path.join(CHECKPOINT_DIR, 'features')
 WANDB_ID_PATH   = os.path.join(CHECKPOINT_DIR, 'wandb_run_id.txt')
 RESULTS_DIR     = os.path.join(CHECKPOINT_DIR, 'results')
 
-os.makedirs(FEATURES_DIR, exist_ok=True)
-os.makedirs(RESULTS_DIR, exist_ok=True)
+# os.makedirs(FEATURES_DIR, exist_ok=True)
+# os.makedirs(RESULTS_DIR, exist_ok=True)
 
 # =============================================================================
 # MODEL CONFIGURATION

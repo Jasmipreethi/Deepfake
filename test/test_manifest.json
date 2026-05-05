@@ -1,0 +1,1597 @@
+[
+  {
+    "dest_file": "real/id04823_0000_real.mp4",
+    "source_file": "vox_celeb_2/id04823/E8EjZzjVe-k/00051/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id04823",
+    "audio_frames": 128000,
+    "video_frames": 199,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id03382_0001_real.mp4",
+    "source_file": "vox_celeb_2/id03382/VaRkOy_ZXP8/00025/real_p1.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id03382",
+    "audio_frames": 81920,
+    "video_frames": 127,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id08660_0002_real.mp4",
+    "source_file": "vox_celeb_2/id08660/VseH8mZCksc/00242/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id08660",
+    "audio_frames": 86016,
+    "video_frames": 134,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id03382_0003_real.mp4",
+    "source_file": "vox_celeb_2/id03382/tDUwA-wuug8/00080/real_p1.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id03382",
+    "audio_frames": 106496,
+    "video_frames": 165,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id08660_0004_real.mp4",
+    "source_file": "vox_celeb_2/id08660/DqhGm2VQhJM/00074/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id08660",
+    "audio_frames": 195584,
+    "video_frames": 305,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id04823_0005_real.mp4",
+    "source_file": "vox_celeb_2/id04823/In81YooiDmA/00102/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id04823",
+    "audio_frames": 82944,
+    "video_frames": 129,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/pYgvVDCHRZM_0006_real.mp4",
+    "source_file": "lrs3/pYgvVDCHRZM/00002/00002_p2.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "pYgvVDCHRZM",
+    "audio_frames": 561152,
+    "video_frames": 318,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id03733_0007_real.mp4",
+    "source_file": "vox_celeb_2/id03733/ID223ToMVxM/00163/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id03733",
+    "audio_frames": 91136,
+    "video_frames": 142,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id03942_0008_real.mp4",
+    "source_file": "vox_celeb_2/id03942/VwGEfIaenOQ/00319/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id03942",
+    "audio_frames": 121856,
+    "video_frames": 189,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id04225_0009_real.mp4",
+    "source_file": "vox_celeb_2/id04225/8G-1331TBHg/00064/real_p1.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id04225",
+    "audio_frames": 131072,
+    "video_frames": 204,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id03382_0010_real.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00121/real_p1.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id03382",
+    "audio_frames": 219136,
+    "video_frames": 341,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id04818_0011_real.mp4",
+    "source_file": "vox_celeb_2/id04818/pxC7vC7axaQ/00163/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id04818",
+    "audio_frames": 99328,
+    "video_frames": 155,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id07355_0012_real.mp4",
+    "source_file": "vox_celeb_2/id07355/oBSudfEIxeI/00157/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id07355",
+    "audio_frames": 320512,
+    "video_frames": 500,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id00930_0013_real.mp4",
+    "source_file": "vox_celeb_2/id00930/PUcvLP1Pn-8/00070/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id00930",
+    "audio_frames": 147456,
+    "video_frames": 229,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id04517_0014_real.mp4",
+    "source_file": "vox_celeb_2/id04517/IZqghCSEj94/00101/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id04517",
+    "audio_frames": 114688,
+    "video_frames": 178,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id03733_0015_real.mp4",
+    "source_file": "vox_celeb_2/id03733/a0qykyKAB0Q/00340/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id03733",
+    "audio_frames": 113664,
+    "video_frames": 177,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id02157_0016_real.mp4",
+    "source_file": "vox_celeb_2/id02157/Ha3ahp_q1_M/00183/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id02157",
+    "audio_frames": 234496,
+    "video_frames": 365,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id06222_0017_real.mp4",
+    "source_file": "vox_celeb_2/id06222/Gq3yHSkRuvM/00109/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id06222",
+    "audio_frames": 120832,
+    "video_frames": 188,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id04225_0018_real.mp4",
+    "source_file": "vox_celeb_2/id04225/bIA6myV8xFw/00147/real_p1.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id04225",
+    "audio_frames": 94208,
+    "video_frames": 146,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/pYgvVDCHRZM_0019_real.mp4",
+    "source_file": "lrs3/pYgvVDCHRZM/00012/00012_p2.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "pYgvVDCHRZM",
+    "audio_frames": 184320,
+    "video_frames": 104,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id04225_0020_real.mp4",
+    "source_file": "vox_celeb_2/id04225/8G-1331TBHg/00073/real_p1.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id04225",
+    "audio_frames": 93184,
+    "video_frames": 145,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id04225_0021_real.mp4",
+    "source_file": "vox_celeb_2/id04225/1_qZKgxZyGI/00013/real_p1.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id04225",
+    "audio_frames": 97280,
+    "video_frames": 152,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id07355_0022_real.mp4",
+    "source_file": "vox_celeb_2/id07355/dMygQiQ--hE/00094/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id07355",
+    "audio_frames": 236544,
+    "video_frames": 369,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/pYgvVDCHRZM_0023_real.mp4",
+    "source_file": "lrs3/pYgvVDCHRZM/00004/00004_p3.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "pYgvVDCHRZM",
+    "audio_frames": 300032,
+    "video_frames": 170,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "real/id06222_0024_real.mp4",
+    "source_file": "vox_celeb_2/id06222/bpPUM_xwuRc/00250/real.mp4",
+    "modify_type": "real",
+    "true_label": 1,
+    "true_verdict": "REAL",
+    "speaker": "id06222",
+    "audio_frames": 95232,
+    "video_frames": 148,
+    "fake_segments": []
+  },
+  {
+    "dest_file": "fake/mvC3Qafe5Ms_0025_audio_fake.mp4",
+    "source_file": "lrs3/mvC3Qafe5Ms/00013/real_video_fake_audio_p4.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "mvC3Qafe5Ms",
+    "audio_frames": 990208,
+    "video_frames": 560,
+    "fake_segments": [
+      [
+        2.17,
+        2.45
+      ],
+      [
+        4.25,
+        4.41
+      ],
+      [
+        5.85,
+        6.09
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id08660_0026_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id08660/XOejEXIcQC4/00269/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id08660",
+    "audio_frames": 128576,
+    "video_frames": 201,
+    "fake_segments": [
+      [
+        0.12,
+        0.4
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0027_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/ve22woNed24/00171/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 94656,
+    "video_frames": 147,
+    "fake_segments": [
+      [
+        1.74,
+        2.26
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id08660_0028_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id08660/XOejEXIcQC4/00278/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id08660",
+    "audio_frames": 146624,
+    "video_frames": 229,
+    "fake_segments": [
+      [
+        1.68,
+        2.14
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04823_0029_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id04823/mYlh2koJrHA/00299/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04823",
+    "audio_frames": 224128,
+    "video_frames": 350,
+    "fake_segments": [
+      [
+        2.02,
+        2.26
+      ],
+      [
+        13.54,
+        13.78
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03215_0030_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03215/WlyCi4Qhn5w/00251/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03215",
+    "audio_frames": 81792,
+    "video_frames": 127,
+    "fake_segments": [
+      [
+        2.14,
+        2.38
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0031_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00110/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 439616,
+    "video_frames": 686,
+    "fake_segments": [
+      [
+        0.62,
+        0.88
+      ],
+      [
+        2.5,
+        2.74
+      ],
+      [
+        19.04,
+        19.2
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03942_0032_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03942/SlTV7nvBNLk/00297/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03942",
+    "audio_frames": 197376,
+    "video_frames": 308,
+    "fake_segments": [
+      [
+        7.5,
+        7.82
+      ],
+      [
+        11.5,
+        12.06
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id01408_0033_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id01408/SiQ9C7gyprg/00037/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id01408",
+    "audio_frames": 90688,
+    "video_frames": 141,
+    "fake_segments": [
+      [
+        1.68,
+        1.92
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0034_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/PQzU-p_X-4Y/00018/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 124288,
+    "video_frames": 193,
+    "fake_segments": [
+      [
+        6.28,
+        6.4
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id00930_0035_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id00930/kI1-HGxKLNY/00111/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id00930",
+    "audio_frames": 116288,
+    "video_frames": 182,
+    "fake_segments": [
+      [
+        1.74,
+        2.36
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0036_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/1_qZKgxZyGI/00008/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 79680,
+    "video_frames": 125,
+    "fake_segments": [
+      [
+        1.7,
+        1.92
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0037_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00103/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 149120,
+    "video_frames": 233,
+    "fake_segments": [
+      [
+        1.84,
+        2.14
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0038_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/ockh8KdXJP8/00062/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 164800,
+    "video_frames": 258,
+    "fake_segments": [
+      [
+        2.44,
+        2.68
+      ],
+      [
+        7.58,
+        7.72
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04618_0039_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id04618/jLzC4gsLMeI/00358/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04618",
+    "audio_frames": 113792,
+    "video_frames": 177,
+    "fake_segments": [
+      [
+        3.12,
+        3.6
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0040_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/1_qZKgxZyGI/00010/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 111808,
+    "video_frames": 173,
+    "fake_segments": [
+      [
+        2.46,
+        2.62
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0041_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00111/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 213888,
+    "video_frames": 333,
+    "fake_segments": [
+      [
+        3.66,
+        3.96
+      ],
+      [
+        4.14,
+        4.32
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04618_0042_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id04618/GqK2xhlMMpA/00147/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04618",
+    "audio_frames": 155264,
+    "video_frames": 242,
+    "fake_segments": [
+      [
+        1.9,
+        2.1
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id08660_0043_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id08660/HzoSRERzr30/00182/real_video_fake_audio.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id08660",
+    "audio_frames": 90496,
+    "video_frames": 140,
+    "fake_segments": [
+      [
+        1.5,
+        1.66
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0044_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/8G-1331TBHg/00053/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 328320,
+    "video_frames": 515,
+    "fake_segments": [
+      [
+        5.36,
+        5.58
+      ],
+      [
+        14.0,
+        14.38
+      ],
+      [
+        17.22,
+        17.34
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0045_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/1_qZKgxZyGI/00015/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 86848,
+    "video_frames": 135,
+    "fake_segments": [
+      [
+        4.94,
+        5.2
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0046_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/bIA6myV8xFw/00137/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 300736,
+    "video_frames": 470,
+    "fake_segments": [
+      [
+        1.46,
+        1.7
+      ],
+      [
+        2.86,
+        3.0
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0047_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/ZZjY-9Ol_wU/00028/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 108736,
+    "video_frames": 168,
+    "fake_segments": [
+      [
+        1.14,
+        1.5
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0048_audio_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00160/real_video_fake_audio_p1.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 166848,
+    "video_frames": 260,
+    "fake_segments": [
+      [
+        1.04,
+        1.28
+      ],
+      [
+        5.58,
+        5.8
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/mvC3Qafe5Ms_0049_audio_fake.mp4",
+    "source_file": "lrs3/mvC3Qafe5Ms/00006/real_video_fake_audio_p4.mp4",
+    "modify_type": "audio_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "mvC3Qafe5Ms",
+    "audio_frames": 850944,
+    "video_frames": 482,
+    "fake_segments": [
+      [
+        2.25,
+        2.43
+      ],
+      [
+        2.79,
+        3.17
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id08660_0050_video_fake.mp4",
+    "source_file": "vox_celeb_2/id08660/X-6jWqJsvDw/00265/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id08660",
+    "audio_frames": 208896,
+    "video_frames": 326,
+    "fake_segments": [
+      [
+        0.0,
+        0.44
+      ],
+      [
+        9.44,
+        9.72
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0051_video_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00152/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 164864,
+    "video_frames": 258,
+    "fake_segments": [
+      [
+        0.22,
+        0.42
+      ],
+      [
+        2.92,
+        3.1
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03733_0052_video_fake.mp4",
+    "source_file": "vox_celeb_2/id03733/GMI-sO28NHw/00120/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03733",
+    "audio_frames": 121856,
+    "video_frames": 190,
+    "fake_segments": [
+      [
+        1.22,
+        1.44
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03733_0053_video_fake.mp4",
+    "source_file": "vox_celeb_2/id03733/Xf6njjJ86lQ/00272/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03733",
+    "audio_frames": 209920,
+    "video_frames": 327,
+    "fake_segments": [
+      [
+        0.4,
+        0.84
+      ],
+      [
+        5.26,
+        5.7
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0054_video_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/W0d5TzMfdzQ/00095/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 104448,
+    "video_frames": 162,
+    "fake_segments": [
+      [
+        1.06,
+        1.2
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id06222_0055_video_fake.mp4",
+    "source_file": "vox_celeb_2/id06222/Ah5Ux6v-5C0/00031/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id06222",
+    "audio_frames": 139264,
+    "video_frames": 217,
+    "fake_segments": [
+      [
+        6.42,
+        6.7
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id02157_0056_video_fake.mp4",
+    "source_file": "vox_celeb_2/id02157/LAodbQ45ndk/00254/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id02157",
+    "audio_frames": 211968,
+    "video_frames": 330,
+    "fake_segments": [
+      [
+        8.52,
+        8.68
+      ],
+      [
+        9.74,
+        9.9
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0057_video_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/8G-1331TBHg/00071/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 80896,
+    "video_frames": 126,
+    "fake_segments": [
+      [
+        3.32,
+        3.46
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04517_0058_video_fake.mp4",
+    "source_file": "vox_celeb_2/id04517/ARwWuFsNIMY/00049/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04517",
+    "audio_frames": 81920,
+    "video_frames": 127,
+    "fake_segments": [
+      [
+        1.98,
+        2.16
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03733_0059_video_fake.mp4",
+    "source_file": "vox_celeb_2/id03733/Fuqs3ed2UZI/00103/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03733",
+    "audio_frames": 115712,
+    "video_frames": 180,
+    "fake_segments": [
+      [
+        4.54,
+        5.04
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03733_0060_video_fake.mp4",
+    "source_file": "vox_celeb_2/id03733/Iv1TTT3I9fg/00181/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03733",
+    "audio_frames": 278528,
+    "video_frames": 435,
+    "fake_segments": [
+      [
+        0.38,
+        0.5
+      ],
+      [
+        13.16,
+        13.36
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03942_0061_video_fake.mp4",
+    "source_file": "vox_celeb_2/id03942/ChpzvUye8uU/00138/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03942",
+    "audio_frames": 81920,
+    "video_frames": 127,
+    "fake_segments": [
+      [
+        0.74,
+        0.84
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id01408_0062_video_fake.mp4",
+    "source_file": "vox_celeb_2/id01408/cCfY75omHbc/00041/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id01408",
+    "audio_frames": 176128,
+    "video_frames": 274,
+    "fake_segments": [
+      [
+        1.5,
+        2.22
+      ],
+      [
+        9.24,
+        9.64
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0063_video_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/ockh8KdXJP8/00067/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 89088,
+    "video_frames": 139,
+    "fake_segments": [
+      [
+        2.3,
+        2.64
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id07355_0064_video_fake.mp4",
+    "source_file": "vox_celeb_2/id07355/aZfazZLOv6I/00084/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id07355",
+    "audio_frames": 109568,
+    "video_frames": 172,
+    "fake_segments": [
+      [
+        0.0,
+        0.14
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id01408_0065_video_fake.mp4",
+    "source_file": "vox_celeb_2/id01408/ByOXw7F2RwM/00009/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id01408",
+    "audio_frames": 119808,
+    "video_frames": 187,
+    "fake_segments": [
+      [
+        0.76,
+        0.92
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04818_0066_video_fake.mp4",
+    "source_file": "vox_celeb_2/id04818/QjFqiUFRzQ0/00104/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04818",
+    "audio_frames": 108544,
+    "video_frames": 169,
+    "fake_segments": [
+      [
+        4.18,
+        4.34
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0067_video_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00125/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 156672,
+    "video_frames": 244,
+    "fake_segments": [
+      [
+        7.7,
+        8.18
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0068_video_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/aSmenx1KlPs/00113/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 119808,
+    "video_frames": 187,
+    "fake_segments": [
+      [
+        1.74,
+        1.9
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/mvC3Qafe5Ms_0069_video_fake.mp4",
+    "source_file": "lrs3/mvC3Qafe5Ms/00006/fake_video_real_audio_p3.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "mvC3Qafe5Ms",
+    "audio_frames": 859136,
+    "video_frames": 486,
+    "fake_segments": [
+      [
+        2.25,
+        2.43
+      ],
+      [
+        2.79,
+        3.35
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id02157_0070_video_fake.mp4",
+    "source_file": "vox_celeb_2/id02157/Ha3ahp_q1_M/00213/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id02157",
+    "audio_frames": 140288,
+    "video_frames": 219,
+    "fake_segments": [
+      [
+        2.9,
+        3.1
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0071_video_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/W0d5TzMfdzQ/00096/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 128000,
+    "video_frames": 199,
+    "fake_segments": [
+      [
+        7.16,
+        7.4
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/mvC3Qafe5Ms_0072_video_fake.mp4",
+    "source_file": "lrs3/mvC3Qafe5Ms/00002/fake_video_real_audio_p4.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "mvC3Qafe5Ms",
+    "audio_frames": 685056,
+    "video_frames": 388,
+    "fake_segments": [
+      [
+        1.05,
+        2.071
+      ],
+      [
+        3.733,
+        4.013
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04177_0073_video_fake.mp4",
+    "source_file": "vox_celeb_2/id04177/HKl7L7cQmi8/00015/fake_video_real_audio.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04177",
+    "audio_frames": 115712,
+    "video_frames": 180,
+    "fake_segments": [
+      [
+        3.34,
+        4.02
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0074_video_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/Nq4GROZ4j7s/00083/fake_video_real_audio_p1.mp4",
+    "modify_type": "visual_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 106496,
+    "video_frames": 165,
+    "fake_segments": [
+      [
+        0.74,
+        1.12
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/mvC3Qafe5Ms_0075_both_fake.mp4",
+    "source_file": "lrs3/mvC3Qafe5Ms/00002/fake_video_fake_audio_p4.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "mvC3Qafe5Ms",
+    "audio_frames": 656384,
+    "video_frames": 372,
+    "fake_segments": [
+      [
+        1.05,
+        1.39
+      ],
+      [
+        3.05,
+        3.37
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0076_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/aSmenx1KlPs/00120/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 95936,
+    "video_frames": 150,
+    "fake_segments": [
+      [
+        0.44,
+        0.64
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0077_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/1_qZKgxZyGI/00012/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 130816,
+    "video_frames": 203,
+    "fake_segments": [
+      [
+        5.56,
+        6.0
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0078_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/aSmenx1KlPs/00126/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 148800,
+    "video_frames": 232,
+    "fake_segments": [
+      [
+        1.08,
+        1.24
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04842_0079_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04842/uH9B58k8f4c/00428/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04842",
+    "audio_frames": 179215,
+    "video_frames": 279,
+    "fake_segments": [
+      [
+        0.4,
+        0.55
+      ],
+      [
+        1.89,
+        2.78
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03102_0080_both_fake.mp4",
+    "source_file": "vox_celeb_2/id03102/01lJQgd3_aY/00023/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03102",
+    "audio_frames": 106496,
+    "video_frames": 165,
+    "fake_segments": [
+      [
+        5.62,
+        6.56
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id08660_0081_both_fake.mp4",
+    "source_file": "vox_celeb_2/id08660/EBNEpDqvFhY/00104/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id08660",
+    "audio_frames": 89984,
+    "video_frames": 140,
+    "fake_segments": [
+      [
+        0.84,
+        1.12
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03942_0082_both_fake.mp4",
+    "source_file": "vox_celeb_2/id03942/GzdR39_3R8M/00170/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03942",
+    "audio_frames": 185216,
+    "video_frames": 289,
+    "fake_segments": [
+      [
+        2.34,
+        2.7
+      ],
+      [
+        4.46,
+        4.8
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0083_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/aSmenx1KlPs/00116/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 148736,
+    "video_frames": 231,
+    "fake_segments": [
+      [
+        5.18,
+        5.42
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id08016_0084_both_fake.mp4",
+    "source_file": "vox_celeb_2/id08016/zHA9mhkzdAw/00035/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id08016",
+    "audio_frames": 105664,
+    "video_frames": 164,
+    "fake_segments": [
+      [
+        1.26,
+        1.7
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0085_both_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/tDUwA-wuug8/00083/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 106112,
+    "video_frames": 165,
+    "fake_segments": [
+      [
+        5.38,
+        5.66
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id02157_0086_both_fake.mp4",
+    "source_file": "vox_celeb_2/id02157/1rlhqSRy1zw/00005/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id02157",
+    "audio_frames": 406528,
+    "video_frames": 636,
+    "fake_segments": [
+      [
+        13.6,
+        13.9
+      ],
+      [
+        18.68,
+        18.98
+      ],
+      [
+        23.02,
+        23.24
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0087_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/aSmenx1KlPs/00124/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 99456,
+    "video_frames": 155,
+    "fake_segments": [
+      [
+        0.46,
+        0.98
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0088_both_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00157/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 102080,
+    "video_frames": 159,
+    "fake_segments": [
+      [
+        0.74,
+        1.06
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03215_0089_both_fake.mp4",
+    "source_file": "vox_celeb_2/id03215/UGNHaXOV4OM/00178/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03215",
+    "audio_frames": 117414,
+    "video_frames": 183,
+    "fake_segments": [
+      [
+        0.4,
+        0.81
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0090_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/aSmenx1KlPs/00122/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 284288,
+    "video_frames": 444,
+    "fake_segments": [
+      [
+        0.54,
+        0.82
+      ],
+      [
+        12.12,
+        12.28
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id08660_0091_both_fake.mp4",
+    "source_file": "vox_celeb_2/id08660/G6dhArO9048/00127/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id08660",
+    "audio_frames": 102720,
+    "video_frames": 161,
+    "fake_segments": [
+      [
+        5.78,
+        6.0
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id02157_0092_both_fake.mp4",
+    "source_file": "vox_celeb_2/id02157/IQLCb5ZVfGs/00241/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id02157",
+    "audio_frames": 84288,
+    "video_frames": 132,
+    "fake_segments": [
+      [
+        2.56,
+        3.02
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id01408_0093_both_fake.mp4",
+    "source_file": "vox_celeb_2/id01408/ByOXw7F2RwM/00009/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id01408",
+    "audio_frames": 123648,
+    "video_frames": 193,
+    "fake_segments": [
+      [
+        0.76,
+        1.16
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0094_both_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00106/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 256960,
+    "video_frames": 401,
+    "fake_segments": [
+      [
+        0.28,
+        0.56
+      ],
+      [
+        10.94,
+        11.3
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id03382_0095_both_fake.mp4",
+    "source_file": "vox_celeb_2/id03382/t_EroZzvoVs/00145/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id03382",
+    "audio_frames": 370560,
+    "video_frames": 579,
+    "fake_segments": [
+      [
+        1.46,
+        2.42
+      ],
+      [
+        2.7,
+        2.94
+      ],
+      [
+        19.84,
+        20.56
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0096_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/bIA6myV8xFw/00146/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 93696,
+    "video_frames": 145,
+    "fake_segments": [
+      [
+        0.7,
+        1.04
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0097_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/1_qZKgxZyGI/00001/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 98752,
+    "video_frames": 154,
+    "fake_segments": [
+      [
+        1.92,
+        2.26
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0098_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/8G-1331TBHg/00052/fake_video_fake_audio_p1.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 118528,
+    "video_frames": 185,
+    "fake_segments": [
+      [
+        0.6,
+        0.84
+      ]
+    ]
+  },
+  {
+    "dest_file": "fake/id04225_0099_both_fake.mp4",
+    "source_file": "vox_celeb_2/id04225/aSmenx1KlPs/00100/fake_video_fake_audio.mp4",
+    "modify_type": "both_modified",
+    "true_label": 0,
+    "true_verdict": "FAKE",
+    "speaker": "id04225",
+    "audio_frames": 89088,
+    "video_frames": 139,
+    "fake_segments": [
+      [
+        2.76,
+        2.9
+      ]
+    ]
+  }
+]

@@ -1,1424 +1,411 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepScan — AV Deepfake Detector</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap"
-        rel="stylesheet">
-    <style>
-        /* ── DESIGN SYSTEM ── */
-        :root {
-            --bg: #050a14;
-            --surface: #0c1425;
-            --surface2: #111d33;
-            --border: #1e3352;
-            --accent: #00d4ff;
-            --accent2: #7c3aed;
-            --real: #22c55e;
-            --fake: #ef4444;
-            --warn: #f59e0b;
-            --text: #e2e8f0;
-            --muted: #64748b;
-            --mono: 'Space Mono', monospace;
-            --sans: 'DM Sans', sans-serif;
-            --radius: 10px;
-            --glow: 0 0 30px rgba(0, 212, 255, 0.08);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: var(--sans);
-            font-size: 15px;
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-
-        /* Animated grid background */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            background-image:
-                linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-            background-size: 40px 40px;
-            pointer-events: none;
-        }
-
-        /* ── LAYOUT ── */
-        .app {
-            position: relative;
-            z-index: 1;
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* ── SIDEBAR ── */
-        .sidebar {
-            width: 220px;
-            min-height: 100vh;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding: 24px 0;
-            position: sticky;
-            top: 0;
-            flex-shrink: 0;
-        }
-
-        .logo {
-            padding: 0 20px 24px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 16px;
-        }
-
-        .logo-title {
-            font-family: var(--mono);
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: 2px;
-        }
-
-        .logo-sub {
-            font-size: 10px;
-            color: var(--muted);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        nav {
-            flex: 1;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 20px;
-            cursor: pointer;
-            color: var(--muted);
-            font-size: 13px;
-            font-weight: 500;
-            border-left: 2px solid transparent;
-            transition: all 0.15s;
-            user-select: none;
-        }
-
-        .nav-item:hover {
-            color: var(--text);
-            background: rgba(0, 212, 255, 0.04);
-        }
-
-        .nav-item.active {
-            color: var(--accent);
-            border-left-color: var(--accent);
-            background: rgba(0, 212, 255, 0.06);
-        }
-
-        .nav-icon {
-            font-size: 16px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .sidebar-footer {
-            padding: 16px 20px 0;
-            border-top: 1px solid var(--border);
-        }
-
-        .device-badge {
-            font-family: var(--mono);
-            font-size: 10px;
-            color: var(--muted);
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 4px 8px;
-            display: inline-block;
-        }
-
-        /* ── MAIN ── */
-        .main {
-            flex: 1;
-            padding: 32px 40px;
-            max-width: 1100px;
-            overflow-x: hidden;
-        }
-
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-            animation: fadeIn 0.2s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(6px);
-            }
-
-            to {
-                opacity: 1;
-                transform: none;
-            }
-        }
-
-        .page-header {
-            margin-bottom: 28px;
-        }
-
-        .page-title {
-            font-family: var(--mono);
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 4px;
-        }
-
-        .page-sub {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        /* ── CARDS ── */
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 24px;
-            box-shadow: var(--glow);
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-family: var(--mono);
-            font-size: 12px;
-            color: var(--muted);
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            margin-bottom: 16px;
-        }
-
-        /* ── DROPZONE ── */
-        .dropzone {
-            border: 2px dashed var(--border);
-            border-radius: var(--radius);
-            padding: 48px 24px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
-        }
-
-        .dropzone:hover,
-        .dropzone.drag-over {
-            border-color: var(--accent);
-            background: rgba(0, 212, 255, 0.03);
-        }
-
-        .dropzone-icon {
-            font-size: 40px;
-            margin-bottom: 12px;
-        }
-
-        .dropzone-text {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .dropzone-text strong {
-            color: var(--accent);
-        }
-
-        .dropzone input {
-            display: none;
-        }
-
-        /* ── CONTROLS ROW ── */
-        .controls {
-            display: flex;
-            gap: 16px;
-            align-items: flex-end;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            min-width: 160px;
-        }
-
-        .control-label {
-            font-size: 11px;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-family: var(--mono);
-        }
-
-        .control-value {
-            font-family: var(--mono);
-            font-size: 12px;
-            color: var(--accent);
-            text-align: right;
-        }
-
-        select,
-        input[type=range] {
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-family: var(--sans);
-            outline: none;
-            cursor: pointer;
-        }
-
-        select:focus {
-            border-color: var(--accent);
-        }
-
-        input[type=range] {
-            padding: 0;
-            height: 4px;
-            appearance: none;
-            background: var(--border);
-            border: none;
-            cursor: pointer;
-        }
-
-        input[type=range]::-webkit-slider-thumb {
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-            border: 2px solid var(--bg);
-        }
-
-        .btn {
-            padding: 10px 22px;
-            border-radius: 6px;
-            border: none;
-            font-family: var(--mono);
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-transform: uppercase;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: var(--bg);
-        }
-
-        .btn-primary:hover {
-            filter: brightness(1.1);
-            transform: translateY(-1px);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--muted);
-            border: 1px solid var(--border);
-        }
-
-        .btn-ghost:hover {
-            color: var(--text);
-            border-color: var(--text);
-        }
-
-        .btn-danger {
-            background: transparent;
-            color: var(--fake);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        /* ── FILE QUEUE ── */
-        .file-queue {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 10px 14px;
-            font-size: 13px;
-        }
-
-        .file-item-name {
-            flex: 1;
-            color: var(--text);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .file-item-size {
-            color: var(--muted);
-            font-size: 11px;
-            font-family: var(--mono);
-            flex-shrink: 0;
-        }
-
-        .file-item-remove {
-            cursor: pointer;
-            color: var(--muted);
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-
-        .file-item-remove:hover {
-            color: var(--fake);
-        }
-
-        /* ── PROGRESS ── */
-        .progress-bar-wrap {
-            background: var(--surface2);
-            border-radius: 4px;
-            height: 4px;
-            margin: 12px 0;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: var(--accent);
-            border-radius: 4px;
-            width: 0%;
-            transition: width 0.3s;
-        }
-
-        .progress-bar.indeterminate {
-            width: 40%;
-            animation: slide 1.2s ease-in-out infinite;
-        }
-
-        @keyframes slide {
-            0% {
-                transform: translateX(-200%);
-            }
-
-            100% {
-                transform: translateX(350%);
-            }
-        }
-
-        /* ── RESULT CARD ── */
-        .result-card {
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            overflow: hidden;
-            margin-bottom: 16px;
-        }
-
-        .result-header {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px 20px;
-        }
-
-        .result-header.real {
-            background: rgba(34, 197, 94, 0.08);
-            border-bottom: 1px solid rgba(34, 197, 94, 0.15);
-        }
-
-        .result-header.fake {
-            background: rgba(239, 68, 68, 0.08);
-            border-bottom: 1px solid rgba(239, 68, 68, 0.15);
-        }
-
-        .verdict-badge {
-            font-family: var(--mono);
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: 3px;
-            flex-shrink: 0;
-        }
-
-        .verdict-badge.real {
-            color: var(--real);
-        }
-
-        .verdict-badge.fake {
-            color: var(--fake);
-        }
-
-        .result-filename {
-            flex: 1;
-            font-size: 13px;
-            color: var(--muted);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .confidence-badge {
-            font-family: var(--mono);
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 4px;
-        }
-
-        .confidence-badge.real {
-            background: rgba(34, 197, 94, 0.15);
-            color: var(--real);
-        }
-
-        .confidence-badge.fake {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--fake);
-        }
-
-        .result-body {
-            padding: 16px 20px;
-            background: var(--surface);
-        }
-
-        /* ── SCORE BARS ── */
-        .score-bars {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 14px;
-        }
-
-        .score-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .score-label {
-            font-size: 11px;
-            color: var(--muted);
-            font-family: var(--mono);
-            width: 52px;
-            flex-shrink: 0;
-        }
-
-        .score-bar-bg {
-            flex: 1;
-            height: 6px;
-            border-radius: 3px;
-            background: var(--surface2);
-            overflow: hidden;
-            position: relative;
-        }
-
-        .score-bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .score-bar-fill.real {
-            background: linear-gradient(90deg, var(--real), #86efac);
-        }
-
-        .score-bar-fill.fake {
-            background: linear-gradient(90deg, var(--fake), #fca5a5);
-        }
-
-        .score-bar-fill.neutral {
-            background: linear-gradient(90deg, var(--accent), #67e8f9);
-        }
-
-        .score-val {
-            font-family: var(--mono);
-            font-size: 11px;
-            color: var(--muted);
-            width: 48px;
-            text-align: right;
-            flex-shrink: 0;
-        }
-
-        /* ── EXPLANATION PANEL ── */
-        .explanation-panel {
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 12px 14px;
-            font-size: 12px;
-            color: var(--muted);
-            line-height: 1.6;
-            margin-bottom: 12px;
-        }
-
-        .explanation-panel strong {
-            color: var(--text);
-        }
-
-        /* ── WINDOW TIMELINE ── */
-        .timeline {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-
-        .window-chip {
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 11px;
-            font-family: var(--mono);
-            flex: 1;
-            min-width: 120px;
-        }
-
-        .window-chip-time {
-            color: var(--muted);
-            margin-bottom: 4px;
-        }
-
-        .window-chip-score {
-            color: var(--text);
-            font-weight: 700;
-        }
-
-        /* ── MEL SPECTROGRAM ── */
-        .mel-grid {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-
-        .mel-img {
-            border-radius: 4px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-            flex: 1;
-            min-width: 120px;
-        }
-
-        .mel-img img {
-            width: 100%;
-            display: block;
-        }
-
-        .mel-img-label {
-            font-size: 10px;
-            color: var(--muted);
-            font-family: var(--mono);
-            padding: 4px 6px;
-            background: var(--surface2);
-        }
-
-        /* ── RESULT ACTIONS ── */
-        .result-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        /* ── BATCH SUMMARY ── */
-        .batch-summary {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .summary-stat {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px;
-            text-align: center;
-        }
-
-        .summary-stat-val {
-            font-family: var(--mono);
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .summary-stat-val.real {
-            color: var(--real);
-        }
-
-        .summary-stat-val.fake {
-            color: var(--fake);
-        }
-
-        .summary-stat-val.neutral {
-            color: var(--accent);
-        }
-
-        .summary-stat-label {
-            font-size: 11px;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* ── COMPARE PAGE ── */
-        .compare-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .compare-col {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px;
-        }
-
-        .compare-col-title {
-            font-family: var(--mono);
-            font-size: 11px;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 14px;
-        }
-
-        /* ── HISTORY ── */
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .history-table th {
-            text-align: left;
-            font-size: 10px;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-family: var(--mono);
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .history-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid rgba(30, 51, 82, 0.5);
-            font-size: 13px;
-        }
-
-        .history-table tr:hover td {
-            background: rgba(0, 212, 255, 0.02);
-        }
-
-        .history-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .tag-real {
-            color: var(--real);
-            font-family: var(--mono);
-            font-weight: 700;
-            font-size: 12px;
-        }
-
-        .tag-fake {
-            color: var(--fake);
-            font-family: var(--mono);
-            font-weight: 700;
-            font-size: 12px;
-        }
-
-        .history-actions {
-            display: flex;
-            gap: 6px;
-        }
-
-        .icon-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: var(--muted);
-            font-size: 14px;
-            padding: 4px;
-            border-radius: 4px;
-            transition: all 0.15s;
-        }
-
-        .icon-btn:hover {
-            color: var(--text);
-            background: var(--surface2);
-        }
-
-        .icon-btn.danger:hover {
-            color: var(--fake);
-        }
-
-        /* ── EMPTY STATE ── */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--muted);
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-            opacity: 0.4;
-        }
-
-        .empty-state-text {
-            font-size: 13px;
-        }
-
-        /* ── TOAST ── */
-        .toast-container {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .toast {
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 13px;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            animation: toastIn 0.2s ease;
-            max-width: 320px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }
-
-        @keyframes toastIn {
-            from {
-                transform: translateY(16px);
-                opacity: 0;
-            }
-
-            to {
-                transform: none;
-                opacity: 1;
-            }
-        }
-
-        .toast.success {
-            border-color: rgba(34, 197, 94, 0.3);
-        }
-
-        .toast.error {
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-
-        /* ── SCROLLBAR ── */
-        ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 3px;
-        }
-
-        /* ── RESPONSIVE ── */
-        @media (max-width: 768px) {
-            .sidebar {
-                display: none;
-            }
-
-            .main {
-                padding: 20px 16px;
-            }
-
-            .compare-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .batch-summary {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AV Deepfake Detector</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; }
+.app { width: 100%; max-width: 580px; }
+h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; color: #38bdf8; }
+.subtitle { color: #64748b; font-size: 0.8rem; margin-bottom: 20px; }
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+.tab { padding: 8px 18px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; cursor: pointer; color: #64748b; background: transparent; border: none; transition: all 0.15s; }
+.tab:hover { color: #e2e8f0; background: #1e293b; }
+.tab.active { color: #38bdf8; background: #1e293b; border: 1px solid #334155; }
+
+/* ── Page sections ── */
+.page { display: none; }
+.page.active { display: block; animation: fadeIn 0.15s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ── Card ── */
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 14px; }
+label { display: block; font-size: 0.7rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+select, button { width: 100%; padding: 10px 14px; border-radius: 8px; font-size: 0.875rem; }
+select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; margin-bottom: 14px; cursor: pointer; }
+select:focus { border-color: #38bdf8; outline: none; }
+button { background: #38bdf8; color: #0f172a; font-weight: 600; border: none; cursor: pointer; transition: opacity 0.15s; }
+button:hover { opacity: 0.9; }
+button:disabled { opacity: 0.35; cursor: not-allowed; }
+button.ghost { background: transparent; border: 1px solid #334155; color: #94a3b8; }
+button.ghost:hover { border-color: #94a3b8; color: #e2e8f0; }
+
+/* ── Dropzone ── */
+.dropzone { border: 2px dashed #334155; border-radius: 10px; padding: 32px 20px; text-align: center; cursor: pointer; margin-bottom: 14px; transition: all 0.15s; }
+.dropzone:hover, .dropzone.drag-over { border-color: #38bdf8; background: rgba(56,189,248,0.04); }
+.dropzone input { display: none; }
+.dropzone-text { color: #64748b; font-size: 0.8rem; line-height: 1.6; }
+.dropzone-text strong { color: #38bdf8; }
+
+/* ── File info ── */
+.file-info { display: none; font-size: 0.75rem; color: #94a3b8; margin-bottom: 12px; padding: 8px 12px; background: #0f172a; border-radius: 6px; word-break: break-all; }
+
+/* ── Loader / Error ── */
+.loader { display: none; text-align: center; padding: 16px; color: #38bdf8; font-size: 0.85rem; }
+.error { display: none; color: #ef4444; padding: 10px 14px; background: rgba(239,68,68,0.1); border-radius: 8px; font-size: 0.8rem; margin-bottom: 12px; }
+
+/* ── Result ── */
+.result { display: none; }
+.verdict { font-size: 2.2rem; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 4px; }
+.verdict.real { color: #22c55e; }
+.verdict.fake { color: #ef4444; }
+.confidence { font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px; }
+.scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.score-item { background: #0f172a; border-radius: 8px; padding: 12px 6px; text-align: center; }
+.score-label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+.score-value { font-size: 1.1rem; font-weight: 700; }
+.score-item.audio .score-value { color: #a78bfa; }
+.score-item.video .score-value { color: #f472b6; }
+.score-item.joint .score-value { color: #38bdf8; }
+
+/* ── Compare ── */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.compare-col { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 16px; }
+.compare-col-title { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+.compare-scores { display: flex; flex-direction: column; gap: 6px; }
+.compare-score-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
+.compare-score-label { color: #64748b; }
+.compare-score-val { font-weight: 600; }
+.compare-verdict { font-size: 1.1rem; font-weight: 700; margin: 8px 0 4px; }
+.compare-verdict.real { color: #22c55e; }
+.compare-verdict.fake { color: #ef4444; }
+.compare-error { font-size: 0.75rem; color: #ef4444; }
+.compare-summary { text-align: center; margin-top: 12px; font-size: 0.8rem; color: #94a3b8; }
+.compare-summary strong { color: #38bdf8; }
+
+/* ── History ── */
+.history-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.history-count { font-size: 0.75rem; color: #64748b; }
+.history-table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+th { text-align: left; font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 10px; border-bottom: 1px solid #334155; }
+td { padding: 8px 10px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(56,189,248,0.03); }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; font-family: monospace; letter-spacing: 0.05em; }
+.tag.real { background: rgba(34,197,94,0.15); color: #22c55e; }
+.tag.fake { background: rgba(239,68,68,0.15); color: #ef4444; }
+.score-mini { font-family: monospace; font-size: 0.75rem; color: #94a3b8; }
+.action-btn { background: none; border: none; color: #64748b; cursor: pointer; padding: 3px 6px; font-size: 0.75rem; border-radius: 4px; width: auto; }
+.action-btn:hover { color: #e2e8f0; background: #334155; }
+.action-btn.danger:hover { color: #ef4444; }
+.empty-state { text-align: center; padding: 32px; color: #475569; font-size: 0.85rem; }
+
+/* ── Footer badge ── */
+.device-badge { display: inline-block; font-size: 0.65rem; background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 3px 8px; color: #64748b; margin-top: 12px; }
+</style>
 </head>
-
 <body>
+<div class="app">
+  <h1>AV Deepfake Detector</h1>
+  <p class="subtitle">Select model → Upload video → Get verdict</p>
 
-    <div class="app">
-        <!-- ── SIDEBAR ── -->
-        <aside class="sidebar">
-            <div class="logo">
-                <div class="logo-title">DEEPSCAN</div>
-                <div class="logo-sub">AV Deepfake Detector</div>
-            </div>
-            <nav>
-                <div class="nav-item active" onclick="showPage('analyse')">
-                    <span class="nav-icon">🔍</span> Analyse
-                </div>
-                <div class="nav-item" onclick="showPage('compare')">
-                    <span class="nav-icon">⚖️</span> Compare Models
-                </div>
-                <div class="nav-item" onclick="showPage('history')">
-                    <span class="nav-icon">🕘</span> History
-                </div>
-            </nav>
-            <div class="sidebar-footer">
-                <div id="deviceBadge" class="device-badge">LOADING...</div>
-            </div>
-        </aside>
+  <!-- Tab navigation -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('analyze')">Analyze</button>
+    <button class="tab" onclick="showTab('compare')">Compare</button>
+    <button class="tab" onclick="showTab('history')">History</button>
+  </div>
 
-        <!-- ── MAIN ── -->
-        <main class="main">
+  <!-- ── ANALYZE PAGE ── -->
+  <div class="page active" id="page-analyze">
+    <div class="card">
+      <div class="dropzone" id="dropzone">
+        <div class="dropzone-text"><strong>Click to upload</strong> or drag & drop<br>MP4, AVI, MOV, MKV, WEBM</div>
+        <input type="file" id="fileInput" accept="video/*">
+      </div>
+      <div class="file-info" id="fileInfo"></div>
+      <label for="modelSelect">Model</label>
+      <select id="modelSelect"></select>
+      <div style="font-size:0.7rem;color:#475569;min-height:16px;margin-top:-10px;margin-bottom:14px;" id="modelInfo"></div>
+      <button id="analyzeBtn" disabled>Analyze Video</button>
+      <div style="text-align:center;"><span class="device-badge" id="deviceBadge">Loading...</span></div>
+    </div>
+    <div class="loader" id="loader">Analyzing...</div>
+    <div class="error" id="error"></div>
+    <div class="card result" id="result">
+      <div class="verdict" id="verdict"></div>
+      <div class="confidence" id="confidence"></div>
+      <div class="scores">
+        <div class="score-item audio"><div class="score-label">Audio</div><div class="score-value" id="audioScore"></div></div>
+        <div class="score-item video"><div class="score-label">Video</div><div class="score-value" id="videoScore"></div></div>
+        <div class="score-item joint"><div class="score-label">Joint</div><div class="score-value" id="jointScore"></div></div>
+      </div>
+      <button class="ghost" id="resetBtn" style="margin-top:8px;">Analyze Another</button>
+    </div>
+  </div>
 
-            <!-- ─ ANALYSE PAGE ─ -->
-            <div class="page active" id="page-analyse">
-                <div class="page-header">
-                    <div class="page-title">// ANALYSE</div>
-                    <div class="page-sub">Upload one or more videos to detect deepfake manipulation</div>
-                </div>
+  <!-- ── COMPARE PAGE ── -->
+  <div class="page" id="page-compare">
+    <div class="card">
+      <div class="dropzone" id="compareDropzone">
+        <div class="dropzone-text"><strong>Upload a video</strong> to compare both models<br>Same video, side-by-side results</div>
+        <input type="file" id="compareFileInput" accept="video/*">
+      </div>
+      <div class="file-info" id="compareFileInfo"></div>
+      <button id="compareBtn" disabled>Compare Models</button>
+    </div>
+    <div class="loader" id="compareLoader">Running both models...</div>
+    <div class="error" id="compareError"></div>
+    <div id="compareResult" style="display:none;">
+      <div class="compare-grid">
+        <div class="compare-col" id="compareCol1"><div class="compare-col-title">Model 1</div></div>
+        <div class="compare-col" id="compareCol2"><div class="compare-col-title">Model 2</div></div>
+      </div>
+      <div class="compare-summary" id="compareSummary"></div>
+    </div>
+  </div>
 
-                <!-- Upload card -->
-                <div class="card">
-                    <div class="card-title">Upload Videos</div>
-
-                    <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-                        <div class="dropzone-icon">📹</div>
-                        <div class="dropzone-text">
-                            <strong>Click to upload</strong> or drag &amp; drop<br>
-                            MP4, AVI, MOV, MKV, WEBM supported
-                        </div>
-                        <input type="file" id="fileInput" accept="video/*" multiple>
-                    </div>
-
-                    <div class="file-queue" id="fileQueue" style="margin-top:14px;"></div>
-
-                    <!-- Controls -->
-                    <div class="controls" style="margin-top:16px;">
-<div class="control-group">
-  <span class="control-label">Model</span>
-  <select id="modelSelect">
-    <option value="model1">Model 1</option>
-    <option value="model2">Model 2</option>
-  </select>
+  <!-- ── HISTORY PAGE ── -->
+  <div class="page" id="page-history">
+    <div class="history-toolbar">
+      <span class="history-count" id="historyCount"></span>
+      <button class="ghost" style="width:auto;padding:6px 12px;font-size:0.75rem;" id="clearHistoryBtn">Clear All</button>
+    </div>
+    <div class="card" id="historyCard">
+      <div id="historyEmpty" class="empty-state">No analyses yet</div>
+      <div id="historyTable" style="display:none;" class="history-table-wrap">
+        <table>
+          <thead><tr>
+            <th>File</th><th>Verdict</th><th>Joint</th><th>Model</th><th></th>
+          </tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
-<button class="btn btn-primary" id="analyseBtn" onclick="runAnalyse()" disabled>
-                            ▶ RUN ANALYSIS
-                        </button>
-                        <button class="btn btn-ghost" onclick="clearFiles()" id="clearBtn" style="display:none;">
-                            CLEAR
-                        </button>
-                    </div>
 
-                    <div class="progress-bar-wrap" id="progressWrap" style="display:none;">
-                        <div class="progress-bar indeterminate" id="progressBar"></div>
-                    </div>
-                </div>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedFile = null;
+let compareFile = null;
 
-                <!-- Batch summary (shown after analysis) -->
-                <div id="batchSummary" style="display:none;"></div>
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const r = await fetch('/api/models');
+    const d = await r.json();
+    document.getElementById('deviceBadge').textContent = (d.device || 'cpu').toUpperCase();
+const sel = document.getElementById('modelSelect');
+  const modelInfo = document.getElementById('modelInfo');
+  sel.innerHTML = '';
+  if (d.model1?.available) sel.innerHTML += `<option value="model1">${d.model1.label}</option>`;
+  if (d.model2?.available) sel.innerHTML += `<option value="model2">${d.model2.label}</option>`;
+  if (!sel.innerHTML) sel.innerHTML = '<option>No models configured</option>';
+  sel.addEventListener('change', () => {
+    const m = sel.value === 'model1' ? d.model1 : d.model2;
+    modelInfo.textContent = m?.note || '';
+  });
+  if (sel.value) sel.dispatchEvent(new Event('change'));
+  } catch {
+    document.getElementById('deviceBadge').textContent = 'OFFLINE';
+  }
+}
 
-                <!-- Results -->
-                <div id="resultsContainer"></div>
-            </div>
+// ── Tab navigation ─────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'history') loadHistory();
+}
 
-            <!-- ─ COMPARE PAGE ─ -->
-            <div class="page" id="page-compare">
-                <div class="page-header">
-                    <div class="page-title">// COMPARE MODELS</div>
-                    <div class="page-sub">Upload one video to run it through both models side by side</div>
-                </div>
+// ── Analyze page ───────────────────────────────────────────────────────────
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
 
-                <div class="card">
-                    <div class="card-title">Upload Video</div>
-                    <div class="dropzone" id="compareDropzone"
-                        onclick="document.getElementById('compareFileInput').click()">
-                        <div class="dropzone-icon">📹</div>
-                        <div class="dropzone-text"><strong>Click to upload</strong> a single video</div>
-                        <input type="file" id="compareFileInput" accept="video/*">
-                    </div>
-                    <div id="compareFileName" style="margin-top:10px;font-size:12px;color:var(--muted);"></div>
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('video/')) handleFile(f);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
 
-<div class="controls" style="margin-top:16px;">
-  <button class="btn btn-primary" id="compareBtn" onclick="runCompare()" disabled>
-                            ⚖️ COMPARE
-                        </button>
-                    </div>
-                    <div class="progress-bar-wrap" id="compareProgress" style="display:none;">
-                        <div class="progress-bar indeterminate"></div>
-                    </div>
-                </div>
+function handleFile(f) {
+  selectedFile = f;
+  document.getElementById('fileInfo').textContent = `📹 ${f.name} (${(f.size/1e6).toFixed(1)} MB)`;
+  document.getElementById('fileInfo').style.display = 'block';
+  document.getElementById('analyzeBtn').disabled = false;
+}
 
-                <div id="compareResults" style="display:none;">
-                    <div class="compare-grid">
-                        <div class="compare-col" id="compareCol1">
-                            <div class="compare-col-title">Model 1</div>
-                        </div>
-                        <div class="compare-col" id="compareCol2">
-                            <div class="compare-col-title">Model 2</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ─ HISTORY PAGE ─ -->
-            <div class="page" id="page-history">
-                <div class="page-header">
-                    <div class="page-title">// HISTORY</div>
-                    <div class="page-sub">All previously analysed videos</div>
-                </div>
-                <div class="card" style="padding:0;overflow:hidden;">
-                    <div
-                        style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);">
-                        <span class="card-title" style="margin:0;">Recent Analyses</span>
-                        <button class="btn btn-danger" onclick="clearHistory()"
-                            style="padding:6px 14px;font-size:11px;">
-                            CLEAR ALL
-                        </button>
-                    </div>
-                    <div id="historyContent" style="padding:0 0 8px;">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🕘</div>
-                            <div class="empty-state-text">No analyses yet</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <!-- Toast container -->
-    <div class="toast-container" id="toastContainer"></div>
-
-    <script>
-        // ═══════════════════════════════════════════════════════════════
-        // STATE
-        // ═══════════════════════════════════════════════════════════════
-        let fileQueue = [];
-        let compareFile = null;
-        let modelInfo = {};
-
-        // ═══════════════════════════════════════════════════════════════
-        // INIT
-        // ═══════════════════════════════════════════════════════════════
-        async function init() {
-            try {
-                const r = await fetch('/api/models');
-                const d = await r.json();
-                modelInfo = d;
-                document.getElementById('deviceBadge').textContent =
-                    (d.device || 'cpu').toUpperCase();
-
-                const sel = document.getElementById('modelSelect');
-                sel.innerHTML = '';
-                if (d.model1) sel.innerHTML += `<option value="model1">Model 1 — Ep${d.model1.epoch} AUC ${d.model1.best_auc}</option>`;
-                if (d.model2) sel.innerHTML += `<option value="model2">Model 2 — Ep${d.model2.epoch} AUC ${d.model2.best_auc}</option>`;
-                if (!d.model1 && !d.model2)
-                    sel.innerHTML = '<option>⚠ No models configured</option>';
-            } catch (e) {
-                document.getElementById('deviceBadge').textContent = 'OFFLINE';
-                toast('Cannot connect to server', 'error');
-            }
-            loadHistory();
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // NAVIGATION
-        // ═══════════════════════════════════════════════════════════════
-        function showPage(name) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('page-' + name).classList.add('active');
-            event.currentTarget.classList.add('active');
-            if (name === 'history') loadHistory();
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // FILE HANDLING
-        // ═══════════════════════════════════════════════════════════════
-        document.getElementById('fileInput').addEventListener('change', e => {
-            addFiles(Array.from(e.target.files));
-            e.target.value = '';
-        });
-
-        const dz = document.getElementById('dropzone');
-        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-        dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-        dz.addEventListener('drop', e => {
-            e.preventDefault(); dz.classList.remove('drag-over');
-            addFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/')));
-        });
-
-        function addFiles(files) {
-            files.forEach(f => {
-                if (!fileQueue.find(q => q.name === f.name && q.size === f.size))
-                    fileQueue.push(f);
-            });
-            renderQueue();
-        }
-
-        function removeFile(idx) {
-            fileQueue.splice(idx, 1);
-            renderQueue();
-        }
-
-        function clearFiles() {
-            fileQueue = [];
-            renderQueue();
-            document.getElementById('resultsContainer').innerHTML = '';
-            document.getElementById('batchSummary').style.display = 'none';
-        }
-
-        function renderQueue() {
-            const q = document.getElementById('fileQueue');
-            const analyseBtn = document.getElementById('analyseBtn');
-            const clearBtn = document.getElementById('clearBtn');
-            analyseBtn.disabled = fileQueue.length === 0;
-            clearBtn.style.display = fileQueue.length ? 'inline-flex' : 'none';
-            if (!fileQueue.length) { q.innerHTML = ''; return; }
-            q.innerHTML = fileQueue.map((f, i) => `
-    <div class="file-item">
-      <span>📹</span>
-      <span class="file-item-name">${f.name}</span>
-      <span class="file-item-size">${(f.size / 1e6).toFixed(1)} MB</span>
-      <span class="file-item-remove" onclick="removeFile(${i})">✕</span>
-    </div>`).join('');
-        }
-
-        // Compare file
-        document.getElementById('compareFileInput').addEventListener('change', e => {
-            compareFile = e.target.files[0] || null;
-            document.getElementById('compareFileName').textContent =
-                compareFile ? `📹 ${compareFile.name}` : '';
-            document.getElementById('compareBtn').disabled = !compareFile;
-            document.getElementById('compareResults').style.display = 'none';
-        });
-
-        // ═══════════════════════════════════════════════════════════════
-        // ANALYSE
-        // ═══════════════════════════════════════════════════════════════
-        async function runAnalyse() {
-            if (!fileQueue.length) return;
-            const btn = document.getElementById('analyseBtn');
-            const progress = document.getElementById('progressWrap');
-            const container = document.getElementById('resultsContainer');
-            const summary = document.getElementById('batchSummary');
-
-            btn.disabled = true;
-            progress.style.display = 'block';
-            container.innerHTML = '';
-            summary.style.display = 'none';
-
-const fd = new FormData();
-  fileQueue.forEach(f => fd.append('videos', f));
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+  if (!selectedFile) return;
+  showLoading(true);
+  const fd = new FormData();
+  fd.append('video', selectedFile);
   fd.append('model', document.getElementById('modelSelect').value);
-
   try {
-                const r = await fetch('/api/analyse', { method: 'POST', body: fd });
-                const d = await r.json();
-                if (d.error) { toast(d.error, 'error'); return; }
+    const r = await fetch('/api/analyze', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { showError(d.error); return; }
+    showResult(d);
+  } catch (e) { showError(e.message); }
+});
 
-                const results = d.results;
+function showLoading(on) {
+  document.getElementById('loader').style.display = on ? 'block' : 'none';
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('result').style.display = 'none';
+}
 
-                // Batch summary
-                if (results.length > 1) {
-                    const reals = results.filter(r => r.verdict === 'REAL').length;
-                    const fakes = results.filter(r => r.verdict === 'FAKE').length;
-                    const avg = results.reduce((a, r) => a + (r.joint_score || 0), 0) / results.length;
-                    summary.innerHTML = `
-        <div class="batch-summary">
-          <div class="summary-stat">
-            <div class="summary-stat-val neutral">${results.length}</div>
-            <div class="summary-stat-label">Total</div>
-          </div>
-          <div class="summary-stat">
-            <div class="summary-stat-val real">${reals}</div>
-            <div class="summary-stat-label">Real</div>
-          </div>
-          <div class="summary-stat">
-            <div class="summary-stat-val fake">${fakes}</div>
-            <div class="summary-stat-label">Fake</div>
-          </div>
-          <div class="summary-stat">
-            <div class="summary-stat-val neutral">${(avg * 100).toFixed(0)}%</div>
-            <div class="summary-stat-label">Avg Score</div>
-          </div>
-        </div>`;
-                    summary.style.display = 'block';
-                }
+function showError(msg) {
+  showLoading(false);
+  document.getElementById('error').textContent = msg;
+  document.getElementById('error').style.display = 'block';
+}
 
-                // Individual results
-                results.forEach(r => {
-                    if (r.error) {
-                        container.innerHTML += `<div class="result-card"><div class="result-header" style="padding:14px 20px;">
-          ⚠ ${r.filename}: ${r.error}</div></div>`;
-                        return;
-                    }
-                    container.innerHTML += buildResultCard(r);
-                });
+function showResult(d) {
+  showLoading(false);
+  const v = document.getElementById('verdict');
+  v.textContent = d.verdict;
+  v.className = 'verdict ' + (d.verdict === 'REAL' ? 'real' : 'fake');
+  document.getElementById('confidence').textContent = `Confidence: ${Math.round(d.confidence*100)}%`;
+  document.getElementById('audioScore').textContent = d.audio_score?.toFixed(3) ?? '—';
+  document.getElementById('videoScore').textContent = d.video_score?.toFixed(3) ?? '—';
+  document.getElementById('jointScore').textContent = d.joint_score?.toFixed(3) ?? '—';
+  document.getElementById('result').style.display = 'block';
+}
 
-                toast(`Analysed ${results.length} video${results.length > 1 ? 's' : ''}`, 'success');
-            } catch (e) {
-                toast('Analysis failed: ' + e.message, 'error');
-            } finally {
-                btn.disabled = false;
-                progress.style.display = 'none';
-            }
-        }
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('analyzeBtn').disabled = true;
+  selectedFile = null;
+  fileInput.value = '';
+});
 
-        function buildResultCard(r) {
-            const isReal = r.verdict === 'REAL';
-            const cls = isReal ? 'real' : 'fake';
-            const conf = Math.round((r.confidence || 0) * 100);
-            const thresh = r.threshold || 0.5;
+// ── Compare page ───────────────────────────────────────────────────────────
+const compareDropzone = document.getElementById('compareDropzone');
+const compareFileInput = document.getElementById('compareFileInput');
 
-            const scoreBar = (label, val) => {
-                const barCls = val >= thresh ? 'real' : 'fake';
-                return `<div class="score-row">
-      <span class="score-label">${label}</span>
-      <div class="score-bar-bg">
-        <div class="score-bar-fill ${barCls}" style="width:${val * 100}%"></div>
-      </div>
-      <span class="score-val">${val.toFixed(3)}</span>
-    </div>`;
-            };
+compareDropzone.addEventListener('click', () => compareFileInput.click());
+compareDropzone.addEventListener('dragover', e => { e.preventDefault(); compareDropzone.classList.add('drag-over'); });
+compareDropzone.addEventListener('dragleave', () => compareDropzone.classList.remove('drag-over'));
+compareDropzone.addEventListener('drop', e => {
+  e.preventDefault(); compareDropzone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('video/')) handleCompareFile(f);
+});
+compareFileInput.addEventListener('change', () => { if (compareFileInput.files[0]) handleCompareFile(compareFileInput.files[0]); });
 
-            const windows = (r.windows || []).map((w, i) =>
-                `<div class="window-chip">
-      <div class="window-chip-time">W${i + 1}: ${w.start_sec}s–${w.end_sec}s</div>
-      <div class="window-chip-score" style="color:${w.joint_score >= thresh ? 'var(--real)' : 'var(--fake)'}">
-        ${w.joint_score.toFixed(3)}
-      </div>
-    </div>`).join('');
+function handleCompareFile(f) {
+  compareFile = f;
+  document.getElementById('compareFileInfo').textContent = `📹 ${f.name} (${(f.size/1e6).toFixed(1)} MB)`;
+  document.getElementById('compareFileInfo').style.display = 'block';
+  document.getElementById('compareBtn').disabled = false;
+  document.getElementById('compareResult').style.display = 'none';
+}
 
-            const mels = (r.mel_images || []).map((img, i) =>
-                `<div class="mel-img">
-      <div class="mel-img-label">Window ${i + 1} — Mel Spectrogram</div>
-      <img src="data:image/png;base64,${img}" alt="mel spectrogram">
-    </div>`).join('');
-
-            return `
-  <div class="result-card">
-    <div class="result-header ${cls}">
-      <span class="verdict-badge ${cls}">${r.verdict}</span>
-      <span class="result-filename">${r.filename || r.file || 'video'}</span>
-      <span class="confidence-badge ${cls}">${conf}% confident</span>
-    </div>
-    <div class="result-body">
-      <div class="score-bars">
-        ${scoreBar('JOINT', r.joint_score)}
-        ${scoreBar('AUDIO', r.audio_score)}
-        ${scoreBar('VIDEO', r.video_score)}
-      </div>
-      ${r.explanation ? `<div class="explanation-panel">
-        <strong>🔍 ${r.triggered_by?.toUpperCase() || 'ANALYSIS'}:</strong> ${r.explanation}
-      </div>` : ''}
-      ${windows ? `<div class="timeline">${windows}</div>` : ''}
-      ${mels ? `<div class="mel-grid">${mels}</div>` : ''}
-      ${r.id ? `<div class="result-actions">
-        <button class="btn btn-ghost" style="padding:6px 14px;font-size:11px;"
-          onclick="downloadReport('${r.id}')">📄 PDF REPORT</button>
-      </div>` : ''}
-    </div>
-  </div>`;
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // COMPARE
-        // ═══════════════════════════════════════════════════════════════
-        async function runCompare() {
-            if (!compareFile) return;
-            const btn = document.getElementById('compareBtn');
-            const progress = document.getElementById('compareProgress');
-            const results = document.getElementById('compareResults');
-
-            btn.disabled = true;
-            progress.style.display = 'block';
-            results.style.display = 'none';
-
-const fd = new FormData();
+document.getElementById('compareBtn').addEventListener('click', async () => {
+  if (!compareFile) return;
+  document.getElementById('compareLoader').style.display = 'block';
+  document.getElementById('compareError').style.display = 'none';
+  document.getElementById('compareResult').style.display = 'none';
+  const fd = new FormData();
   fd.append('video', compareFile);
-
   try {
-                const r = await fetch('/api/compare', { method: 'POST', body: fd });
-                const d = await r.json();
-                if (d.error) { toast(d.error, 'error'); return; }
+    const r = await fetch('/api/compare', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) {
+      document.getElementById('compareLoader').style.display = 'none';
+      document.getElementById('compareError').textContent = d.error;
+      document.getElementById('compareError').style.display = 'block';
+      return;
+    }
+    renderCompare(d);
+  } catch (e) {
+    document.getElementById('compareLoader').style.display = 'none';
+    document.getElementById('compareError').textContent = e.message;
+    document.getElementById('compareError').style.display = 'block';
+  }
+});
 
-                for (const [key, col] of [['model1', 'compareCol1'], ['model2', 'compareCol2']]) {
-                    const m = d.models[key];
-                    const el = document.getElementById(col);
-                    const label = key === 'model1' ? 'Model 1' : 'Model 2';
-                    const info = m?.model_info;
-                    el.innerHTML = `<div class="compare-col-title">${label}${info ? ` — Ep${info.epoch} AUC ${info.best_auc}` : ''}</div>`;
-                    if (!m || m.error) {
-                        el.innerHTML += `<div class="explanation-panel">⚠ ${m?.error || 'Not configured'}</div>`;
-                    } else {
-                        const isReal = m.verdict === 'REAL';
-                        const cls = isReal ? 'real' : 'fake';
-                        const conf = Math.round((m.confidence || 0) * 100);
-                        const thresh = d.threshold;
-                        const sb = (label, val) => {
-                            const bc = val >= thresh ? 'real' : 'fake';
-                            return `<div class="score-row">
-            <span class="score-label">${label}</span>
-            <div class="score-bar-bg">
-              <div class="score-bar-fill ${bc}" style="width:${val * 100}%"></div>
-            </div>
-            <span class="score-val">${val.toFixed(3)}</span>
-          </div>`;
-                        };
-                        el.innerHTML += `
-          <div style="margin-bottom:14px;">
-            <span class="verdict-badge ${cls}" style="font-size:24px;">${m.verdict}</span>
-            <span class="confidence-badge ${cls}" style="margin-left:8px;">${conf}% confident</span>
-          </div>
-          <div class="score-bars">
-            ${sb('JOINT', m.joint_score)}
-            ${sb('AUDIO', m.audio_score)}
-            ${sb('VIDEO', m.video_score)}
-          </div>
-          ${m.explanation ? `<div class="explanation-panel" style="margin-top:10px;">
-            <strong>${m.triggered_by?.toUpperCase() || 'ANALYSIS'}:</strong> ${m.explanation}
-          </div>` : ''}`;
-                    }
-                }
-                results.style.display = 'block';
-                toast('Comparison complete', 'success');
-            } catch (e) {
-                toast('Comparison failed: ' + e.message, 'error');
-            } finally {
-                btn.disabled = false;
-                progress.style.display = 'none';
-            }
-        }
+function renderCompare(d) {
+  document.getElementById('compareLoader').style.display = 'none';
+  document.getElementById('compareResult').style.display = 'block';
+  const r1 = d.results.model1;
+  const r2 = d.results.model2;
+  renderCompareCol('compareCol1', 'Model 1', r1);
+  renderCompareCol('compareCol2', 'Model 2', r2);
 
-        // ═══════════════════════════════════════════════════════════════
-        // HISTORY
-        // ═══════════════════════════════════════════════════════════════
-        async function loadHistory() {
-            try {
-                const r = await fetch('/api/history?limit=100');
-                const d = await r.json();
-                const el = document.getElementById('historyContent');
-                if (!d.analyses.length) {
-                    el.innerHTML = `<div class="empty-state">
-        <div class="empty-state-icon">🕘</div>
-        <div class="empty-state-text">No analyses yet</div>
-      </div>`;
-                    return;
-                }
-                el.innerHTML = `<table class="history-table">
-      <thead><tr>
-        <th>File</th><th>Verdict</th><th>Joint</th><th>Model</th><th>Time</th><th></th>
-      </tr></thead>
-      <tbody>
-        ${d.analyses.map(a => `
-          <tr>
-            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                title="${a.filename}">${a.filename}</td>
-            <td><span class="tag-${a.verdict.toLowerCase()}">${a.verdict}</span></td>
-            <td style="font-family:var(--mono);font-size:12px;">${a.joint_score?.toFixed(3) || '—'}</td>
-            <td style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                title="${a.model_path}">${a.model_path?.split('/').pop() || '—'}</td>
-            <td style="font-size:11px;color:var(--muted);white-space:nowrap;">${a.timestamp?.slice(0, 16).replace('T', ' ') || '—'}</td>
-            <td>
-              <div class="history-actions">
-                <button class="icon-btn" onclick="downloadReport('${a.id}')" title="PDF Report">📄</button>
-                <button class="icon-btn danger" onclick="deleteAnalysis('${a.id}')" title="Delete">🗑</button>
-              </div>
-            </td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
-            } catch (e) {
-                console.error(e);
-            }
-        }
+  const summary = document.getElementById('compareSummary');
+  if (r1.verdict && r2.verdict) {
+    if (r1.verdict === r2.verdict) {
+      summary.innerHTML = `Both models agree: <strong>${r1.verdict}</strong>`;
+    } else {
+      summary.innerHTML = `Disagree: Model 1 says <strong>${r1.verdict}</strong>, Model 2 says <strong>${r2.verdict}</strong>`;
+    }
+  } else {
+    summary.innerHTML = '';
+  }
+}
 
-        async function clearHistory() {
-            if (!confirm('Delete all history?')) return;
-            await fetch('/api/history', { method: 'DELETE' });
-            loadHistory();
-            toast('History cleared', 'success');
-        }
+function renderCompareCol(id, label, r) {
+  const el = document.getElementById(id);
+  if (!r || r.error) {
+    el.innerHTML = `<div class="compare-col-title">${label}</div><div class="compare-error">${r?.error || 'Not available'}</div>`;
+    return;
+  }
+  const cls = r.verdict === 'REAL' ? 'real' : 'fake';
+  el.innerHTML = `
+    <div class="compare-col-title">${label}</div>
+    <div class="compare-verdict ${cls}">${r.verdict}</div>
+    <div class="compare-scores">
+      <div class="compare-score-row"><span class="compare-score-label">Audio</span><span class="compare-score-val" style="color:#a78bfa">${r.audio_score?.toFixed(3)}</span></div>
+      <div class="compare-score-row"><span class="compare-score-label">Video</span><span class="compare-score-val" style="color:#f472b6">${r.video_score?.toFixed(3)}</span></div>
+      <div class="compare-score-row"><span class="compare-score-label">Joint</span><span class="compare-score-val" style="color:#38bdf8">${r.joint_score?.toFixed(3)}</span></div>
+    </div>`;
+}
 
-        async function deleteAnalysis(id) {
-            await fetch(`/api/history/${id}`, { method: 'DELETE' });
-            loadHistory();
-        }
+// ── History page ────────────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/history?limit=100');
+    const d = await r.json();
+    const items = d.analyses || [];
+    document.getElementById('historyCount').textContent = items.length + ' analysis' + (items.length !== 1 ? 'es' : '');
 
-        // ═══════════════════════════════════════════════════════════════
-        // PDF REPORT
-        // ═══════════════════════════════════════════════════════════════
-        function downloadReport(id) {
-            window.open(`/api/report/${id}`, '_blank');
-        }
+    if (!items.length) {
+      document.getElementById('historyEmpty').style.display = '';
+      document.getElementById('historyTable').style.display = 'none';
+      return;
+    }
+    document.getElementById('historyEmpty').style.display = 'none';
+    document.getElementById('historyTable').style.display = '';
+    document.getElementById('historyBody').innerHTML = items.map(a => `
+      <tr>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(a.filename)}">${esc(a.filename)}</td>
+        <td><span class="tag ${a.verdict.toLowerCase()}">${a.verdict}</span></td>
+        <td class="score-mini">${a.joint_score?.toFixed(3)}</td>
+        <td style="font-size:0.7rem;color:#64748b;">${a.model_key}</td>
+        <td><button class="action-btn danger" onclick="deleteAnalysis('${a.id}')">✕</button></td>
+      </tr>`).join('');
+  } catch (e) { console.error(e); }
+}
 
-        // ═══════════════════════════════════════════════════════════════
-        // TOAST
-        // ═══════════════════════════════════════════════════════════════
-        function toast(msg, type = 'success') {
-            const c = document.getElementById('toastContainer');
-            const t = document.createElement('div');
-            t.className = `toast ${type}`;
-            t.innerHTML = `<span>${type === 'success' ? '✓' : '✗'}</span> ${msg}`;
-            c.appendChild(t);
-            setTimeout(() => t.remove(), 3500);
-        }
+async function deleteAnalysis(id) {
+  await fetch(`/api/history/${id}`, { method: 'DELETE' });
+  loadHistory();
+}
 
-        // ═══════════════════════════════════════════════════════════════
-        // BOOT
-        // ═══════════════════════════════════════════════════════════════
-        init();
-    </script>
+document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+  if (!confirm('Delete all history?')) return;
+  await fetch('/api/history', { method: 'DELETE' });
+  loadHistory();
+});
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+init();
+</script>
 </body>
-
 </html>

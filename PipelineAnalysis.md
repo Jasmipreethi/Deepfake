@@ -463,45 +463,39 @@ python create_test_data.py --use_all \
 
 ## Changes: Web Interface
 
-### What was added
-A full-featured web application for deepfake detection — "DeepScan". Built on Flask + vanilla HTML/CSS/JS with SQLite history.
+### Overview
+A simplified web application for deepfake detection — three self-contained tabs with no external JS/CSS dependencies. Built on Flask + single-page HTML with SQLite history. All ML logic is imported from `inference.py` — no model architecture duplication.
 
 ### Pages
 
 | Page | Features |
 |---|---|
-| **Analyse** | Single or batch video upload, model selector, adjustable threshold slider, window count, score bars, explanation panel, mel spectrogram display, PDF report download |
-| **Compare** | Upload one video, run through both models side-by-side with per-model verdicts and scores |
-| **History** | SQLite-backed table of all past analyses, per-entry PDF reports, individual/bulk delete |
+| **Analyze** | Drag-and-drop video upload, model selector dropdown with per-model metadata, real-time verdict + audio/video/joint score display, reset for next upload |
+| **Compare** | Upload one video, run through both models side-by-side with per-model verdicts, three score breakdowns each, and agree/disagree summary line |
+| **History** | SQLite-backed table of all past analyses (file, verdict tag, joint score, model), per-entry delete, bulk clear all |
 
 ### Backend (`web/app.py`)
-- Self-contained architecture (duplicates model classes from `inference.py` — no import dependency)
-- Thread-safe model cache — loads each model once, shares across requests
-- Multi-window inference with per-window score breakdown
-- Mel spectrogram rendering as base64 PNG for explanation panel
-- Automated modality-based explanation (audio / video / both / mismatch)
-- PDF report generation via `reportlab`
-- SQLite history database (`history.db`)
+- Imports `load_model` and `predict_video` from `inference.py` — no duplicate architecture
+- In-memory model cache — loads each model once, shares across requests
+- Model paths hardcoded to `logs/logs_2/best_model.pth` (Model 2) and `logs/logs_3/best_model.pth` (Model 3)
+- Multi-window inference (3 windows per video, averaged for robustness)
+- SQLite history database (`history.db`) — auto-saves every analysis with file, scores, verdict, model, timestamp
+- Uploaded videos cleaned up immediately after processing
 
 ### API Endpoints
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `/api/analyse` | POST | Upload + classify videos (single or batch) |
-| `/api/compare` | POST | Compare two models on one video |
-| `/api/models` | GET | List loaded models with epoch/AUC info |
+| `/api/analyze` | POST | Upload + classify a single video |
+| `/api/compare` | POST | Compare both models on one video |
+| `/api/models` | GET | List available models with metadata and device info |
 | `/api/history` | GET/DELETE | Fetch or clear analysis history |
-| `/api/history/<id>` | GET/DELETE | Fetch or delete a single entry |
-| `/api/report/<id>` | GET | Download PDF report for an analysis |
+| `/api/history/<id>` | DELETE | Delete a single history entry |
 
 ### Usage
 ```bash
 cd web
-pip install flask flask-cors reportlab matplotlib
-
-# Set model paths
-export MODEL1_PATH=/path/to/best_model_1.pth
-export MODEL2_PATH=/path/to/best_model_2.pth
+pip install flask torch torchvision torchaudio opencv-python-headless
 
 python app.py
 # Open http://localhost:5000

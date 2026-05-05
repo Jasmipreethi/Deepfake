@@ -131,18 +131,19 @@ python create_test_data.py \
 The pipeline will auto-detect missing data and offer to download from Hugging Face.
 Test data is sampled **only from val speakers** — zero overlap with training data.
 
-### 4. Web Interface (DeepScan)
+### 4. Web Interface
 
 ```bash
 cd web
-pip install flask flask-cors reportlab matplotlib
-export MODEL1_PATH=/path/to/best_model_1.pth
-export MODEL2_PATH=/path/to/best_model_2.pth
+pip install flask torch torchvision torchaudio opencv-python-headless
 python app.py
-# Open http://localhost:5000 (or --port 8080)
+# Open http://localhost:5000
 ```
 
-Features: batch upload, model comparison, adjustable threshold, mel spectrogram display, SQLite history, and PDF report generation.
+Three self-contained tabs:
+- **Analyze** — drag-and-drop upload, model selector, real-time verdict + audio/video/joint scores
+- **Compare** — run one video through both models side-by-side with agree/disagree summary
+- **History** — SQLite-backed table of all past analyses with per-entry delete and bulk clear
 
 ---
 
