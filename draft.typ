@@ -958,17 +958,17 @@ Three Vast.ai GPU instances were rented over the course of the project. Their sp
 Instances 1 and 2 shared identical hardware (dual RTX 3060 on a ProLiant DL580 Gen9 with Xeon E7-8890 v4 processors) but were acquired at different spot prices (\$0.783 and \$0.569 per hour). Instance 2's lower cost made extended training runs more economical. Instance 3 (single RTX 3070 on a X99 motherboard with Xeon E5-2678 v3) was used for smaller tasks where its 8 GB VRAM was sufficient, at a fraction of the cost.
 
 #figure(
-  image("figures/vastai_instance_1.png", width: 85%),
+  image("figures/vastai_instance_1.jpg", width: 85%),
   caption: [Vast.ai Instance 1 — 2× RTX 3060 (24 GB), \$0.783/hr],
 )
 
 #figure(
-  image("figures/vastai_instance_2.png", width: 85%),
+  image("figures/vastai_instance_2.jpg", width: 85%),
   caption: [Vast.ai Instance 2 — 2× RTX 3060 (24 GB), \$0.569/hr],
 )
 
 #figure(
-  image("figures/vastai_instance_3.png", width: 85%),
+  image("figures/vastai_instance_3.jpg", width: 85%),
   caption: [Vast.ai Instance 3 — 1× RTX 3070 (8 GB), \$0.028/hr],
 )
 
