@@ -11,10 +11,18 @@
 
     The project's initial proposal (CN6000 Initial Proposal, 2025) aimed to research and create demo software that distinguishes between real and deepfake media using deep learning techniques, with a planned architecture based on CNN, TensorFlow, and SciPy. In response to the dataset's scale and characteristics, the implementation evolved to a Cross-Modal Transformer Fusion architecture with ResNet18 and ResNet3D-18 encoders, Focal Loss, and PyTorch - all as documented in Chapter 3. The delivered system exceeds the initial proposal's scope by providing per-modality score dissociation, a speaker-disjoint evaluation protocol, and a model comparison interface.
 
-    While Model 2 reached a peak validation AUC of 0.994, evaluation on a 100-video test set identified Model 3 as practically superior, achieving 93% accuracy and perfect precision (1.000) at a 0.5 threshold with zero false positives. Deviations from the initial proposal necessitated by hardware and stability constraints are documented and justified. The project contributes a modular, resumable training pipeline, a standalone inference system, and a web interface for video upload and classification. Constraints include a small test set and a fixed analysis window.
+    While Model 2 reached a peak validation AUC of 0.994 after five training epochs, evaluation on a 100-video speaker-disjoint test set identified the earlier-stopped Model 3 as practically superior, achieving 93% accuracy and perfect precision (1.000) at a 0.5 threshold with zero false positives — a finding that demonstrates the importance of score calibration over raw AUC optimisation. Deviations from the initial proposal necessitated by hardware, budget, and stability constraints are documented and justified. The project contributes a modular, resumable training pipeline, a standalone inference system, and a web interface for video upload and classification. Constraints include a small test set, fixed analysis window, and training limited to five epochs due to student resource limitations.
   ],
   acknowledgments: [
-    I would like to express my sincere gratitude to my supervisor, Lucian Duta, for his guidance and support throughout this project. I am also grateful to the developers of the AV-Deepfake1M++ dataset for providing the benchmark data that made this work possible. Finally, I would like to thank my family and friends for their encouragement and understanding during the development of this dissertation.
+    I would like to express my sincere gratitude to my supervisor, Lucian Duta, for his invaluable guidance, patience, and support throughout this project. His feedback and encouragement were instrumental in shaping this work.
+
+    I am grateful to the University of East London and the course leader for providing the academic environment and resources that made this project possible.
+
+    To my family, thank you for your unwavering love, patience, and belief in me throughout this journey.
+
+    To my friends, especially Jayrup, for his constant support, guidance, and encouragement — thank you for being there through the late nights and challenging moments.
+
+    I am also grateful to the developers of the AV-Deepfake1M++ dataset for providing the benchmark data that made this work possible.
   ],
   body,
 ) = {
@@ -78,17 +86,18 @@
   pagebreak()
 
   // 4. Table of Contents
+  heading(level: 1, outlined: false)[Contents]
   outline(depth: 3, indent: 2em, title: none)
   pagebreak()
 
   // List of Figures
   heading(level: 1, outlined: true)[List of Figures]
-  outline(target: figure.where(kind: image), depth: 1, indent: 2em)
+  outline(target: figure.where(kind: image), depth: 1, indent: 2em, title: none)
   pagebreak()
 
   // List of Tables
   heading(level: 1, outlined: true)[List of Tables]
-  outline(target: figure.where(kind: table), depth: 1, indent: 2em)
+  outline(target: figure.where(kind: table), depth: 1, indent: 2em, title: none)
   pagebreak()
 
   // 4.1 Start numbering pages
