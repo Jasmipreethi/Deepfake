@@ -172,6 +172,12 @@
   // Image styling — black border
   show image: it => box(stroke: 0.5pt + black, it)
 
+  // Spacing after all figures (images and tables)
+  show figure: it => {
+    it
+    v(1em)
+  }
+
   // Table styling - bold headers, bottom border, left-aligned content
   show table.cell.where(y: 0): strong
   set table(
