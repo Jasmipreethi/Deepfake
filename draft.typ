@@ -150,32 +150,26 @@
   // Paragraph styling
   set par(justify: true, leading: 0.8em)
 
-  // Table styling — bold headers, bottom border, centered columns
+  // Table styling — bold headers, bottom border, left-aligned content
   show table.cell.where(y: 0): strong
   set table(
     stroke: (x, y) => if y == 0 {
       (bottom: 0.7pt + black)
     },
-    align: (x, y) => (
-      if x > 0 { center } else { left }
-    ),
+    align: left,
   )
 
   body
 }
 
-// Helper for Appendices to switch lettering
+// Helper for Appendices
 #let appendix(body) = {
   pagebreak()
-  counter(heading).update(0)
-  set heading(numbering: "A.1")
+  set heading(numbering: none)
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
     v(1em)
-    let num = counter(heading).display("A")
-    text(size: 14pt, weight: "bold")[
-      Appendix #num - #it.body
-    ]
+    text(size: 16pt, weight: "bold")[#it.body]
     v(1em)
   }
   body
@@ -626,7 +620,7 @@ The primary evaluation metric for each head is AUC (Area Under the ROC Curve), w
 The system constitutes a deep learning pipeline: ResNet3D-18 (pretrained on Kinetics-400) for video, ResNet18 (pretrained on ImageNet) for audio via mel-spectrograms, and a two-layer Transformer Encoder for cross-modal fusion — over thirty layers trained jointly with backpropagation and the AdamW optimiser. Transfer learning is applied to both encoders, with a two-phase fine-tuning schedule (Section 3.4.2) that progressively adapts pretrained weights to the deepfake detection task.
 
 #figure(
-  image("figures/architecture.png", width: 100%),
+  image("figures/architecture.png", width: 80%),
   caption: [Cross-Modal Transformer Fusion system architecture: ResNet3D-18 video encoder and ResNet18 audio encoder feed into a two-layer Transformer Encoder with [CLS] token, producing three independent sigmoid classification heads for audio, video, and joint authenticity predictions.],
 )
 
@@ -824,7 +818,7 @@ The Transformer Encoder fusion module receives the 256-dimensional feature vecto
 On CPU-only hardware, the Transformer module is automatically replaced with a lightweight MLP fusion module to reduce inference latency, making the system deployable without GPU hardware.
 
 #figure(
-  image("figures/transformer_fusion_module.png", width: 100%),
+  image("figures/transformer_fusion_module.png", width: 70%),
   caption: [Transformer Fusion module: 256-dim video and audio features projected to 512 dims, combined with a learnable [CLS] token and positional embeddings into a 3-token sequence. Two layers of multi-head self-attention (8 heads, GELU, pre-norm) capture cross-modal dependencies. The [CLS] token output feeds three independent sigmoid classification heads.],
 )
 
@@ -854,7 +848,7 @@ Training proceeded in two phases to protect the pretrained encoder features duri
 In Phase 2, covering the remaining 75% of epochs, all parameters were unfrozen. Encoder parameters were trained at a learning rate of $1 times 10^-5$, ten times lower than the fusion module's $1 times 10^-4$, to allow gradual domain adaptation without catastrophic forgetting of pretrained features. Both the phase boundary and the patience threshold for early stopping were expressed as fractions of the total epoch count (`freeze_epochs = max(1, round(epochs × 0.25))`, `patience = max(5, round(epochs × 0.30))`), making the training schedule scale automatically with any change to the total epoch budget.
 
 #figure(
-  image("/figures/ two_phase_training.png", width: 100%),
+  image("figures/two_phase_training.png", width: 85%),
   caption: [Two-phase training schedule: Phase 1 (frozen encoders, 25% of epochs, LR 1×10⁻⁴) protects pretrained features; Phase 2 (unfrozen encoders, 75% of epochs, encoder LR 1×10⁻⁵) enables full-domain adaptation. ReduceLROnPlateau halves LR after 5 epochs without AUC improvement. Default budget: 10 epochs; runs capped at 5 due to student resource constraints.],
 )
 
@@ -1143,7 +1137,7 @@ Evaluation was conducted using `compare_models.py` on a 100-video test set (25 r
 Figure 4.7 presents a comprehensive comparison of all three models on the test set: bar charts of overall metrics (AUC, accuracy, precision, recall, F1), ROC curves, score distribution histograms, confusion matrix summaries, per-type AUC breakdowns, and audio-vs-video score scatter plots for each model. The scatter plots reveal the modality-specific behaviour of the three-head architecture — `audio_modified` clips cluster toward high video scores with low audio scores, while `visual_modified` clips show the reverse pattern.
 
 #figure(
-  image("comparison_results/model_comparison.png", width: 100%),
+  image("comparison_results/model_comparison.png", width: 95%),
   caption: [Model comparison scatter plot and histograms],
 )
 
@@ -1473,33 +1467,56 @@ Overall, the project met its core objective: a functional, well-documented multi
 
 // Appendix
 #appendix[
+= Appendix
+
   // A
-  = Initial Project Proposal (CN6000)
+  == Initial Project Proposal (CN6000)
 
   The initial project proposal for this dissertation was submitted as part of the CN6000 Initial Proposal (2025) module. The proposal outlined the following scope, methodology, and objectives as originally conceived.
 
-  _*Proposal Details*_
+  _*Initial Proposal Form*_
 
   #figure(
     table(
       columns: (auto, auto),
-      [_Field_], [_Content_],
-      [Module], [CN6000 Initial Proposal (2025)],
-      [Title], ["Deepfake Detection Using Deep Learning Models"],
-      [Proposed Architecture], [Convolutional Neural Network (CNN) with TensorFlow and SciPy],
-      [Proposed Dataset], [Not finalised at proposal stage — literature review identified AV-Deepfake1M++ as target],
-      [Initial Objectives],
-      [Literature review; impact analysis; dataset research; implementation of CNN-based detector; evaluation; reflection],
-
-      [Proposed Tech Stack], [Python, TensorFlow, SciPy, FFMPEG tools],
+      [_Programme_], [BSc (Hons) Data Science and Artificial Intelligence],
+      [_Year_], [2025],
+      [_Student Number_], [2571395],
+      [_Proposed Title_], [Deepfake detection using deep learning model],
+      [_Proposed Aim_], [To research on and create a demo software that will distinguish between real and deepfake media files using deep learning techniques.],
     ),
-    caption: [Initial project proposal summary (CN6000, 2025)],
+    caption: [],
   )
+
+  _*Proposed Objectives*_
+
+  By the end of this project, I will be able to:
+
+  1. To explore the literature on the different types of deepfake technologies and how they are created.
+  2. To research on the impact of deepfake across various sectors and current solutions.
+  3. To conduct quantitative research by performing secondary data analysis on AV-Deepfake1M: A Large-Scale LLM-Driven Audio-Visual Deepfake Dataset.
+  4. Design and implement a demo software that detects and differentiates deepfake media using deep learning.
+  5. Evaluate the implementation and findings on the model accuracy on detecting audio-visual manipulation.
+  6. Reflect on the final outcomes, challenges faced and suggest further development of the software.
+
+  _*Draft of Rationale*_
+
+  Easy access AI to tools lead evolving technologies and effortless media to manipulation, creating highly realistic synthetic media also known as deepfake. Deepfake is coined from both 'deep learning' technology using which it is created and 'fake' meaning a counterfeit.
+
+  The frequent occurrence of such media is reducing the credibility of audio-visual media in areas like law, politics, finance and banking, etc, evolving a threat cybersecurity, public trust, and identity verification systems. Generative models like text-to-speech (TTS), voice conversion (VC) and many more create media that are is difficult to identify making them powerful tools for spreading misinformation and impersonation of political people.
+
+  Many datasets available online provide less diverse or poor-quality data leading to poor performance as they are not trained to work in real world settings. Therefore, existing detection models often misclassify audio-visual deepfakes of higher quality as real. This project will help me to understand how deepfakes are created, what major industries they affect, and to develop an understanding of existing deepfake detection models. I will be able to identify techniques and methods that can increase the quality of accurately classifying data into real and fake.
+
+  _*Facilities Required*_
+
+  Python, TensorFlow, SciPy, FFMPEG tools, Convolutional Neural Network (CNN)
+
+  _*Supervisor*_: Lucian Duta
 
   Three principal architectural deviations from the initial proposal were required during implementation, each driven by practical constraints encountered with the AV-Deepfake1M++ dataset and the available training infrastructure: the audio encoder changed from Wav2Vec 2.0 to ResNet18 (Section 3.3.4), the visual encoder changed from MobileNetV3 to ResNet3D-18 (Section 3.3.5), and the fusion module changed from DiMoDif to a custom Transformer Encoder (Section 3.3.6). These changes and their justifications are fully documented in Chapter 3.
 
   // B
-  = Final Project Proposal
+  == Final Project Proposal
 
   The final project proposal reflected the evolved scope and methodology after the literature review and exploratory data analysis were completed. The refined objectives and deliverables are as follows.
 
@@ -1533,7 +1550,7 @@ Overall, the project met its core objective: a functional, well-documented multi
   6. Standalone inference system and web interface for non-technical use.
 
   // C
-  = Application for Approval of Research Activities
+  == Application for Approval of Research Activities
 
   This project uses a publicly available, pre-existing dataset (AV-Deepfake1M++) distributed under a research-only license. No primary data collection involving human participants was conducted. The dataset was collected by its creators under established data use agreements, and all recordings feature consenting individuals.
 
@@ -1545,7 +1562,7 @@ Overall, the project met its core objective: a functional, well-documented multi
   The project was conducted in accordance with the University's guidelines on research ethics and data protection. No personally identifiable information was processed or stored outside the dataset's original distribution. The dataset's consent framework and terms of use are documented in Appendix D.
 
   // D
-  = Dataset Usage and Consent
+  == Dataset Usage and Consent
 
   The AV-Deepfake1M++ dataset @Cai2025 is distributed under a research-only license through Hugging Face and the official 1M-Deepfakes Detection Challenge platform. The dataset terms of use include the following provisions:
 
@@ -1574,7 +1591,7 @@ Overall, the project met its core objective: a functional, well-documented multi
   The author confirms that all dataset usage complies with the terms set by the dataset creators and that no terms were violated during this research project.
 
   // E
-  = Hyperparameter Configuration
+  == Hyperparameter Configuration
 
   All hyperparameters were centralised in `config.py`. The values used across all training runs are listed below.
 
@@ -1603,8 +1620,26 @@ Overall, the project met its core objective: a functional, well-documented multi
     caption: [Complete hyperparameter configuration],
   )
 
+  The Focal Loss implementation (`train_utils.py`) downweights well-classified examples through a $(1-p_t)^gamma$ modulating factor, concentrating training on hard, ambiguous samples near the decision boundary:
+
+  ```python
+  class FocalLoss(nn.Module):
+      def __init__(self, gamma=2.0, alpha=0.25):
+          super().__init__()
+          self.gamma = gamma
+          self.alpha = alpha
+
+      def forward(self, pred, target):
+          pred = torch.clamp(pred, 1e-6, 1.0 - 1e-6)
+          bce = -(target * torch.log(pred) + (1 - target) * torch.log(1 - pred))
+          p_t = pred * target + (1 - pred) * (1 - target)
+          focal_weight = (1 - p_t) ** self.gamma
+          alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
+          return (alpha_t * focal_weight * bce).mean()
+  ```
+
   // F
-  = Model Architecture Summary
+  == Model Architecture Summary
 
   #figure(
     table(
@@ -1619,8 +1654,48 @@ Overall, the project met its core objective: a functional, well-documented multi
     caption: [Model architecture component summary],
   )
 
+  The core fusion module (`cross_modal.py`) uses a Transformer Encoder with a learnable [CLS] token to fuse 256-dim audio and video features into a 512-dim joint representation, then applies three independent sigmoid classification heads:
+
+  ```python
+  class TransformerFusion(nn.Module):
+      def __init__(self, feature_dim=256, hidden_dim=512,
+                   num_heads=8, num_layers=2, dropout=0.4):
+          super().__init__()
+          self.audio_proj  = nn.Linear(feature_dim, hidden_dim)
+          self.video_proj  = nn.Linear(feature_dim, hidden_dim)
+          self.cls_token   = nn.Parameter(torch.randn(1, 1, hidden_dim))
+          self.pos_embedding = nn.Parameter(torch.randn(1, 3, hidden_dim))
+
+          encoder_layer = nn.TransformerEncoderLayer(
+              d_model=hidden_dim, nhead=num_heads,
+              dim_feedforward=hidden_dim * 4, dropout=dropout,
+              activation='gelu', batch_first=True, norm_first=True
+          )
+          self.transformer = nn.TransformerEncoder(
+              encoder_layer, num_layers=num_layers,
+              norm=nn.LayerNorm(hidden_dim)
+          )
+          self.audio_classifier = nn.Linear(hidden_dim, 1)
+          self.video_classifier = nn.Linear(hidden_dim, 1)
+          self.joint_classifier = nn.Linear(hidden_dim, 1)
+
+      def forward(self, video_feat, audio_feat):
+          B = video_feat.shape[0]
+          v   = self.video_proj(video_feat).unsqueeze(1)
+          a   = self.audio_proj(audio_feat).unsqueeze(1)
+          cls = self.cls_token.expand(B, -1, -1)
+          tokens = torch.cat([cls, v, a], dim=1) + self.pos_embedding
+          fused  = self.transformer(tokens)
+          cls_out = fused[:, 0, :]
+          return {
+              'audio_pred': torch.sigmoid(self.audio_classifier(cls_out)),
+              'video_pred': torch.sigmoid(self.video_classifier(cls_out)),
+              'joint_pred': torch.sigmoid(self.joint_classifier(cls_out)),
+          }
+  ```
+
   // G
-  = Training Run Summary
+  == Training Run Summary
 
   #figure(
     table(
@@ -1635,7 +1710,7 @@ Overall, the project met its core objective: a functional, well-documented multi
   )
 
   // H
-  = Feature Extraction Parameters
+  == Feature Extraction Parameters
 
   #figure(
     table(
@@ -1659,7 +1734,7 @@ Overall, the project met its core objective: a functional, well-documented multi
   )
 
   // I
-  = Dataset Cleaning Summary
+  == Dataset Cleaning Summary
 
   #figure(
     table(
@@ -1674,8 +1749,24 @@ Overall, the project met its core objective: a functional, well-documented multi
     caption: [Dataset cleaning summary — from raw metadata to final usable dataset],
   )
 
+  The speaker-disjoint partition (`data_utils.py`) extracts speaker IDs from file paths and uses `GroupShuffleSplit` to ensure zero speaker overlap between training and validation sets:
+
+  ```python
+  # Extract speaker IDs from file paths (e.g., "source/id00015/clip.mp4")
+  df['speaker'] = df['file'].apply(
+      lambda f: f.split('/')[1] if '/' in f else 'unknown'
+  )
+  # Split by speaker — all videos from one speaker stay in the same split
+  gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+  train_idx, val_idx = next(gss.split(df, groups=df['speaker']))
+  train_df, val_df = df.iloc[train_idx], df.iloc[val_idx]
+  # Verify zero overlap
+  overlap = set(train_df['speaker'].unique()) & set(val_df['speaker'].unique())
+  assert len(overlap) == 0, f"Speaker overlap detected: {overlap}"
+  ```
+
   // J
-  = Test Set Composition
+  == Test Set Composition
 
   #figure(
     table(
@@ -1691,45 +1782,60 @@ Overall, the project met its core objective: a functional, well-documented multi
   )
 
   // K
-  = Figure Attribution
+  == Figure Attribution
 
   All figures in this dissertation were either generated programmatically from project code and results, or created using generative AI tools for conceptual diagrams. The attribution is as follows.
 
   #figure(
     table(
-      columns: (auto, auto, auto, auto),
+      columns: (22%, 34%, 9%, 35%),
       [_Figure_], [_Filename_], [_Section_], [_Source_],
-      [System architecture diagram], [`architecture.png`], [3.3.1], [AI-generated (DALL·E / Midjourney)],
+      [System architecture diagram], [`architecture.png`], [3.3.1], [AI-generated],
       [Speaker-disjoint split schema], [`speaker_split.png`], [3.3.2], [AI-generated],
-      [Transformer fusion module detail], [`transformer_fusion_module.png`], [3.3.6], [AI-generated],
+      [Transformer fusion module], [`transformer_fusion_module.png`], [3.3.6], [AI-generated],
       [Two-phase training timeline], [`two_phase_training.png`], [3.4.2], [AI-generated],
-      [Modification type distribution],
-      [`modification_type_distribution.png`],
-      [3.3.3],
-      [Code-generated — `analyze_data.py`],
-
-      [Fake segment analysis], [`fake_segment_analysis.png`], [3.3.3], [Code-generated — `analyze_data.py`],
-      [Mel-spectrogram comparison],
-      [`mel_spectrogram_comparison.png`],
-      [3.3.4],
-      [Code-generated — `plot_mel_spectrogram.py`],
-
-      [Training history (all models)], [`training_history.png`], [4.2], [Code-generated — `compare_models.py`],
-      [Training history (Model 4/5)],
-      [`training_history_model4.png`],
-      [4.2.3],
-      [Code-generated — `plot_training_history.py`],
-
-      [Model comparison dashboard], [`model_comparison.png`], [4.3.1], [Code-generated — `compare_models.py`],
-      [Per-type accuracy bar chart],
-      [`per_type_accuracy_bar_chart.png`],
-      [4.4],
-      [Code-generated — `plot_per_type_accuracy.py`],
+      [Modification type distribution], [`modification_type_distribution.png`], [3.3.3], [\ `analyze_data.py`],
+      [Fake segment analysis], [`fake_segment_analysis.png`], [3.3.3], [\ `analyze_data.py`],
+      [Mel-spectrogram comparison], [`mel_spectrogram_comparison.png`], [3.3.4], [\ `plot_mel_spectrogram.py`],
+      [Training history (all models)], [`training_history.png`], [4.2], [\ `compare_models.py`],
+      [Training history (Model 4/5)], [`training_history_model4.png`], [4.2.3], [\ `plot_training_history.py`],
+      [Model comparison dashboard], [`model_comparison.png`], [4.3.1], [\ `compare_models.py`],
+      [Per-type accuracy bar chart], [`per_type_accuracy_bar_chart.png`], [4.4], [\ `plot_per_type_accuracy.py`],
     ),
     caption: [Figure attribution — AI-generated conceptual diagrams vs. code-generated plots from project results],
   )
 
   All code-generated figures use data from the project's training runs (logs/), prediction outputs (comparison_results/), and dataset analysis (analysis/). The plotting scripts are available in the project repository and can be reproduced by running the corresponding Python files with the project's data.
+
+  // L
+  == Web Interface Screenshots
+
+  The following screenshots demonstrate the browser-based web interface (`web/app.py`) described in Section 3.7.1. The interface was accessed at `http://localhost:5000` using a local browser. To reproduce: run `python web/app.py` with the model environment variables set, then open the URL in a browser.
+
+  #figure(
+    image("figures/web_analyze_empty.png", width: 90%),
+    caption: [Analyze tab — initial state showing model selector dropdown, drag-and-drop upload area, and threshold slider.],
+  )
+
+  #figure(
+    image("figures/web_analyze_real.png", width: 90%),
+    caption: [Analyze tab — a real video classified with green "REAL" verdict, displaying audio, video, and joint authenticity scores.],
+  )
+
+  #figure(
+    image("figures/web_analyze_fake.png", width: 90%),
+    caption: [Analyze tab — a fake video classified with red "FAKE" verdict, showing per-modality score breakdown.],
+  )
+
+  #figure(
+    image("figures/web_compare.png", width: 90%),
+    caption: [Compare tab — the same video evaluated by two models side by side, showing both verdicts, three per-modality scores per model, and an agree/disagree summary.],
+  )
+
+  #figure(
+    image("figures/web_history.png", width: 90%),
+    caption: [History tab — SQLite-backed table of past analyses showing filename, verdict, joint score, model used, and timestamp, with per-entry delete and bulk clear options.],
+  )
 
 ]
 
