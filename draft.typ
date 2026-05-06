@@ -1540,9 +1540,9 @@ This glossary defines technical terminology used throughout this dissertation. D
 
 *AV-Deepfake1M++.* A large-scale audio-visual deepfake benchmark containing ~2 million video clips, 2,000+ speakers, and four manipulation categories with real-world perturbations. @Cai2025
 
-*BCE (Binary Cross-Entropy).* The standard loss function for binary classification, measuring divergence between predicted probabilities and true labels. Subsumed by Focal Loss when $\gamma = 0$.
+*BCE (Binary Cross-Entropy).* The standard loss function for binary classification, measuring divergence between predicted probabilities and true labels. Subsumed by Focal Loss when γ = 0.
 
-*[CLS] token.* A learnable classification token prepended to input sequences in Transformer architectures. Its final representation aggregates information from all inputs and feeds the classification heads.
+*CLS token.* A learnable classification token prepended to input sequences in Transformer architectures. Its final representation aggregates information from all inputs and feeds the classification heads.
 
 *Cross-modal attention.* A mechanism allowing representations from different modalities (audio, video) to attend to each other during feature learning, capturing inconsistencies that simple concatenation cannot. @Cai2024
 
@@ -1556,7 +1556,7 @@ This glossary defines technical terminology used throughout this dissertation. D
 
 *FaceForensics++.* A widely-used face manipulation benchmark with ~4,000 videos and multiple manipulation methods. @Rossler2019
 
-*Focal Loss.* A loss function extending BCE with a modulating factor $(1-p_t)^\gamma$ that downweights well-classified examples, concentrating training on hard, ambiguous samples. $\gamma = 2.0$ in this project. @lin2018focallossdenseobject
+*Focal Loss.* A loss function extending BCE with a modulating factor (1−p_t)^γ that downweights well-classified examples, concentrating training on hard, ambiguous samples. γ = 2.0 in this project. @lin2018focallossdenseobject
 
 *GAN (Generative Adversarial Network).* A framework where generator and discriminator networks compete, enabling realistic synthetic content generation. @Rossler2019
 
