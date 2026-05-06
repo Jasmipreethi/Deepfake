@@ -1,13 +1,11 @@
 // draft.typ
-
 #let project(
-  title: "Multimodal Audio-Visual Deepfake Detection Using Cross-Modal Transformer Fusion",
+  title: "Deepfake Detection Using Cross-Modal Transformer Fusion",
   author: "Jasmi Preethi Alasapuri",
   student_id: "2571395",
-  degree: "BSc (Hons) in Data Science and Artificial Intelligence",
+  degree: "Data Science and Artificial Intelligence",
   supervisor: "Lucian Duta",
-  module: "CN6000",
-  date: "27 April 2026",
+  date: datetime.today(),
   abstract: [
     This dissertation presents a multimodal deepfake detection system trained on the validation subset of the AV-Deepfake1M++ dataset, comprising over 77,000 video clips. The system employs a cross-modal transformer fusion network that integrates ResNet3D-18 and ResNet18 encoders to produce simultaneous predictions for audio, video, and joint authenticity. Trained with focal loss under a strict speaker-disjoint partition, the model achieves high generalisation to unseen identities.
 
@@ -20,61 +18,167 @@
   ],
   body,
 ) = {
+  // 1. Page & Font Setup
+  set document(author: author, title: title)
   set page(
-    margin: (x: 2.5cm, y: 2.5cm),
-    numbering: "1",
-    header: align(right, text(size: 9pt, title)),
+    paper: "a4",
+    margin: (left: 2.5cm, right: 2.5cm, top: 2.5cm, bottom: 2.5cm),
+    numbering: none,
   )
-  set par(justify: true, leading: 0.5em)
-  show heading.where(level: 1): set heading(numbering: "1")
-  show heading.where(level: 2): set heading(numbering: "1.1")
-  show heading.where(level: 3): set heading(numbering: "1.1.1")
+  set text(lang: "en", size: 12pt)
 
-  // Title page (unnumbered)
-  counter(page).update(0)
+  // 2. The Title Page
   align(center)[
-    #text(size: 14pt, weight: "bold")[SCHOOL OF ARCHITECTURE, COMPUTING AND ENGINEERING]
-    #v(0.3cm)
+    #image("uel.svg", width: 5cm)
+    #v(2em)
+
+    #text(size: 14pt)[SCHOOL OF ARCHITECTURE, COMPUTING AND ENGINEERING] \
+    #v(0.5em)
     #text(size: 12pt)[Department of Engineering and Computing]
-    #v(2.5cm)
-    #text(size: 22pt, weight: "bold")[#title]
-    #v(2cm)
-    #text(size: 14pt)[#author]
-    #v(0.3cm)
+
+    #v(4fr)
+
+    #text(weight: "bold", size: 22pt)[#title]
+
+    #v(2fr)
+
+    #text(weight: "bold", size: 14pt)[#author] \
     #text(size: 12pt)[#student_id]
-    #v(1.5cm)
-    #text(size: 12pt)[A report submitted in part fulfilment of the degree of #degree]
-    #v(0.5cm)
-    #text(size: 12pt)[Supervisor: #supervisor]
-    #v(1cm)
-    #text(size: 12pt)[#module]
-    #v(0.3cm)
-    #text(size: 12pt)[#date]
+
+    #v(2fr)
+
+    A report submitted in part fulfilment of the degree of \
+    BSc (Hons) in #text(style: "italic")[#degree]
+
+    #v(1em)
+
+    Supervisor: #supervisor \
+    CN6000
+
+    #v(2fr)
+
+    #v(1em)
+    #date.display("[day] [month repr:long] [year]")
+    #v(2em)
   ]
-
-  // Abstract
   pagebreak()
+
+  set page(numbering: "i")
   counter(page).update(1)
-  heading(level: 1, [Abstract])
+
+  // 3. Front Matter (Abstract & Acknowledgments)
+  set heading(numbering: none)
+
+  heading(level: 1, outlined: true)[Abstract]
   abstract
-
-  // Acknowledgments
   pagebreak()
-  heading(level: 1, [Acknowledgments])
+
+  heading(level: 1, outlined: true)[Acknowledgments]
   acknowledgments
-
-  // Table of Contents
   pagebreak()
-  heading(level: 1, [Table of Contents])
-  outline()
 
-  // Main body
+  // 4. Table of Contents
+  outline(depth: 3, indent: 2em)
   pagebreak()
+
+  // 4.1 Start numbering pages
+  set page(numbering: "1")
+  counter(page).update(1)
+
+  // 5. Main Content Styling & Headers
+  set page(
+    numbering: "1",
+    header: context {
+      let current_page = here().page()
+      let before = query(selector(heading.where(level: 1)).before(here()))
+      let after = query(selector(heading.where(level: 1)).after(here()))
+      let target_heading = none
+
+      if after.len() > 0 and after.first().location().page() == current_page {
+        target_heading = after.first()
+      } else if before.len() > 0 {
+        target_heading = before.last()
+      }
+
+      if target_heading != none {
+        grid(
+          columns: (1fr, 1fr),
+          align(left)[
+            #text(style: "italic", size: 10pt)[
+              #if target_heading.numbering != none [
+                #if "A" in target_heading.numbering [
+                  #let app_val = counter(heading).get().first()
+                  #if app_val != none and app_val >= 1 [
+                    Appendix #counter(heading).display("A"):
+                  ] else [
+                    Appendix
+                  ]
+                ] else [
+                  Chapter #counter(heading).display():
+                ]
+              ]
+              #target_heading.body
+            ]
+          ],
+          align(right)[
+            #text(size: 10pt)[#author]
+          ],
+        )
+        v(-0.8em)
+        line(length: 100%, stroke: 0.5pt + gray)
+      }
+    },
+  )
+
+  counter(page).update(1)
+  set heading(numbering: "1.1")
+
+  // Custom rule to force "Chapter X: Title" formatting
+  show heading.where(level: 1): it => {
+    pagebreak(weak: true)
+    v(1em)
+    if it.body == [References] or it.body == [Bibliography] {
+      text(size: 16pt, weight: "bold")[#it.body]
+    } else {
+      text(size: 16pt, weight: "bold")[
+        Chapter #counter(heading).display(): #it.body
+      ]
+    }
+    v(1em)
+  }
+
+  // Paragraph styling
+  set par(justify: true, leading: 0.8em)
+
+  // Table styling — bold headers, bottom border, centered columns
+  show table.cell.where(y: 0): strong
+  set table(
+    stroke: (x, y) => if y == 0 {
+      (bottom: 0.7pt + black)
+    },
+    align: (x, y) => (
+      if x > 0 { center } else { left }
+    ),
+  )
+
   body
+}
 
-  // Bibliography (auto-generated)
+// Helper for Appendices to switch lettering
+#let appendix(body) = {
   pagebreak()
-  heading(level: 1, [Bibliography])
+  counter(heading).update(0)
+  set heading(numbering: "A.1")
+  show heading.where(level: 1): it => {
+    pagebreak(weak: true)
+    v(1em)
+    let num = counter(heading).display("A")
+    text(size: 14pt, weight: "bold")[
+      Appendix #num - #it.body
+    ]
+    v(1em)
+  }
+  body
 }
 
 #show: project
@@ -1365,265 +1469,267 @@ Working with a dataset of this scale — 77,326 video clips, 68,851 of which wer
 
 Overall, the project met its core objective: a functional, well-documented multimodal deepfake detection system that achieves strong performance on a speaker-disjoint evaluation and provides interpretable per-modality output. The codebase is modular, reproducible, and extensible, and represents a solid foundation for the future directions described above.
 
+#bibliography("references.bib", style: "harvard-cite-them-right", title: "References")
+
 // Appendix
-= Appendix
+#appendix[
+  // A
+  = Initial Project Proposal (CN6000)
 
-// A
-== Initial Project Proposal (CN6000)
+  The initial project proposal for this dissertation was submitted as part of the CN6000 Initial Proposal (2025) module. The proposal outlined the following scope, methodology, and objectives as originally conceived.
 
-The initial project proposal for this dissertation was submitted as part of the CN6000 Initial Proposal (2025) module. The proposal outlined the following scope, methodology, and objectives as originally conceived.
+  _*Proposal Details*_
 
-_*Proposal Details*_
+  #figure(
+    table(
+      columns: (auto, auto),
+      [_Field_], [_Content_],
+      [Module], [CN6000 Initial Proposal (2025)],
+      [Title], ["Deepfake Detection Using Deep Learning Models"],
+      [Proposed Architecture], [Convolutional Neural Network (CNN) with TensorFlow and SciPy],
+      [Proposed Dataset], [Not finalised at proposal stage — literature review identified AV-Deepfake1M++ as target],
+      [Initial Objectives],
+      [Literature review; impact analysis; dataset research; implementation of CNN-based detector; evaluation; reflection],
 
-#figure(
-  table(
-    columns: (auto, auto),
-    [_Field_], [_Content_],
-    [Module], [CN6000 Initial Proposal (2025)],
-    [Title], ["Deepfake Detection Using Deep Learning Models"],
-    [Proposed Architecture], [Convolutional Neural Network (CNN) with TensorFlow and SciPy],
-    [Proposed Dataset], [Not finalised at proposal stage — literature review identified AV-Deepfake1M++ as target],
-    [Initial Objectives],
-    [Literature review; impact analysis; dataset research; implementation of CNN-based detector; evaluation; reflection],
+      [Proposed Tech Stack], [Python, TensorFlow, SciPy, FFMPEG tools],
+    ),
+    caption: [Initial project proposal summary (CN6000, 2025)],
+  )
 
-    [Proposed Tech Stack], [Python, TensorFlow, SciPy, FFMPEG tools],
-  ),
-  caption: [Initial project proposal summary (CN6000, 2025)],
-)
+  Three principal architectural deviations from the initial proposal were required during implementation, each driven by practical constraints encountered with the AV-Deepfake1M++ dataset and the available training infrastructure: the audio encoder changed from Wav2Vec 2.0 to ResNet18 (Section 3.3.4), the visual encoder changed from MobileNetV3 to ResNet3D-18 (Section 3.3.5), and the fusion module changed from DiMoDif to a custom Transformer Encoder (Section 3.3.6). These changes and their justifications are fully documented in Chapter 3.
 
-Three principal architectural deviations from the initial proposal were required during implementation, each driven by practical constraints encountered with the AV-Deepfake1M++ dataset and the available training infrastructure: the audio encoder changed from Wav2Vec 2.0 to ResNet18 (Section 3.3.4), the visual encoder changed from MobileNetV3 to ResNet3D-18 (Section 3.3.5), and the fusion module changed from DiMoDif to a custom Transformer Encoder (Section 3.3.6). These changes and their justifications are fully documented in Chapter 3.
+  // B
+  = Final Project Proposal
 
-// B
-== Final Project Proposal
+  The final project proposal reflected the evolved scope and methodology after the literature review and exploratory data analysis were completed. The refined objectives and deliverables are as follows.
 
-The final project proposal reflected the evolved scope and methodology after the literature review and exploratory data analysis were completed. The refined objectives and deliverables are as follows.
+  _*Final Proposal Details*_
 
-_*Final Proposal Details*_
+  #figure(
+    table(
+      columns: (auto, auto),
+      [_Field_], [_Content_],
+      [Module], [CN6000 Dissertation (2026)],
+      [Title], ["Deepfake Detection Using Cross-Modal Transformer Fusion"],
+      [Dataset], [AV-Deepfake1M++ validation split (68,851 usable clips) @Cai2025],
+      [Architecture],
+      [Cross-Modal Transformer Fusion: ResNet3D-18 (video) + ResNet18 (audio) + 2-layer Transformer Encoder with three-head output],
 
-#figure(
-  table(
-    columns: (auto, auto),
-    [_Field_], [_Content_],
-    [Module], [CN6000 Dissertation (2026)],
-    [Title], ["Deepfake Detection Using Cross-Modal Transformer Fusion"],
-    [Dataset], [AV-Deepfake1M++ validation split (68,851 usable clips) @Cai2025],
-    [Architecture],
-    [Cross-Modal Transformer Fusion: ResNet3D-18 (video) + ResNet18 (audio) + 2-layer Transformer Encoder with three-head output],
+      [Training Pipeline], [PyTorch, Focal Loss, two-phase fine-tuning, W&B tracking, checkpoint-resumable],
+      [Deliverables],
+      [Trained model checkpoints; standalone inference system; web-based detection interface with model comparison and history tracking],
+    ),
+    caption: [Final project proposal summary],
+  )
 
-    [Training Pipeline], [PyTorch, Focal Loss, two-phase fine-tuning, W&B tracking, checkpoint-resumable],
-    [Deliverables],
-    [Trained model checkpoints; standalone inference system; web-based detection interface with model comparison and history tracking],
-  ),
-  caption: [Final project proposal summary],
-)
+  _*Refined Objectives*_
 
-_*Refined Objectives*_
+  The six refined objectives, as stated in Section 1.4, are:
+  1. Literature review across generation and detection techniques; gap identification.
+  2. Real-world deepfake impact analysis across finance, healthcare, politics, and media.
+  3. Quantitative secondary analysis of AV-Deepfake1M++ including EDA and speaker-disjoint split.
+  4. Design and implementation of the Cross-Modal Transformer Fusion architecture.
+  5. Resumable training pipeline with evaluation on a 100-video test set.
+  6. Standalone inference system and web interface for non-technical use.
 
-The six refined objectives, as stated in Section 1.4, are:
-1. Literature review across generation and detection techniques; gap identification.
-2. Real-world deepfake impact analysis across finance, healthcare, politics, and media.
-3. Quantitative secondary analysis of AV-Deepfake1M++ including EDA and speaker-disjoint split.
-4. Design and implementation of the Cross-Modal Transformer Fusion architecture.
-5. Resumable training pipeline with evaluation on a 100-video test set.
-6. Standalone inference system and web interface for non-technical use.
+  // C
+  = Application for Approval of Research Activities
 
-// C
-== Application for Approval of Research Activities
+  This project uses a publicly available, pre-existing dataset (AV-Deepfake1M++) distributed under a research-only license. No primary data collection involving human participants was conducted. The dataset was collected by its creators under established data use agreements, and all recordings feature consenting individuals.
 
-This project uses a publicly available, pre-existing dataset (AV-Deepfake1M++) distributed under a research-only license. No primary data collection involving human participants was conducted. The dataset was collected by its creators under established data use agreements, and all recordings feature consenting individuals.
+  The research activities fall under secondary data analysis and software development. No ethical approval was required for:
+  - Secondary analysis of a publicly available benchmark dataset.
+  - Development and evaluation of machine learning models.
+  - Software engineering for the web interface.
 
-The research activities fall under secondary data analysis and software development. No ethical approval was required for:
-- Secondary analysis of a publicly available benchmark dataset.
-- Development and evaluation of machine learning models.
-- Software engineering for the web interface.
+  The project was conducted in accordance with the University's guidelines on research ethics and data protection. No personally identifiable information was processed or stored outside the dataset's original distribution. The dataset's consent framework and terms of use are documented in Appendix D.
 
-The project was conducted in accordance with the University's guidelines on research ethics and data protection. No personally identifiable information was processed or stored outside the dataset's original distribution. The dataset's consent framework and terms of use are documented in Appendix D.
+  // D
+  = Dataset Usage and Consent
 
-// D
-== Dataset Usage and Consent
+  The AV-Deepfake1M++ dataset @Cai2025 is distributed under a research-only license through Hugging Face and the official 1M-Deepfakes Detection Challenge platform. The dataset terms of use include the following provisions:
 
-The AV-Deepfake1M++ dataset @Cai2025 is distributed under a research-only license through Hugging Face and the official 1M-Deepfakes Detection Challenge platform. The dataset terms of use include the following provisions:
+  #figure(
+    table(
+      columns: (auto, auto),
+      [_Provision_], [_Compliance_],
+      [Research-only use],
+      [This dissertation constitutes academic research; no commercial application was developed or deployed.],
 
-#figure(
-  table(
-    columns: (auto, auto),
-    [_Provision_], [_Compliance_],
-    [Research-only use],
-    [This dissertation constitutes academic research; no commercial application was developed or deployed.],
+      [No redistribution],
+      [The dataset was not redistributed. Only the validation split was downloaded and processed on cloud GPU instances. All extracted features and trained models remain on the author's local machine.],
 
-    [No redistribution],
-    [The dataset was not redistributed. Only the validation split was downloaded and processed on cloud GPU instances. All extracted features and trained models remain on the author's local machine.],
+      [Attribution],
+      [The dataset is cited throughout this dissertation as @Cai2025. The official dataset paper and website are referenced in the bibliography.],
 
-    [Attribution],
-    [The dataset is cited throughout this dissertation as @Cai2025. The official dataset paper and website are referenced in the bibliography.],
+      [Consent of individuals],
+      [The dataset creators obtained consent from all recorded individuals. All subjects agreed to participate and to have their likenesses modified during dataset construction @Cai2025.],
 
-    [Consent of individuals],
-    [The dataset creators obtained consent from all recorded individuals. All subjects agreed to participate and to have their likenesses modified during dataset construction @Cai2025.],
+      [Non-consensual content prohibition],
+      [The dataset explicitly prohibits the use of its data for generating non-consensual deepfake content. This project uses the dataset exclusively for detection research, which is aligned with harm mitigation.],
+    ),
+    caption: [Dataset usage terms and compliance statement],
+  )
 
-    [Non-consensual content prohibition],
-    [The dataset explicitly prohibits the use of its data for generating non-consensual deepfake content. This project uses the dataset exclusively for detection research, which is aligned with harm mitigation.],
-  ),
-  caption: [Dataset usage terms and compliance statement],
-)
+  The author confirms that all dataset usage complies with the terms set by the dataset creators and that no terms were violated during this research project.
 
-The author confirms that all dataset usage complies with the terms set by the dataset creators and that no terms were violated during this research project.
+  // E
+  = Hyperparameter Configuration
 
-// E
-== Hyperparameter Configuration
+  All hyperparameters were centralised in `config.py`. The values used across all training runs are listed below.
 
-All hyperparameters were centralised in `config.py`. The values used across all training runs are listed below.
+  #figure(
+    table(
+      columns: (auto, auto, auto),
+      [_Parameter_], [_Value_], [_Description_],
+      [`feature_dim`], [`256`], [Encoder output dimension for both ResNet3D-18 and ResNet18],
+      [`hidden_dim`], [`512`], [Fusion module hidden layer width],
+      [`dropout`], [`0.4`], [Applied to encoder FC layers and fusion module],
+      [`batch_size`], [`8`], [Per-GPU batch size],
+      [`epochs`], [`10`], [Default epoch budget (capped at 5 in practice)],
+      [`freeze_epochs`], [`max(1, round(epochs × 0.25))`], [Epochs with encoders frozen (auto-computed)],
+      [`patience`], [`max(5, round(epochs × 0.30))`], [Epochs without improvement before early stop],
+      [`focal_gamma`], [`2.0`], [Focal Loss focusing parameter],
+      [`focal_alpha`], [`0.25`], [Focal Loss class balance weight],
+      [`learning_rate`], [`$1 × 10^{-4}$`], [Fusion module learning rate],
+      [`encoder_lr`], [`$1 × 10^{-5}$`], [Encoder fine-tuning learning rate (10× lower)],
+      [`weight_decay`], [`$1 × 10^{-4}$`], [AdamW weight decay],
+      [`grad_clip`], [`1.0`], [Maximum gradient norm before clipping],
+      [`val_split`], [`0.2`], [Validation split fraction],
+      [`scheduler_factor`], [`0.5`], [ReduceLROnPlateau LR reduction factor],
+      [`scheduler_patience`], [`5`], [Epochs before LR reduction],
+      [`seed`], [`42`], [Global random seed for reproducibility],
+    ),
+    caption: [Complete hyperparameter configuration],
+  )
 
-#figure(
-  table(
-    columns: (auto, auto, auto),
-    [_Parameter_], [_Value_], [_Description_],
-    [`feature_dim`], [`256`], [Encoder output dimension for both ResNet3D-18 and ResNet18],
-    [`hidden_dim`], [`512`], [Fusion module hidden layer width],
-    [`dropout`], [`0.4`], [Applied to encoder FC layers and fusion module],
-    [`batch_size`], [`8`], [Per-GPU batch size],
-    [`epochs`], [`10`], [Default epoch budget (capped at 5 in practice)],
-    [`freeze_epochs`], [`max(1, round(epochs × 0.25))`], [Epochs with encoders frozen (auto-computed)],
-    [`patience`], [`max(5, round(epochs × 0.30))`], [Epochs without improvement before early stop],
-    [`focal_gamma`], [`2.0`], [Focal Loss focusing parameter],
-    [`focal_alpha`], [`0.25`], [Focal Loss class balance weight],
-    [`learning_rate`], [`$1 × 10^{-4}$`], [Fusion module learning rate],
-    [`encoder_lr`], [`$1 × 10^{-5}$`], [Encoder fine-tuning learning rate (10× lower)],
-    [`weight_decay`], [`$1 × 10^{-4}$`], [AdamW weight decay],
-    [`grad_clip`], [`1.0`], [Maximum gradient norm before clipping],
-    [`val_split`], [`0.2`], [Validation split fraction],
-    [`scheduler_factor`], [`0.5`], [ReduceLROnPlateau LR reduction factor],
-    [`scheduler_patience`], [`5`], [Epochs before LR reduction],
-    [`seed`], [`42`], [Global random seed for reproducibility],
-  ),
-  caption: [Complete hyperparameter configuration],
-)
+  // F
+  = Model Architecture Summary
 
-// F
-== Model Architecture Summary
+  #figure(
+    table(
+      columns: (auto, auto, auto),
+      [_Component_], [_Architecture_], [_Parameters (approx.)_],
+      [Video Encoder], [ResNet3D-18 (Kinetics-400 pretrained)], [~33.3M],
+      [Audio Encoder], [ResNet18 (ImageNet pretrained; 1-channel conv1)], [~11.7M],
+      [Transformer Fusion], [2-layer Encoder, 8 heads, 512-dim, GELU], [~4.7M],
+      [Classification Heads], [3 × Linear(512→1) + Sigmoid], [~1.5K],
+      [_Total_], [—], [_~49.7M_],
+    ),
+    caption: [Model architecture component summary],
+  )
 
-#figure(
-  table(
-    columns: (auto, auto, auto),
-    [_Component_], [_Architecture_], [_Parameters (approx.)_],
-    [Video Encoder], [ResNet3D-18 (Kinetics-400 pretrained)], [~33.3M],
-    [Audio Encoder], [ResNet18 (ImageNet pretrained; 1-channel conv1)], [~11.7M],
-    [Transformer Fusion], [2-layer Encoder, 8 heads, 512-dim, GELU], [~4.7M],
-    [Classification Heads], [3 × Linear(512→1) + Sigmoid], [~1.5K],
-    [_Total_], [—], [_~49.7M_],
-  ),
-  caption: [Model architecture component summary],
-)
+  // G
+  = Training Run Summary
 
-// G
-== Training Run Summary
+  #figure(
+    table(
+      columns: (auto, auto, auto, auto, auto, auto),
+      [_Run_], [_Epochs_], [_Best Val Joint AUC_], [_Test AUC_], [_Test Acc at 0.5_], [_Status_],
+      [Model 1], [1], [0.6626], [N/A], [N/A], [Corrupted on download],
+      [Model 2], [5], [0.9937], [0.9189], [66.0%], [Intact],
+      [Model 3], [3], [0.9851], [0.9371], [93.0%], [Intact (early stop)],
+      [Model 4/5], [5], [0.9925], [0.9152], [71.0%], [Intact],
+    ),
+    caption: [Summary of all training runs with validation and test metrics],
+  )
 
-#figure(
-  table(
-    columns: (auto, auto, auto, auto, auto, auto),
-    [_Run_], [_Epochs_], [_Best Val Joint AUC_], [_Test AUC_], [_Test Acc at 0.5_], [_Status_],
-    [Model 1], [1], [0.6626], [N/A], [N/A], [Corrupted on download],
-    [Model 2], [5], [0.9937], [0.9189], [66.0%], [Intact],
-    [Model 3], [3], [0.9851], [0.9371], [93.0%], [Intact (early stop)],
-    [Model 4/5], [5], [0.9925], [0.9152], [71.0%], [Intact],
-  ),
-  caption: [Summary of all training runs with validation and test metrics],
-)
+  // H
+  = Feature Extraction Parameters
 
-// H
-== Feature Extraction Parameters
+  #figure(
+    table(
+      columns: (auto, auto),
+      [_Parameter_], [_Value_],
+      [Audio sample rate], [16,000 Hz],
+      [FFT window], [1,024 points],
+      [Hop length], [512 samples],
+      [Mel frequency bins], [128],
+      [Audio clip duration], [2.0 seconds],
+      [Audio samples per clip], [32,000],
+      [Spectrogram shape], [1 × 128 × 63],
+      [Video FPS], [25],
+      [Video frames per clip], [50],
+      [Frame size], [224 × 224 pixels],
+      [Video tensor shape], [50 × 3 × 224 × 224],
+      [Augmentation (audio)], [SpecAugment: frequency masking (≤20 bins), time masking (≤15 steps)],
+      [Augmentation (video)], [Random horizontal flip, brightness jitter (±0.2), contrast jitter (0.8–1.2)],
+    ),
+    caption: [Feature extraction parameters],
+  )
 
-#figure(
-  table(
-    columns: (auto, auto),
-    [_Parameter_], [_Value_],
-    [Audio sample rate], [16,000 Hz],
-    [FFT window], [1,024 points],
-    [Hop length], [512 samples],
-    [Mel frequency bins], [128],
-    [Audio clip duration], [2.0 seconds],
-    [Audio samples per clip], [32,000],
-    [Spectrogram shape], [1 × 128 × 63],
-    [Video FPS], [25],
-    [Video frames per clip], [50],
-    [Frame size], [224 × 224 pixels],
-    [Video tensor shape], [50 × 3 × 224 × 224],
-    [Augmentation (audio)], [SpecAugment: frequency masking (≤20 bins), time masking (≤15 steps)],
-    [Augmentation (video)], [Random horizontal flip, brightness jitter (±0.2), contrast jitter (0.8–1.2)],
-  ),
-  caption: [Feature extraction parameters],
-)
+  // I
+  = Dataset Cleaning Summary
 
-// I
-== Dataset Cleaning Summary
+  #figure(
+    table(
+      columns: (auto, auto, auto, auto),
+      [_Stage_], [_Criterion_], [_Remaining_], [_Dropped_],
+      [Initial], [All val_metadata.json entries], [77,326], [—],
+      [Stage 1], [audio_frames $>$ 0 and video_frames $>$ 0], [77,115], [211 (zero audio)],
 
-#figure(
-  table(
-    columns: (auto, auto, auto, auto),
-    [_Stage_], [_Criterion_], [_Remaining_], [_Dropped_],
-    [Initial], [All val_metadata.json entries], [77,326], [—],
-    [Stage 1], [audio_frames $>$ 0 and video_frames $>$ 0], [77,115], [211 (zero audio)],
+      [Stage 2], [File confirmed present on disk], [68,851], [8,264 (missing/corrupted)],
+      [_Final usable_], [—], [_68,851 (89%)_], [—],
+    ),
+    caption: [Dataset cleaning summary — from raw metadata to final usable dataset],
+  )
 
-    [Stage 2], [File confirmed present on disk], [68,851], [8,264 (missing/corrupted)],
-    [_Final usable_], [—], [_68,851 (89%)_], [—],
-  ),
-  caption: [Dataset cleaning summary — from raw metadata to final usable dataset],
-)
+  // J
+  = Test Set Composition
 
-// J
-== Test Set Composition
+  #figure(
+    table(
+      columns: (auto, auto, auto),
+      [_Manipulation Type_], [_Count_], [_Percentage_],
+      [`real`], [25], [25.0%],
+      [`audio_modified`], [25], [25.0%],
+      [`visual_modified`], [25], [25.0%],
+      [`both_modified`], [25], [25.0%],
+      [_Total_], [_100_], [_100%_],
+    ),
+    caption: [100-video test set composition — 25 videos per manipulation type],
+  )
 
-#figure(
-  table(
-    columns: (auto, auto, auto),
-    [_Manipulation Type_], [_Count_], [_Percentage_],
-    [`real`], [25], [25.0%],
-    [`audio_modified`], [25], [25.0%],
-    [`visual_modified`], [25], [25.0%],
-    [`both_modified`], [25], [25.0%],
-    [_Total_], [_100_], [_100%_],
-  ),
-  caption: [100-video test set composition — 25 videos per manipulation type],
-)
+  // K
+  = Figure Attribution
 
-// K
-== Figure Attribution
+  All figures in this dissertation were either generated programmatically from project code and results, or created using generative AI tools for conceptual diagrams. The attribution is as follows.
 
-All figures in this dissertation were either generated programmatically from project code and results, or created using generative AI tools for conceptual diagrams. The attribution is as follows.
+  #figure(
+    table(
+      columns: (auto, auto, auto, auto),
+      [_Figure_], [_Filename_], [_Section_], [_Source_],
+      [System architecture diagram], [`architecture.png`], [3.3.1], [AI-generated (DALL·E / Midjourney)],
+      [Speaker-disjoint split schema], [`speaker_split.png`], [3.3.2], [AI-generated],
+      [Transformer fusion module detail], [`transformer_fusion_module.png`], [3.3.6], [AI-generated],
+      [Two-phase training timeline], [`two_phase_training.png`], [3.4.2], [AI-generated],
+      [Modification type distribution],
+      [`modification_type_distribution.png`],
+      [3.3.3],
+      [Code-generated — `analyze_data.py`],
 
-#figure(
-  table(
-    columns: (auto, auto, auto, auto),
-    [_Figure_], [_Filename_], [_Section_], [_Source_],
-    [System architecture diagram], [`architecture.png`], [3.3.1], [AI-generated (DALL·E / Midjourney)],
-    [Speaker-disjoint split schema], [`speaker_split.png`], [3.3.2], [AI-generated],
-    [Transformer fusion module detail], [`transformer_fusion_module.png`], [3.3.6], [AI-generated],
-    [Two-phase training timeline], [`two_phase_training.png`], [3.4.2], [AI-generated],
-    [Modification type distribution],
-    [`modification_type_distribution.png`],
-    [3.3.3],
-    [Code-generated — `analyze_data.py`],
+      [Fake segment analysis], [`fake_segment_analysis.png`], [3.3.3], [Code-generated — `analyze_data.py`],
+      [Mel-spectrogram comparison],
+      [`mel_spectrogram_comparison.png`],
+      [3.3.4],
+      [Code-generated — `plot_mel_spectrogram.py`],
 
-    [Fake segment analysis], [`fake_segment_analysis.png`], [3.3.3], [Code-generated — `analyze_data.py`],
-    [Mel-spectrogram comparison],
-    [`mel_spectrogram_comparison.png`],
-    [3.3.4],
-    [Code-generated — `plot_mel_spectrogram.py`],
+      [Training history (all models)], [`training_history.png`], [4.2], [Code-generated — `compare_models.py`],
+      [Training history (Model 4/5)],
+      [`training_history_model4.png`],
+      [4.2.3],
+      [Code-generated — `plot_training_history.py`],
 
-    [Training history (all models)], [`training_history.png`], [4.2], [Code-generated — `compare_models.py`],
-    [Training history (Model 4/5)],
-    [`training_history_model4.png`],
-    [4.2.3],
-    [Code-generated — `plot_training_history.py`],
+      [Model comparison dashboard], [`model_comparison.png`], [4.3.1], [Code-generated — `compare_models.py`],
+      [Per-type accuracy bar chart],
+      [`per_type_accuracy_bar_chart.png`],
+      [4.4],
+      [Code-generated — `plot_per_type_accuracy.py`],
+    ),
+    caption: [Figure attribution — AI-generated conceptual diagrams vs. code-generated plots from project results],
+  )
 
-    [Model comparison dashboard], [`model_comparison.png`], [4.3.1], [Code-generated — `compare_models.py`],
-    [Per-type accuracy bar chart],
-    [`per_type_accuracy_bar_chart.png`],
-    [4.4],
-    [Code-generated — `plot_per_type_accuracy.py`],
-  ),
-  caption: [Figure attribution — AI-generated conceptual diagrams vs. code-generated plots from project results],
-)
+  All code-generated figures use data from the project's training runs (logs/), prediction outputs (comparison_results/), and dataset analysis (analysis/). The plotting scripts are available in the project repository and can be reproduced by running the corresponding Python files with the project's data.
 
-All code-generated figures use data from the project's training runs (logs/), prediction outputs (comparison_results/), and dataset analysis (analysis/). The plotting scripts are available in the project repository and can be reproduced by running the corresponding Python files with the project's data.
+]
 
-#bibliography("references.bib", style: "harvard-cite-them-right")
