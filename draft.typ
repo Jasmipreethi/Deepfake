@@ -169,6 +169,9 @@
   // Paragraph styling
   set par(justify: true, leading: 0.8em)
 
+  // Image styling — black border
+  show image: it => box(stroke: 0.5pt + black, it)
+
   // Table styling - bold headers, bottom border, left-aligned content
   show table.cell.where(y: 0): strong
   set table(
