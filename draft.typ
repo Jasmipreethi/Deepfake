@@ -923,7 +923,7 @@ To overcome these infrastructure barriers, all model training and large-scale fe
     [Local; always available],
 
     [Cost],
-    [Free tier unworkable; paid ~$50+/"month"], [~$10–15 per 5-epoch run (student-funded)],
+    [Free tier unworkable; paid ~\$50+/month], [~\$10–15 per 5-epoch run (student-funded)],
     [N/A (existing hardware)],
     [Outcome],
 
@@ -938,28 +938,28 @@ Three Vast.ai GPU instances were rented over the course of the project. Their sp
   table(
     columns: (auto, auto, auto, auto, auto),
     [_GPU_], [_VRAM_], [_CPU / RAM_], [_Cost (per hour)_], [_Used for_],
-    [2× RTX 3060], [24 GB total], [192 vCPU / 257.8 GB], [$0.783], [Training runs (higher-spec)],
-    [2× RTX 3060], [24 GB total], [192 vCPU / 257.8 GB], [$0.569], [Training runs (spot pricing)],
-    [1× RTX 3070], [8 GB], [24 vCPU / 64.4 GB], [$0.028], [Feature extraction, CPU debugging, small-batch experiments],
+    [2× RTX 3060], [24 GB total], [192 vCPU / 257.8 GB], [\$0.783/hr], [Training runs (higher-spec)],
+    [2× RTX 3060], [24 GB total], [192 vCPU / 257.8 GB], [\$0.569/hr], [Training runs (spot pricing)],
+    [1× RTX 3070], [8 GB], [24 vCPU / 64.4 GB], [\$0.028/hr], [Feature extraction, CPU debugging, small-batch experiments],
   ),
   caption: [Vast.ai GPU instances used for training and feature extraction],
 )
 
-Instances 1 and 2 shared identical hardware (dual RTX 3060 on a ProLiant DL580 Gen9 with Xeon E7-8890 v4 processors) but were acquired at different spot prices ($0.783 and $0.569 per hour). Instance 2's lower cost made extended training runs more economical. Instance 3 (single RTX 3070 on a X99 motherboard with Xeon E5-2678 v3) was used for smaller tasks where its 8 GB VRAM was sufficient, at a fraction of the cost.
+Instances 1 and 2 shared identical hardware (dual RTX 3060 on a ProLiant DL580 Gen9 with Xeon E7-8890 v4 processors) but were acquired at different spot prices (\$0.783 and \$0.569 per hour). Instance 2's lower cost made extended training runs more economical. Instance 3 (single RTX 3070 on a X99 motherboard with Xeon E5-2678 v3) was used for smaller tasks where its 8 GB VRAM was sufficient, at a fraction of the cost.
 
 #figure(
   image("figures/vastai_instance_1.png", width: 85%),
-  caption: [Vast.ai Instance 1 — 2× RTX 3060 (24 GB), $0.783/hr],
+  caption: [Vast.ai Instance 1 — 2× RTX 3060 (24 GB), \$0.783/hr],
 )
 
 #figure(
   image("figures/vastai_instance_2.png", width: 85%),
-  caption: [Vast.ai Instance 2 — 2× RTX 3060 (24 GB), $0.569/hr],
+  caption: [Vast.ai Instance 2 — 2× RTX 3060 (24 GB), \$0.569/hr],
 )
 
 #figure(
   image("figures/vastai_instance_3.png", width: 85%),
-  caption: [Vast.ai Instance 3 — 1× RTX 3070 (8 GB), $0.028/hr],
+  caption: [Vast.ai Instance 3 — 1× RTX 3070 (8 GB), \$0.028/hr],
 )
 
 //3.5.2
