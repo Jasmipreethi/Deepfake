@@ -213,6 +213,16 @@ More recent deepfake systems manipulate both the audio and video streams simulta
 
 Despite growing interest in multimodal deepfake detection, existing approaches exhibit three persistent limitations: simple feature concatenation rather than learned cross-modal attention, vision-centric treatment of audio as a secondary modality, and evaluation protocols that allow speaker identity leakage through random splits. These gaps, examined in detail in Section 2.7, motivate a system that applies cross-modal attention fusion, treats both modalities as equal contributors through per-modality output heads, and enforces a speaker-disjoint evaluation protocol.
 
+_Research Questions_
+
+This dissertation addresses the following research questions:
+
+*RQ1:* To what extent can a deep learning model trained on a speaker-disjoint subset of AV-Deepfake1M++ distinguish real from fake audio-visual media across four manipulation types? _(Evaluated via test-set AUC, accuracy, precision, recall, and F1 — Sections 4.3–4.4; discussed in Section 5.3.1)_
+
+*RQ2:* How does a three-head multi-task architecture contribute to per-modality interpretability in audio-visual deepfake detection? _(Evaluated via per-type head score dissociation analysis — Section 4.4; discussed in Sections 5.3.2–5.3.3)_
+
+*RQ3:* What effect does a speaker-disjoint partition have on model generalisation compared to standard random-split protocols? _(Evaluated via zero-overlap speaker split — Section 3.3.2; cross-referenced against literature benchmarks in Section 5.4; identified as a limitation for future ablation in Section 5.5)_
+
 //1.3
 == Aim
 
