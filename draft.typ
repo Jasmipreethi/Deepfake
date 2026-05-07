@@ -1175,7 +1175,7 @@ The near-identical loss values across Models 2 and 4 further confirm that Runs 3
 // 4.3
 == Test Set Evaluation
 
-Evaluation was conducted using `compare_models.py` on a 100-video test set (25 real, 75 fake) sampled from the validation split using `create_test_data.py`. The test set was held out from training - no video in the test set appears in the training partition - but it draws from the same AV-Deepfake1M++ validation split and speaker pool. All three loadable checkpoints (Models 2–4) were evaluated. Model 1's checkpoint was corrupted and could not be loaded. Each video was processed with one 2-second analysis window on CPU. All results below are measured directly from inference on the test set; no numbers are estimated.
+Evaluation was conducted using `compare_models.py` on a 100-video test set (25 real, 75 fake) sampled from the validation split using `create_test_data.py`. The test set was held out from training — no video in the test set appears in the training partition. All 21 test speakers originate from the validation split, with zero overlap with the 105 training speakers, preserving the speaker-disjoint evaluation guarantee. All three loadable checkpoints (Models 2–4) were evaluated. Model 1's checkpoint was corrupted and could not be loaded. Each video was processed with one 2-second analysis window on CPU. All results below are measured directly from inference on the test set; no numbers are estimated.
 
 // 4.3.1
 === Overall Metrics
