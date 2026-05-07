@@ -229,7 +229,7 @@ More recent deepfake systems manipulate both the audio and video streams simulta
 
 Despite growing interest in multimodal deepfake detection, existing approaches exhibit three persistent limitations: simple feature concatenation rather than learned cross-modal attention, vision-centric treatment of audio as a secondary modality, and evaluation protocols that allow speaker identity leakage through random splits. These gaps, examined in detail in Section 2.7, motivate a system that applies cross-modal attention fusion, treats both modalities as equal contributors through per-modality output heads, and enforces a speaker-disjoint evaluation protocol.
 
-_Research Questions_
+*_Research Questions_*
 
 This dissertation addresses the following research questions:
 
