@@ -1952,19 +1952,19 @@ This glossary defines technical terminology used throughout this dissertation. D
 
   #figure(
     table(
-      columns: (28%, 22%, 6%, 44%),
+      columns: (26%, 20%, 6%, 48%),
       [_Figure_], [_Filename_], [_Section_], [_Source_],
-      [System architecture diagram], [`architecture.png`], [3.3.1], [AI-generated],
-      [Speaker-disjoint split schema], [`speaker_split.png`], [3.3.2], [AI-generated],
+      [System architecture], [`architecture.png`], [3.3.1], [AI-generated],
+      [Speaker-disjoint split], [`speaker_split.png`], [3.3.2], [AI-generated],
       [Transformer fusion module], [`transformer_fusion_module.png`], [3.3.6], [AI-generated],
       [Two-phase training timeline], [`two_phase_training.png`], [3.4.2], [AI-generated],
       [Modification type distribution], [`modification_type_distribution.png`], [3.3.3], [\ `analyze_data.py`],
       [Fake segment analysis], [`fake_segment_analysis.png`], [3.3.3], [\ `analyze_data.py`],
       [Mel-spectrogram comparison], [`mel_spectrogram_comparison.png`], [3.3.4], [\ `plot_mel_spectrogram.py`],
-      [Training history (all models)], [`training_history.png`], [4.2], [\ `compare_models.py`],
+      [Training history (all)], [`training_history.png`], [4.2], [\ `compare_models.py`],
       [Training history (Model 4)], [`training_history_model4.png`], [4.2.3], [\ `plot_training_history.py`],
-      [Model comparison dashboard], [`model_comparison.png`], [4.3.1], [\ `compare_models.py`],
-      [Per-type accuracy bar chart], [`per_type_accuracy_bar_chart.png`], [4.4], [\ `plot_per_type_accuracy.py`],
+      [Model comparison], [`model_comparison.png`], [4.3.1], [\ `compare_models.py`],
+      [Per-type bar chart], [`per_type_accuracy_bar_chart.png`], [4.4], [\ `plot_per_type_accuracy.py`],
     ),
     caption: [Figure attribution - AI-generated conceptual diagrams vs. code-generated plots from project results],
   )
