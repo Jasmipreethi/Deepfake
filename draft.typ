@@ -860,6 +860,8 @@ On CPU-only hardware, the Transformer module is automatically replaced with a li
   caption: [Transformer Fusion module: 256-dim video and audio features projected to 512 dims, combined with a learnable [CLS] token and positional embeddings into a 3-token sequence. Two layers of multi-head self-attention (8 heads, GELU, pre-norm) capture cross-modal dependencies. The [CLS] token output feeds three independent sigmoid classification heads.],
 )
 
+A note on head independence: all three classification heads receive the same CLS token representation, which aggregates information from both audio and video modalities via self-attention. The audio and video heads therefore do not have exclusive access to their respective streams; the observed per-modality dissociation in Chapter 4 reflects learned specialisation within the fused representation rather than true independent per-stream access. A design variant in which the audio head reads directly from the audio token and the video head reads directly from the video token would provide stronger independent modality access and is a direction for future investigation.
+
 // 3.4
 == Model Training and Evaluation Strategy
 
