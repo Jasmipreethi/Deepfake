@@ -193,16 +193,10 @@
   pagebreak()
   set heading(numbering: none)
   show heading.where(level: 1): it => {
-    pagebreak()
+    pagebreak(weak: true)
     v(1em)
     text(size: 16pt, weight: "bold")[#it.body]
     v(1em)
-  }
-  show heading.where(level: 2): it => {
-    pagebreak()
-    v(0.5em)
-    text(size: 14pt, weight: "bold")[#it.body]
-    v(0.5em)
   }
   body
 }
