@@ -1654,7 +1654,9 @@ Overall, the project met its core objective: a functional, well-documented multi
 
   _*Supervisor*_: Lucian Duta
 
-  Three principal architectural deviations from the initial proposal were required during implementation, each driven by practical constraints encountered with the AV-Deepfake1M++ dataset and the available training infrastructure: the audio encoder changed from Wav2Vec 2.0 to ResNet18 (Section 3.3.4), the visual encoder changed from MobileNetV3 to ResNet3D-18 (Section 3.3.5), and the fusion module changed from DiMoDif to a custom Transformer Encoder (Section 3.3.6). These changes and their justifications are fully documented in Chapter 3.
+  Three principal architectural deviations from the initial proposal were required during implementation, each driven by practical constraints encountered with the AV-Deepfake1M++ dataset and the available training infrastructure: the audio encoder changed from Wav2Vec 2.0 to ResNet18 (Section 3.3.4), the visual encoder changed from MobileNetV3 to ResNet3D-18 (Section 3.3.5), and the fusion module changed from DiMoDif to a custom Transformer Encoder (Section 3.3.6).   These changes and their justifications are fully documented in Chapter 3.
+
+  #pagebreak()
 
   // B
   == Final Project Proposal
