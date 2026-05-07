@@ -1965,6 +1965,7 @@ This glossary defines technical terminology used throughout this dissertation. D
       [Training history (Model 4)], [`training_history_model4.png`], [4.2.3], [\ `plot_training_history.py`],
       [Model comparison], [`model_comparison.png`], [4.3.1], [\ `compare_models.py`],
       [Per-type bar chart], [`per_type_accuracy_bar_chart.png`], [4.4], [\ `plot_per_type_accuracy.py`],
+      [Calibration curves], [`calibration_curves.png`], [4.3.2], [\ `plot_calibration_curves.py`],
     ),
     caption: [Figure attribution - AI-generated conceptual diagrams vs. code-generated plots from project results],
   )
