@@ -1586,6 +1586,17 @@ _Threshold optimisation._ Optimising the decision threshold on a held-out calibr
 An improved experiment management infrastructure (cloud storage for checkpoints, web interface enhancements) would reduce operational friction in future training campaigns.
 
 //  6.5
+== Recommendations
+
+Based on the findings of this project, the following recommendations are offered for practitioners, dataset users, and educators working in multimodal deepfake detection.
+
+_For practitioners._ When deploying detector models under constrained training budgets, prioritise checkpointing at the first fine-tuning epoch. The finding that Model 3 (epoch 3) produced better-calibrated scores with zero false positives — outperforming models trained to higher AUC — suggests that maximum validation AUC does not guarantee optimal deployment performance at a fixed threshold. Score calibration should be evaluated explicitly using reliability diagrams, not assumed from ranking metrics alone.
+
+_For dataset users._ Speaker-disjoint partitioning should be adopted as standard practice in audio-visual deepfake detection evaluation. The literature reviewed in Section 2.6.5 demonstrates that random splits inflate performance metrics by allowing identity recognition rather than manipulation detection. GroupShuffleSplit on speaker ID provides a straightforward implementation that produces honest generalisation estimates, even on subsets of large datasets.
+
+_For educators and student researchers._ Cloud GPU access imposes genuine constraints on experiment scope. The five-epoch training budget in this project prevented hyperparameter sweeps, ablation studies, and extended convergence analysis. Student projects targeting similar computational workloads should seek institutional GPU resources where available; where these are unavailable, projects should be scoped to align conclusions with the achievable experimental budget.
+
+//  6.6
 == Personal Reflection
 
 This project was technically more demanding than anticipated. The scale of the AV-Deepfake1M++ dataset - requiring parallel extraction infrastructure, resumable pipelines, and cloud GPU management - transformed what appeared initially to be a modelling problem into a substantial systems engineering challenge. The decisions that ultimately had the most impact on the result were not architectural choices but engineering ones: switching audio loading from librosa to torchaudio to handle corrupted MP4 files, designing the manifest-based resumable extraction system, and implementing the two-phase training schedule to protect pretrained features.
