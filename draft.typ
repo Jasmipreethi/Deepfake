@@ -2005,6 +2005,16 @@ This glossary defines technical terminology used throughout this dissertation. D
   == Project Gantt Chart
 
   #figure(
+    image("figures/gantt_initial.png", width: 90%),
+    caption: [Initial project Gantt chart — submitted as part of the CN6000 proposal (January 2026).],
+  )
+
+  #figure(
+    image("figures/gantt_final.png", width: 90%),
+    caption: [Final project Gantt chart — updated to reflect actual progress and infrastructure delays (May 2026).],
+  )
+
+  #figure(
     table(
       columns: (auto, auto, auto),
       [_Phase_], [_Period_], [_Key Tasks_],
