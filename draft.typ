@@ -672,7 +672,7 @@ The AV-Deepfake1M++ dataset is distributed as approximately 1.4 TB of split comp
 #figure(
   table(
     columns: (auto, auto, auto),
-    [_Category_], [_Description_], [_Count_ (post-cleaning)_],
+    [_Category_], [_Description_], [_Count (post-cleaning)_],
     [`real`], [Unmodified audio and video], [18,037],
     [`audio_modified`], [Voice replaced or cloned; video untouched], [16,848],
     [`visual_modified`], [Face swapped or reenacted; audio untouched], [17,020],
