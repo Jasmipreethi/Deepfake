@@ -598,8 +598,17 @@ Development followed an agile, kanban-based incremental methodology, organised i
 
 Each component - data loading, preprocessing, feature extraction, model integration, and evaluation - was implemented and verified independently on a small video subset before integration into the full pipeline. All hyperparameters and derived constants were centralised in a single configuration file (`config.py`), ensuring that no values were hardcoded. Any change to extraction parameters, model dimensions, or training schedules could be made in one place and propagated automatically, serving as a live record of exact settings for each training run.
 
+//3.2.3
+=== Data Analysis Approach
+
+The primary evaluation metric for each of the three classification heads is Area Under the ROC Curve (AUC), a threshold-independent measure of ranking quality. AUC was chosen over threshold-dependent metrics (accuracy, precision, recall) because it is not affected by the 3:1 fake-to-real class imbalance in the test set — a model predicting FAKE for all inputs would achieve 75% accuracy without any discriminative capability, whereas AUC requires genuine ranking ability. Supporting metrics (accuracy at optimal threshold, precision, recall, F1 score) are reported for each model to provide a complete picture of deployment performance.
+
+Model comparison was conducted across two dimensions: overall performance (aggregate AUC and test-set metrics) and per-type breakdown (accuracy and mean scores for each of the four manipulation categories). Per-modality dissociation was assessed by comparing audio head scores against video head scores for each manipulation type, with the hypothesis that `audio_modified` clips should show suppressed audio scores with elevated video scores, and `visual_modified` clips should show the reverse. Score calibration was quantified using reliability diagrams and mean calibration gap (predicted probability vs. actual fraction of positives, binned uniformly into 10 intervals).
+
+All training metrics (loss, AUC per head, learning rate, epoch duration) were logged via Weights & Biases to provide a full audit trail. Checkpoint metadata was used to verify that training histories were reproducible across runs. The 100-video test set was sampled from the validation split using `create_test_data.py` with explicit verification that no test speaker overlapped with the 105 training speakers.
+
 //3.3
-== System Architecture and Implementation
+== System Design
 
 //3.3.1
 === Overview of the Proposed System
