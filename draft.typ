@@ -1504,7 +1504,21 @@ The results reported in Section 4.2.1 indicate that Model 1 had not converged - 
 
 Multimodal deepfake detectors evaluated on comparable benchmarks have reported varying results depending on evaluation protocol and dataset scale. @Cai2024 demonstrated that multimodal detectors on AV-Deepfake1M can achieve AUC above 0.90 under speaker-disjoint evaluation, though specific figures vary by architecture and manipulation type. On FakeAVCeleb, audio-visual detectors have reported AUC values in the 0.85–0.95 range under controlled settings @yi2023audiodeepfakedetectionsurvey. The AV-Deepfake1M++ challenge at ACM Multimedia 2025 provided standardised benchmarks using the full 2M-clip dataset; baseline results and challenge submissions are documented in @Cai2025.
 
-The validation AUC achieved in this project (0.985–0.994) and test AUC (0.915–0.937) are broadly within the range of published multimodal systems, but direct numerical comparison is not possible for two reasons. First, this project trained exclusively on the 68,851-video validation split rather than the full training set, limiting exposure to the dataset's full speaker and manipulation diversity. Second, published benchmarks typically report on fully held-out test sets with controlled data splits, whereas the test evaluation here uses 100 videos sampled from the same validation split. These differences mean the results presented in this chapter provide indicative evidence of system capability rather than competitive benchmark performance.
+Direct numerical comparison with published results is not possible: this project trained exclusively on the 68,851-video validation split rather than the full training set, and evaluated on a 100-video test set rather than a full held-out benchmark split. However, a qualitative architectural comparison contextualises this work within the detection literature.
+
+#figure(
+  table(
+    columns: (auto, auto, auto, auto, auto),
+    [_System_], [_Fusion Method_], [_Output Type_], [_Speaker Split_], [_Dataset_],
+    [AV-Deepfake1M baseline @Cai2024], [Concatenation + MLP], [Binary joint verdict], [Random split], [AV-Deepfake1M (full)],
+    [FakeAVCeleb detectors @yi2023audiodeepfakedetectionsurvey], [Late fusion], [Binary joint verdict], [Random split], [FakeAVCeleb],
+    [DiMoDif @Cai2025], [Cross-modal attention + temporal], [Joint + temporal boundary], [Random split], [AV-Deepfake1M++ (full)],
+    [_This work_], [Transformer Encoder + CLS token], [Three-head: audio, video, joint], [Speaker-disjoint (GroupShuffleSplit)], [AV-Deepfake1M++ (val only)],
+  ),
+  caption: [Qualitative architectural comparison with prior multimodal detection systems. Direct numerical comparison is not feasible due to different training data regimes and evaluation protocols.],
+)
+
+This work's distinguishing architectural characteristics are the three-head multi-task output (providing per-modality interpretability not offered by binary-output systems), the strict speaker-disjoint evaluation protocol (addressing identity leakage identified in Section 2.6.5), and the explicit score calibration analysis (Section 4.3.2) which is rarely reported in prior multimodal detection work. The finding that per-type accuracy varies substantially across modalities — with `audio_modified` detection as low as 48–52% in two models — is consistent with prior reports that audio-only deepfake detection remains challenging @yi2023audiodeepfakedetectionsurvey, and identifies this as an area requiring improved audio feature extraction in future work.
 
 Unlike the simpler concatenation-based fusion approaches identified as a gap in Section 2.7 @yi2023audiodeepfakedetectionsurvey, the Transformer fusion module (Section 3.3.5) used here allows audio and video representations to interact during feature learning. Whether this provides a measurable advantage over simpler fusion on this dataset cannot be determined without an ablation study, which represents a direction for future work.
 
