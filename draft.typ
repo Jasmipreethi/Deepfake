@@ -605,9 +605,19 @@ Prior to model training, several data analysis steps were undertaken to characte
 
 _Exploratory Data Analysis._ The AV-Deepfake1M++ validation metadata (`val_metadata.json`, 77,326 entries) was analysed using a standalone script (`analyze_data.py`). The analysis characterised the modification type distribution (near-uniform across all four categories, 24.5–26.1%), speaker statistics (1,835 unique speakers, mean 42.1 videos per speaker), and fake segment properties (mean 1.4 segments per fake video, median duration 0.30 seconds). The latter finding confirmed that a fixed two-second analysis window would capture at least one manipulated region in the majority of clips.
 
+#figure(
+  image("analysis/video_frames_distribution.png", width: 80%),
+  caption: [Distribution of video frame counts across the validation split, confirming that the majority of clips contain substantially more than the 50 frames used in the two-second analysis window.],
+)
+
 _Data Cleaning._ A two-stage cleaning pipeline was applied. Stage 1 discarded 211 videos with zero audio frames at the metadata level, preventing NaN propagation during normalisation. Stage 2 excluded 8,264 files that were missing or corrupted on disk following extraction from the compressed archives, leaving a final usable dataset of 68,851 videos. Runtime fallbacks handled partially corrupted files at extraction time: videos with broken audio tracks were assigned zero tensors with sentinel labels excluded from loss computation.
 
 _Speaker-Disjoint Partition._ Speaker IDs were extracted from file paths and a GroupShuffleSplit (test_size = 0.2, seed = 42) assigned 1,468 speakers (80%) to training and 367 speakers (20%) to validation, with zero overlap. This ensures that reported metrics reflect generalisation to entirely unseen identities rather than face or voice recognition.
+
+#figure(
+  image("analysis/videos_per_speaker_distribution.png", width: 80%),
+  caption: [Videos per speaker distribution across the 1,835 speakers in the validation split. The right-skewed distribution (mean 42.1, median 20) is characteristic of datasets drawn from real-world video collections and confirms sufficient speaker diversity for a meaningful speaker-disjoint split.],
+)
 
 _Feature Extraction._ For each video, a central two-second window was sampled at 25 FPS (50 frames, 224×224 pixels, ImageNet normalisation) for the video stream, and a 128-bin mel-spectrogram (16,000 Hz, 1,024-point FFT, 80 dB dynamic range, per-sample normalisation) was computed for the audio stream. Training-time augmentation applied SpecAugment (frequency masking up to 20 mel bins, time masking up to 15 steps) to audio tensors and random horizontal flipping with brightness and contrast jitter to video frames. Extracted features were saved as individual `.pt` files for lazy loading.
 
@@ -1341,6 +1351,13 @@ The training validation AUC measures ranking performance on the full 13,000-vide
 
 Four training sessions were conducted, producing four checkpoints; three produced intact, loadable checkpoints (Models 2, 3, and 4). Model 3 is the epoch-3 checkpoint from the same run that produced Model 4 at epoch 5. All three were evaluated on a 100-video test set. Model 3 achieved the best test-set results: AUC 0.937, accuracy 93.0%, precision 1.000, with zero false positives. Model 2 achieved the highest training AUC (0.994) but delivered lower at-threshold accuracy (66.0%) due to score compression - a divergence discussed further in Chapter 5.
 
+A web interface was developed to make the detection capability accessible without command-line expertise (Section 3.7.1). Figure 4.X shows the Analyze tab classifying a fake video with the full per-modality score breakdown.
+
+#figure(
+  image("figures/web_analyze_fake.png", width: 85%),
+  caption: [Web interface — Analyze tab showing a fake video classified with red "FAKE" verdict, displaying audio, video, and joint authenticity scores. The browser-based interface makes the detection capability accessible to non-technical users without training pipeline dependencies.],
+)
+
 // -----------------------------------------------------------------------------
 // Evaluation
 // -----------------------------------------------------------------------------
@@ -2005,6 +2022,8 @@ Overall, the project met its core objective: a functional, well-documented multi
         [Model comparison], [`model_comparison.png`], [4.3.1], [`compare_models.py`],
         [Per-type bar chart], [`per_type_accuracy_bar_chart.png`], [4.4], [`plot_per_type_accuracy.py`],
         [Calibration curves], [`calibration_curves.png`], [4.3.2], [`plot_calibration_curves.py`],
+        [Video frame distribution], [`video_frames_distribution.png`], [3.2.3], [`analyze_data.py`],
+        [Videos per speaker], [`videos_per_speaker_distribution.png`], [3.2.3], [`analyze_data.py`],
       )
     ],
     caption: [Figure attribution - AI-generated conceptual diagrams vs. code-generated plots from project results],
