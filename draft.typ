@@ -2014,18 +2014,5 @@ This glossary defines technical terminology used throughout this dissertation. D
     caption: [Final project Gantt chart — updated to reflect actual progress and infrastructure delays (May 2026).],
   )
 
-  #figure(
-    table(
-      columns: (auto, auto, auto),
-      [_Phase_], [_Period_], [_Key Tasks_],
-      [Planning and Design], [01 Jan – 27 Jan], [Finalise specification, Viva preparation, acquire dataset],
-      [Implementation Phase I], [26 Jan – 13 Feb], [Cloud platform migration, audio and video feature extraction],
-      [Implementation Phase II], [16 Feb – 13 Mar], [Transformer fusion integration, model training, web interface],
-      [Analysis and Evaluation], [16 Mar – 27 Mar], [Metric and error analysis, results documentation],
-      [Finalisation], [30 Mar – 08 May], [Final write-up, showcase, buffer time, final submission],
-    ),
-    caption: [Project Gantt chart phases — five phases with explicit inter-phase dependencies across the 2026 project calendar.],
-  )
-
 ]
 
