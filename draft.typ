@@ -593,18 +593,23 @@ This chapter also documents the architectural decisions and the practical reason
 == Research and Development Approach
 
 //3.2.1
+=== Research Paradigm
+
+This project adopts a quantitative, empirical research paradigm grounded in secondary data analysis. The three research questions established in Section 1.2 — RQ1 (detection performance), RQ2 (per-modality interpretability), and RQ3 (speaker-disjoint generalisation) — are evaluated through measurable classification metrics (AUC, accuracy, precision, recall, F1) computed against ground-truth labels in a pre-existing benchmark dataset. This paradigm treats the detection problem as a binary classification task amenable to statistical evaluation, distinguishing it from qualitative or mixed-methods approaches that might investigate user perception, content authenticity through non-computational analysis, or the societal impact of deepfakes. The empirical evaluation uses a held-out test set to produce quantitative evidence of system capability, with findings interpreted through the lens of statistical significance and practical calibration as detailed in Section 3.2.4.
+
+//3.2.2
 === Research Methodology
 
 This study adopts a quantitative research methodology based on secondary analysis of the AV-Deepfake1M++ dataset @Cai2025. Quantitative methods are appropriate here because the primary research questions concern measurable classification performance AUC, accuracy, precision, recall, and F1_score across a large, labelled corpus with well-defined ground truth. Using an existing benchmark dataset avoids the cost and ethical complexity of collecting a large-scale audio-visual corpus, which would not have been feasible within the scope or time frame of this project.
 
 Development followed an agile, kanban-based incremental methodology, organised into iterative sprints targeting one functional layer of the pipeline at a time. A Kanban board tracked task status; project milestones were tracked using a Gantt chart (Appendix J). When infrastructure failures described in Section 3.5.1 caused schedule slippage during implementation phase I, the Gantt chart made it straightforward to identify which downstream tasks needed re-scoping.
 
-//3.2.2
+//3.2.3
 === Implementation Methodology
 
 Each component - data loading, preprocessing, feature extraction, model integration, and evaluation - was implemented and verified independently on a small video subset before integration into the full pipeline. All hyperparameters and derived constants were centralised in a single configuration file (`config.py`), ensuring that no values were hardcoded. Any change to extraction parameters, model dimensions, or training schedules could be made in one place and propagated automatically, serving as a live record of exact settings for each training run.
 
-//3.2.3
+//3.2.4
 === Data Analysis Approach
 
 Prior to model training, several data analysis steps were undertaken to characterise the dataset and prepare it for the deepfake detection task.
