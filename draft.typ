@@ -137,7 +137,10 @@
                     Appendix
                   ]
                 ] else [
-                  Chapter #counter(heading).display():
+                  #let ch_val = counter(heading).get().first()
+                  #if ch_val != none and ch_val >= 1 [
+                    Chapter #counter(heading).display():
+                  ]
                 ]
               ]
               #target_heading.body
