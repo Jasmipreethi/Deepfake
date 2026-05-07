@@ -11,7 +11,7 @@
 
     The project's initial proposal (CN6000 Initial Proposal, 2025) aimed to research and create demo software that distinguishes between real and deepfake media using deep learning techniques, with a planned architecture based on CNN, TensorFlow, and SciPy. In response to the dataset's scale and characteristics, the implementation evolved to a Cross-Modal Transformer Fusion architecture with ResNet18 and ResNet3D-18 encoders, Focal Loss, and PyTorch - all as documented in Chapter 3. The delivered system exceeds the initial proposal's scope by providing per-modality score dissociation, a speaker-disjoint evaluation protocol, and a model comparison interface.
 
-    While Model 2 reached a peak validation AUC of 0.994 after five training epochs, evaluation on a 100-video speaker-disjoint test set identified the earlier-stopped Model 3 as practically superior, achieving 93% accuracy and perfect precision (1.000) at a 0.5 threshold with zero false positives — a finding that demonstrates the importance of score calibration over raw AUC optimisation. Deviations from the initial proposal necessitated by hardware, budget, and stability constraints are documented and justified. The project contributes a modular, resumable training pipeline, a standalone inference system, and a web interface for video upload and classification. Constraints include a small test set, fixed analysis window, and training limited to five epochs due to student resource limitations.
+    While Model 2 reached a peak validation AUC of 0.994 after five training epochs, evaluation on a 100-video speaker-disjoint test set identified Model 3 (the epoch-3 checkpoint from the same training run that produced Model 4 at epoch 5) as achieving superior threshold-based performance, with 93% accuracy and zero false positives at a 0.5 threshold — a finding that demonstrates the importance of score calibration over raw AUC optimisation. Deviations from the initial proposal necessitated by hardware, budget, and stability constraints are documented and justified. The project contributes a modular, resumable training pipeline, a standalone inference system, and a web interface for video upload and classification. Constraints include a small test set, fixed analysis window, and training limited to five epochs due to student resource limitations.
   ],
   acknowledgments: [
     I would like to express my sincere gratitude to my supervisor, Lucian Duta, for his invaluable guidance, patience, and support throughout this project. His feedback and encouragement were instrumental in shaping this work.
@@ -1045,7 +1045,7 @@ This chapter described the complete methodology and implementation. The implemen
 // 4.1
 == Introduction
 
-This chapter presents the results of all training runs and the evaluation of the best-performing model on a 100-video test set sampled from the validation split using `create_test_data.py`. Five training runs were conducted, producing five checkpoint pairs (`best_model.pth` and `training_checkpoint.pth`) stored in `logs/logs_1` through `logs/logs_5`. Runs 4 and 5 stopped at the same checkpoint and are therefore treated as a single model (Model 4/5) throughout this chapter - results are implied to be identical where only one is shown. Their training histories were extracted directly from checkpoint metadata using PyTorch and are reported below with full per-epoch detail. The 100-video test set provides indicative rather than statistically robust results; a larger evaluation set would be needed to confirm these findings.
+This chapter presents the results of all training runs and the evaluation of the best-performing model on a 100-video test set sampled from the validation split using `create_test_data.py`. Four training sessions were conducted, producing four checkpoint pairs (`best_model.pth` and `training_checkpoint.pth`) stored in `logs/logs_1` through `logs/logs_4`. Runs 3 and 4 originated from the same training session: Model 3 is the epoch-3 checkpoint, Model 4 is the epoch-5 result of the same run. Their training histories were extracted directly from checkpoint metadata using PyTorch and are reported below with full per-epoch detail. The 100-video test set provides indicative rather than statistically robust results; a larger evaluation set would be needed to confirm these findings.
 
 == Training Results - All Four Runs
 
@@ -1139,7 +1139,7 @@ Model 3 is the epoch-3 checkpoint from this same run; Models 3 and 4 therefore s
 
 #figure(
   image("figures/training_history_model4.png", width: 100%),
-  caption: [Training history for Model 4/5: training and validation loss (Focal Loss, γ=2.0), validation AUC across all three heads, and learning rate schedule - showing the characteristic Phase 1→2 transition at epoch 3. Generated from checkpoint metadata stored in logs/logs_5/output.txt.],
+  caption: [Training history for Model 4: training and validation loss (Focal Loss, γ=2.0), validation AUC across all three heads, and learning rate schedule - showing the characteristic Phase 1→2 transition at epoch 3. Generated from checkpoint metadata stored in logs/logs_4/output.txt.],
 )
 
 #figure(
@@ -1324,7 +1324,7 @@ The training validation AUC measures ranking performance on the full 13,000-vide
 // 4.7
 == Conclusion
 
-Five training runs were conducted; three produced intact, loadable checkpoints (Models 2, 3, and 4). All were evaluated on a 100-video test set. Model 3 (3 epochs, saved at first fine-tuning epoch) achieved the best test-set results: AUC 0.937, accuracy 93.0%, precision 1.000, with zero false positives. Model 2 achieved the highest training AUC (0.994) but delivered lower at-threshold accuracy (66.0%) due to score compression - a divergence discussed further in Chapter 5.
+Four training sessions were conducted, producing four checkpoints; three produced intact, loadable checkpoints (Models 2, 3, and 4). Model 3 is the epoch-3 checkpoint from the same run that produced Model 4 at epoch 5. All three were evaluated on a 100-video test set. Model 3 achieved the best test-set results: AUC 0.937, accuracy 93.0%, precision 1.000, with zero false positives. Model 2 achieved the highest training AUC (0.994) but delivered lower at-threshold accuracy (66.0%) due to score compression - a divergence discussed further in Chapter 5.
 
 // -----------------------------------------------------------------------------
 // Evaluation
@@ -1405,7 +1405,7 @@ The validation joint AUC values reported in Chapter 4 are strong under a speaker
 // 5.3.2
 === Per Type Analysis
 
-The per-type breakdown in the per-type breakdown tables reveals a consistent pattern across all four models. Visual manipulation is the easiest to detect: `visual_modified` clips achieve the lowest mean joint scores across all models (0.124–0.304), and Model 3 achieves 100% while Models 4 (and identically Model 5) achieve 72% accuracy respectively on this type. Audio modification is the hardest: `audio_modified` clips produce the highest fake scores (mean joint 0.158–0.409 across models), yielding only 48–100% accuracy depending on the model. `both_modified` clips are intermediate.
+The per-type breakdown in the per-type breakdown tables reveals a consistent pattern across all models. Visual manipulation is the easiest to detect: `visual_modified` clips achieve the lowest mean joint scores across all models (0.124–0.304), and Model 3 achieves 100% while Model 4 achieves 72% accuracy on this type. Audio modification is the hardest: `audio_modified` clips produce the highest fake scores (mean joint 0.158–0.409 across models), yielding only 48–100% accuracy depending on the model. `both_modified` clips are intermediate.
 
 This pattern is counterintuitive - one might expect `audio_modified` to be detected at lower scores since both the audio head and the joint head should respond. The explanation lies in the video head behaviour: for `audio_modified` clips, the video stream is genuine and the video head correctly assigns a high authenticity score (0.85–0.87 across models), which counteracts the lower audio head signal and raises the joint score. This is the correct modality-specific behaviour - the video head is not wrong to rate the video as authentic - but it means the joint score for `audio_modified` clips lands closer to the 0.5 boundary than for `visual_modified` clips, where the video head provides a strong fake signal.
 
@@ -1483,7 +1483,7 @@ This dissertation presented the design, implementation, and evaluation of a mult
 
 The project's initial proposal (CN6000, 2025) set out to research and create demo software that distinguishes real from deepfake media using deep learning techniques. The implemented system meets and exceeds this aim: a speaker-disjoint evaluation protocol was enforced using GroupShuffleSplit; Focal Loss was adopted in place of standard Binary Cross-Entropy; the initial TensorFlow/CNN stack was replaced with PyTorch and a Cross-Modal Transformer Fusion network; and the demo software was delivered as both a command-line inference tool (`inference.py`) and a web-based interface with model selection, video upload, verdict display, model comparison, and history tracking. The key contributions - a speaker-disjoint evaluation protocol, Focal Loss training, a two-phase encoder fine-tuning schedule, a fully resumable cloud-compatible pipeline with W&B audit logging, and a standalone inference system with web interface - each trace back to the six objectives established in Section 1.4, which themselves evolved from the initial proposal's six objectives.
 
-Five training runs were conducted, producing four intact checkpoints (runs 4 and 5 stopped at the same checkpoint and are treated as one model). Three loadable checkpoints - Models 2, 3, and 4/5 - were evaluated on a 100-video held-out test set. The best model on the test set was Model 3 (saved at the first fine-tuning epoch, epoch 3), which achieved test AUC 0.937, accuracy 93.0%, precision 1.000, F1 0.837, and zero false positives. While Model 2 achieved a slightly higher peak validation joint AUC of 0.994 by epoch five, its test set accuracy at the 0.5 threshold was lower (66%) due to less optimal score calibration. This comparison, observed within the project's 5-epoch resource constraint, highlights that higher validation AUC does not always translate to better threshold-based performance on unseen speakers, and that earlier stopping may produce better-calibrated models for practical deployment - though further training beyond 5 epochs would be needed to determine whether this pattern holds with a full learning rate schedule.
+Four training sessions were conducted, producing four checkpoints (Models 2, 3, and 4; Model 3 is the epoch-3 checkpoint from the same session that produced Model 4 at epoch 5). Three loadable checkpoints were evaluated on a 100-video held-out test set. The best model on the test set was Model 3 (saved at epoch 3, the first fine-tuning epoch), which achieved test AUC 0.937, accuracy 93.0%, precision 1.000, F1 0.837, and zero false positives. While Model 2 achieved a higher peak validation joint AUC of 0.994 by epoch five, its test set accuracy at the 0.5 threshold was lower (66%) due to less optimal score calibration. This comparison, observed within the project's 5-epoch resource constraint, highlights that higher validation AUC does not always translate to better threshold-based performance on unseen speakers, and that earlier checkpoints may produce better-calibrated scores for practical deployment - though further training beyond 5 epochs would be needed to determine whether this pattern holds with a full learning rate schedule.
 
 // 6.2
 == Key Findings
@@ -1885,7 +1885,7 @@ This glossary defines technical terminology used throughout this dissertation. D
       [Model 1], [1], [0.6626], [N/A], [N/A], [Corrupted on download],
       [Model 2], [5], [0.9937], [0.9189], [66.0%], [Intact],
       [Model 3], [3], [0.9851], [0.9371], [93.0%], [Intact (early stop)],
-      [Model 4/5], [5], [0.9925], [0.9152], [71.0%], [Intact],
+      [Model 4], [5], [0.9925], [0.9152], [71.0%], [Intact],
     ),
     caption: [Summary of all training runs with validation and test metrics],
   )
@@ -1979,7 +1979,7 @@ This glossary defines technical terminology used throughout this dissertation. D
       [Fake segment analysis], [`fake_segment_analysis.png`], [3.3.3], [\ `analyze_data.py`],
       [Mel-spectrogram comparison], [`mel_spectrogram_comparison.png`], [3.3.4], [\ `plot_mel_spectrogram.py`],
       [Training history (all models)], [`training_history.png`], [4.2], [\ `compare_models.py`],
-      [Training history (Model 4/5)], [`training_history_model4.png`], [4.2.3], [\ `plot_training_history.py`],
+      [Training history (Model 4)], [`training_history_model4.png`], [4.2.3], [\ `plot_training_history.py`],
       [Model comparison dashboard], [`model_comparison.png`], [4.3.1], [\ `compare_models.py`],
       [Per-type accuracy bar chart], [`per_type_accuracy_bar_chart.png`], [4.4], [\ `plot_per_type_accuracy.py`],
     ),
