@@ -13,7 +13,7 @@
 
     *Methods*: The system integrates ResNet3D-18 (video) and ResNet18 (audio) encoders with a two-layer Transformer Encoder fusion module producing three independent sigmoid classification heads - audio, video, and joint authenticity. Training used Focal Loss under a strict speaker-disjoint split. Four training sessions were conducted on Vast.ai GPU instances, limited to five epochs by student resource constraints.
 
-    *Results*: Model 2 achieved peak validation AUC of 0.994. However, Model 3 - the epoch-3 checkpoint from the same run that produced Model 4 - achieved superior threshold-based performance on a 100-video speaker-disjoint test set: 93% accuracy, zero false positives, and a mean calibration gap of 0.19 compared to Model 2's 0.31. Test AUC for Model 3 was 0.937. Wilson 95% confidence intervals on overall accuracy were 86.3%–96.6%.
+    *Results*: Model 2 achieved peak validation AUC of 0.994. Model 3 — the epoch-3 checkpoint from the same run that produced Model 4 — achieved superior threshold-based performance on a 100-video test set (93% accuracy, zero false positives, calibration gap 0.19 vs Model 2's 0.31). Model 3's per-type accuracy was 100% on all fake categories, though at the cost of 28% false negatives on real videos. Models 2 and 4 achieved 48–52% accuracy on audio-only manipulation, indicating substantially weaker detection of this category. Test AUC for Model 3 was 0.937; Wilson 95% confidence intervals ranged from 86.3–96.6% for overall accuracy to 86.7–100.0% for per-category estimates (n=25).
 
     *Conclusions*: The three-head architecture demonstrated modality-specific score dissociation, with audio and video heads correctly discriminating by manipulation type. The finding that earlier fine-tuning checkpoints produced better-calibrated scores - confirmed by reliability diagrams - suggests practical deployment advantages. Results should be interpreted as indicative trends rather than definitive benchmarks: a single misclassification shifts category accuracy by 4 percentage points, and training was limited to five epochs with no ablation studies conducted.
   ],
@@ -1377,7 +1377,7 @@ A counterintuitive finding is that the ordering of models by training validation
     [Model 3 (3ep)], [0.9851], [_0.9371_], [−0.048], [_93.0%_], [_0.837_],
     [Model 4 (5ep)], [0.9925], [0.9152], [−0.077], [71.0%], [0.623],
   ),
-  caption: [Training AUC vs test AUC - all models],
+  caption: [Training validation AUC vs test AUC — all models. Note: training AUCs are not directly comparable across models because Model 3 was evaluated at epoch 3 while Models 2 and 4 were evaluated at epoch 5, representing different points in the same training trajectory.],
 )
 
 All models show a gap between training validation AUC and test set AUC. The gaps for Models 2 and 4 (∼0.075) are larger than for Model 3 (∼0.048). This is consistent with the score compression effect described in §4.3.2: continued fine-tuning reduces the AUC gap on the training distribution but narrows the score margin between classes, which disproportionately affects test set performance at a fixed threshold.
