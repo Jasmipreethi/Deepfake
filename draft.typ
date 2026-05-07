@@ -1052,6 +1052,26 @@ A browser-based web application (`web/app.py`) was developed to make the detecti
 
 The backend imports `load_model` and `predict_video` directly from `inference.py`. `inference.py` redefines the model architecture classes inline, mirroring `audio.py`, `video.py`, and `cross_modal.py` so that it can run without depending on the training pipeline's module imports. An in-memory cache loads each model once and shares it across requests. Uploaded videos are saved to a temporary directory, processed by calling `predict_video`, and deleted immediately after. Model paths are hardcoded to `logs/logs_2/best_model.pth` (Model 2) and `logs/logs_3/best_model.pth` (Model 3), with environment variable overrides available. Multi-window inference (3 evenly-spaced 2-second windows from the start, centre, and end of the video, averaged) is applied for robustness. The full API specification, including all five endpoints (`/api/models`, `/api/analyze`, `/api/compare`, `/api/history`, `/api/history/<id>`), is documented in `WebInterface.md`.
 
+#figure(
+  image("figures/web_analyze_empty.png", width: 85%),
+  caption: [Web interface — Analyze tab initial state, showing model selector dropdown, drag-and-drop upload area, and threshold slider.],
+)
+
+#figure(
+  image("figures/web_analyze_fake.png", width: 85%),
+  caption: [Web interface — Analyze tab classifying a fake video with red "FAKE" verdict, displaying audio, video, and joint authenticity scores.],
+)
+
+#figure(
+  image("figures/web_compare.png", width: 85%),
+  caption: [Web interface — Compare tab running one video through both models simultaneously, with side-by-side verdicts, per-modality scores, and an agree/disagree summary.],
+)
+
+#figure(
+  image("figures/web_history.png", width: 85%),
+  caption: [Web interface — History tab showing SQLite-backed table of all past analyses with filename, verdict, joint score, model used, and per-entry delete options.],
+)
+
 //3.8
 == Conclusion
 
@@ -2024,6 +2044,10 @@ Overall, the project met its core objective: a functional, well-documented multi
         [Calibration curves], [`calibration_curves.png`], [4.3.2], [`plot_calibration_curves.py`],
         [Video frame distribution], [`video_frames_distribution.png`], [3.2.3], [`analyze_data.py`],
         [Videos per speaker], [`videos_per_speaker_distribution.png`], [3.2.3], [`analyze_data.py`],
+        [Web interface — empty], [`web_analyze_empty.png`], [3.7.1], [Screenshot],
+        [Web interface — fake verdict], [`web_analyze_fake.png`], [3.7.1], [Screenshot],
+        [Web interface — compare], [`web_compare.png`], [3.7.1], [Screenshot],
+        [Web interface — history], [`web_history.png`], [3.7.1], [Screenshot],
       )
     ],
     caption: [Figure attribution - AI-generated conceptual diagrams vs. code-generated plots from project results],
@@ -2032,36 +2056,6 @@ Overall, the project met its core objective: a functional, well-documented multi
   All code-generated figures use data from the project's training runs (logs/), prediction outputs (comparison_results/), and dataset analysis (analysis/). The plotting scripts are available in the project repository and can be reproduced by running the corresponding Python files with the project's data.
 
   // L
-  == Web Interface Screenshots
-
-  The following screenshots demonstrate the browser-based web interface (`web/app.py`) described in Section 3.7.1. The interface was accessed at `http://localhost:5000` using a local browser. To reproduce: run `python web/app.py` with the model environment variables set, then open the URL in a browser.
-
-  #figure(
-    image("figures/web_analyze_empty.png", width: 90%),
-    caption: [Analyze tab - initial state showing model selector dropdown, drag-and-drop upload area, and threshold slider.],
-  )
-
-  #figure(
-    image("figures/web_analyze_real.png", width: 90%),
-    caption: [Analyze tab - a real video classified with green "REAL" verdict, displaying audio, video, and joint authenticity scores.],
-  )
-
-  #figure(
-    image("figures/web_analyze_fake.png", width: 90%),
-    caption: [Analyze tab - a fake video classified with red "FAKE" verdict, showing per-modality score breakdown.],
-  )
-
-  #figure(
-    image("figures/web_compare.png", width: 90%),
-    caption: [Compare tab - the same video evaluated by two models side by side, showing both verdicts, three per-modality scores per model, and an agree/disagree summary.],
-  )
-
-  #figure(
-    image("figures/web_history.png", width: 90%),
-    caption: [History tab - SQLite-backed table of past analyses showing filename, verdict, joint score, model used, and timestamp, with per-entry delete and bulk clear options.],
-  )
-
-  // M
   == Project Gantt Chart
 
   #figure(
