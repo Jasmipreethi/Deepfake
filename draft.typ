@@ -7,11 +7,9 @@
   supervisor: "Lucian Duta",
   date: datetime.today(),
   abstract: [
-    This dissertation presents a multimodal deepfake detection system trained on the validation subset of the AV-Deepfake1M++ dataset, comprising over 77,000 video clips. The system employs a cross-modal transformer fusion network that integrates ResNet3D-18 and ResNet18 encoders to produce simultaneous predictions for audio, video, and joint authenticity. Trained with focal loss under a strict speaker-disjoint partition, the model achieves high generalisation to unseen identities.
+    This dissertation presents a multimodal deepfake detection system trained on the validation subset of the AV-Deepfake1M++ dataset. The system uses a cross-modal transformer fusion network integrating ResNet3D-18 and ResNet18 encoders to produce simultaneous audio, video, and joint authenticity predictions under a speaker-disjoint evaluation protocol.
 
-    The project's initial proposal (CN6000 Initial Proposal, 2025) aimed to research and create demo software that distinguishes between real and deepfake media using deep learning techniques, with a planned architecture based on CNN, TensorFlow, and SciPy. In response to the dataset's scale and characteristics, the implementation evolved to a Cross-Modal Transformer Fusion architecture with ResNet18 and ResNet3D-18 encoders, Focal Loss, and PyTorch - all as documented in Chapter 3. The delivered system exceeds the initial proposal's scope by providing per-modality score dissociation, a speaker-disjoint evaluation protocol, and a model comparison interface.
-
-    While Model 2 reached a peak validation AUC of 0.994 after five training epochs, evaluation on a 100-video speaker-disjoint test set identified Model 3 (the epoch-3 checkpoint from the same training run that produced Model 4 at epoch 5) as achieving superior threshold-based performance, with 93% accuracy and zero false positives at a 0.5 threshold — a finding that demonstrates the importance of score calibration over raw AUC optimisation. Deviations from the initial proposal necessitated by hardware, budget, and stability constraints are documented and justified. The project contributes a modular, resumable training pipeline, a standalone inference system, and a web interface for video upload and classification. Results are indicative trends rather than definitive benchmarks: the 100-video test set (25 per category) means a single misclassification shifts category accuracy by 4 percentage points, with 95% confidence intervals of ±7–10%. Training was limited to five epochs due to student resource constraints, and no ablation studies were conducted to isolate the contribution of individual architectural components.
+    While Model 2 reached a peak validation AUC of 0.994 after five training epochs, evaluation on a 100-video speaker-disjoint test set identified Model 3 (the epoch-3 checkpoint from the same run that produced Model 4) as achieving superior threshold-based performance, with 93% accuracy and zero false positives at a 0.5 threshold — demonstrating the importance of score calibration over raw AUC optimisation. The project contributes a modular, resumable training pipeline, a standalone inference system, and a web interface for video upload and classification. Results are indicative trends rather than definitive benchmarks: the 100-video test set (25 per category) means a single misclassification shifts category accuracy by 4 percentage points, with 95% confidence intervals of ±7–10%. Training was limited to five epochs due to student resource constraints, and no ablation studies were conducted.
   ],
   acknowledgments: [
     I would like to express my sincere gratitude to my supervisor, Lucian Duta, for his invaluable guidance, patience, and support throughout this project. His feedback and encouragement were instrumental in shaping this work.
@@ -305,7 +303,7 @@ A major advancement in deepfake technology was transitioning from controlled lab
 //2.2.3
 === Phase 3: Multimodal and Neural Generation
 
-The latest and arguably most concerning development in deepfake technology is the move from only visual edits to multimodal deepfakes that manipulate both audio and video. Recent studies highlight the importance of inconsistencies between sound and visuals, leading to the creation of datasets such as AV-Deepfake1M @Cai2024 and FakeAVCeleb @yi2023audiodeepfakedetectionsurvey, which feature coordinated alterations to both video and audio streams. This evolution requires that detection tools now evaluate the synchronisation of lip movements with speech, rather than just looking for visual inconsistencies @yi2023audiodeepfakedetectionsurvey. In addition, the generative techniques themselves have progressed beyond traditional GANs. Neural Radiance Fields (NeRF) have been used to create talking-head videos where both viewpoint and audio can be modified @Guo2021. For audio, generation has advanced from simple concatenation methods to diffusion models, such as NaturalSpeech 2, which enable zero-shot voice synthesis with remarkably accurate intonation and prosody @shen2023naturalspeech2latentdiffusion. The key benchmark datasets discussed across these three evolutionary phases are summarised in the table below.
+The most significant recent development in deepfake technology is the move from visual-only edits to multimodal deepfakes that manipulate both audio and video. Recent studies highlight the importance of inconsistencies between sound and visuals, leading to the creation of datasets such as AV-Deepfake1M @Cai2024 and FakeAVCeleb @yi2023audiodeepfakedetectionsurvey, which feature coordinated alterations to both video and audio streams. (AV-Deepfake1M [Cai et al., 2024] is the original benchmark; AV-Deepfake1M++ [Cai et al., 2025] is the extended version used in this dissertation.) This evolution requires that detection tools now evaluate the synchronisation of lip movements with speech, rather than just looking for visual inconsistencies @yi2023audiodeepfakedetectionsurvey.
 
 // _Summary of key deepfake benchmark datasets_
 
@@ -584,33 +582,7 @@ This chapter also documents the architectural decisions and the practical reason
 
 This study adopts a quantitative research methodology based on secondary analysis of the AV-Deepfake1M++ dataset @Cai2025. Quantitative methods are appropriate here because the primary research questions concern measurable classification performance AUC, accuracy, precision, recall, and F1_score across a large, labelled corpus with well-defined ground truth. Using an existing benchmark dataset avoids the cost and ethical complexity of collecting a large-scale audio-visual corpus, which would not have been feasible within the scope or time frame of this project.
 
-Development followed an agile, kanban-based incremental methodology, organised into iterative sprints targeting one functional layer of the pipeline at a time - data loading, feature extraction, model integration, training, and evaluation. A Kanban board tracked task status within each sprint; sprint boundaries aligned with component integration milestones. Project progress was tracked using a Gantt chart across the 2026 project calendar with five phases and explicit inter-phase dependencies:
-
-// _Project Gantt chart phases_
-
-#figure(
-  table(
-    columns: (auto, auto, auto),
-    [_Phase_], [_Period_], [_Key Tasks_],
-    [Planning and Design],
-    [01 Jan – 27 Jan],
-    [Finalise specification, Viva preparation, acquire AV-Deepfake1M++ dataset],
-
-    [Implementation Phase I],
-    [26 Jan – 13 Feb],
-    [Cloud platform migration, ResNet18 mel-spectrogram + ResNet3D-18 full-frame extraction],
-
-    [Implementation Phase II],
-    [16 Feb – 13 Mar],
-    [Transformer fusion integration, model training, demo software and web interface development],
-
-    [Analysis and Evaluation], [16 Mar – 27 Mar], [Metric and error analysis, results documentation],
-    [Finalisation], [30 Mar – 08 May], [Final write-up, showcase, buffer time, final submission],
-  ),
-  caption: [Project Gantt chart phases],
-)
-
-The Gantt chart served as both a planning tool and a progress audit. When infrastructure failures described in Section 3.5.1 - caused substantial schedule slippage during implementation phase I and required a full platform migration, the chart made it straightforward to identify which downstream tasks needed to be re-scoped and which could absorb the delay within the buffer period.
+Development followed an agile, kanban-based incremental methodology, organised into iterative sprints targeting one functional layer of the pipeline at a time. A Kanban board tracked task status; project milestones were tracked using a Gantt chart (Appendix J). When infrastructure failures described in Section 3.5.1 caused schedule slippage during implementation phase I, the Gantt chart made it straightforward to identify which downstream tasks needed re-scoping.
 
 //3.2.2
 === Implementation Methodology
@@ -1512,21 +1484,19 @@ The limitations discussed in Section 5.5 - small test set, single dataset, no ab
 // 6.4
 == Future Work
 
-Several directions would extend and strengthen this work.
+Several directions would extend and strengthen this work, listed in order of priority.
 
-_Full dataset training._ Using the complete AV-Deepfake1M++ training split (over one million clips) rather than only the validation split would expose the model to a far greater diversity of speakers, manipulation techniques, and recording conditions, likely improving generalisation.
+_Ablation studies._ The most urgent contribution: controlled experiments comparing Focal Loss against standard BCE, Transformer fusion against MLP fusion, and full-frame encoding against lip-region crops would clarify the contribution of each design decision. Without ablations, the current results cannot attribute performance to any individual architectural component.
 
-_Ablation studies._ Controlled experiments comparing Focal Loss against standard BCE, Transformer fusion against MLP fusion, and full-frame encoding against lip-region crops would clarify the contribution of each design decision and provide guidance for future architecture choices.
+_Cross-dataset evaluation._ Testing the trained model on FakeAVCeleb, DFDC, or FaceForensics++ would assess whether the learned representations generalise beyond AV-Deepfake1M++, which is the most practically relevant measure of detector reliability and a shared limitation across deepfake detection approaches (Section 2.6.5).
 
-_Temporal localisation._ The current system classifies at the clip level. Extending to frame-level or segment-level predictions would provide richer output and could exploit the `fake_segments` temporal annotations in the metadata - information that was available but unused in this project.
+_Full dataset training._ Using the complete AV-Deepfake1M++ training split (over one million clips) rather than only the validation split would expose the model to far greater diversity and likely improve generalisation.
 
-_Cross-dataset evaluation._ As noted in Section 2.6.5, poor generalisation to unseen generators is a shared limitation across deepfake detection approaches. Testing the trained model on FakeAVCeleb, DFDC, or FaceForensics++ would assess whether the learned representations generalise beyond AV-Deepfake1M++, which is the most practically relevant measure of detector reliability.
+_Temporal localisation._ Extending to frame-level or segment-level predictions would provide richer output and could exploit the `fake_segments` temporal annotations.
 
-_Threshold optimisation._ The 0.5 decision threshold was used throughout without tuning. Optimising the threshold on a held-out calibration set to balance false positives and false negatives according to the application context could improve practical utility.
+_Threshold optimisation._ Optimising the decision threshold on a held-out calibration set to balance false positives and false negatives could improve practical utility.
 
-_Cloud storage pipeline._ Replacing the `scp` file transfer workflow with atomic writes to a cloud storage bucket would eliminate the risk of checkpoint corruption during download, which caused Model 1 to be lost in this project.
-
-_Web interface enhancements._ Adding adjustable threshold controls, batch upload of multiple videos, and visualisation of mel-spectrograms would extend the web interface from a simple classification tool to a more comprehensive diagnostic platform suitable for non-technical users.
+An improved experiment management infrastructure (cloud storage for checkpoints, web interface enhancements) would reduce operational friction in future training campaigns.
 
 //  6.5
 == Personal Reflection
@@ -2024,6 +1994,22 @@ This glossary defines technical terminology used throughout this dissertation. D
   #figure(
     image("figures/web_history.png", width: 90%),
     caption: [History tab - SQLite-backed table of past analyses showing filename, verdict, joint score, model used, and timestamp, with per-entry delete and bulk clear options.],
+  )
+
+  // M
+  == Project Gantt Chart
+
+  #figure(
+    table(
+      columns: (auto, auto, auto),
+      [_Phase_], [_Period_], [_Key Tasks_],
+      [Planning and Design], [01 Jan – 27 Jan], [Finalise specification, Viva preparation, acquire dataset],
+      [Implementation Phase I], [26 Jan – 13 Feb], [Cloud platform migration, audio and video feature extraction],
+      [Implementation Phase II], [16 Feb – 13 Mar], [Transformer fusion integration, model training, web interface],
+      [Analysis and Evaluation], [16 Mar – 27 Mar], [Metric and error analysis, results documentation],
+      [Finalisation], [30 Mar – 08 May], [Final write-up, showcase, buffer time, final submission],
+    ),
+    caption: [Project Gantt chart phases — five phases with explicit inter-phase dependencies across the 2026 project calendar.],
   )
 
 ]
