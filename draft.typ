@@ -1061,27 +1061,35 @@ A browser-based web application (`web/app.py`) was developed to make the detecti
 - *Compare:* Upload one video and run it through both configured models simultaneously, with side-by-side verdicts, three per-modality scores per model, and an agree/disagree summary.
 - *History:* SQLite-backed table of all past analyses showing filename, verdict tag, joint score, and model used, with per-entry delete and bulk clear.
 
-The backend imports `load_model` and `predict_video` directly from `inference.py`. `inference.py` redefines the model architecture classes inline, mirroring `audio.py`, `video.py`, and `cross_modal.py` so that it can run without depending on the training pipeline's module imports. An in-memory cache loads each model once and shares it across requests. Uploaded videos are saved to a temporary directory, processed by calling `predict_video`, and deleted immediately after. Model paths are hardcoded to `logs/logs_2/best_model.pth` (Model 2) and `logs/logs_3/best_model.pth` (Model 3), with environment variable overrides available. Multi-window inference (3 evenly-spaced 2-second windows from the start, centre, and end of the video, averaged) is applied for robustness. The full API specification, including all five endpoints (`/api/models`, `/api/analyze`, `/api/compare`, `/api/history`, `/api/history/<id>`), is documented in `WebInterface.md`.
+The backend imports `load_model` and `predict_video` directly from `inference.py`. `inference.py` redefines the model architecture classes inline, mirroring `audio.py`, `video.py`, and `cross_modal.py` so that it can run without depending on the training pipeline's module imports. An in-memory cache loads each model once and shares it across requests. Uploaded videos are saved to a temporary directory, processed by calling `predict_video`, and deleted immediately after. Model paths are hardcoded to `logs/logs_2/best_model.pth` (Model 2, epoch 5, Val AUC 0.994) and `logs/logs_3/best_model.pth` (Model 3, epoch 3, Val AUC 0.985), with environment variable overrides available. Note that the web interface labels these as "Model 1" and "Model 2" respectively; throughout this dissertation they are referred to as Model 2 and Model 3 to maintain consistency with the training run numbering. Multi-window inference (3 evenly-spaced 2-second windows from the start, centre, and end of the video, averaged) is applied for robustness. The full API specification, including all five endpoints (`/api/models`, `/api/analyze`, `/api/compare`, `/api/history`, `/api/history/<id>`), is documented in `WebInterface.md`.
 
 #figure(
   image("figures/web_analyze_empty.png", width: 85%),
   caption: [Web interface — Analyze tab initial state, showing model selector dropdown, drag-and-drop upload area, and threshold slider.],
 )
 
+The initial state of the Analyze tab presents the user with three core controls: a model selector dropdown allowing selection between Model 2 (epoch 5, Val AUC 0.994) and Model 3 (epoch 3, Val AUC 0.985), a drag-and-drop upload area accepting MP4, AVI, MOV, MKV, and WEBM formats, and a threshold slider defaulting to 0.5. This layout was designed to minimise the steps required before analysis, making the tool accessible to non-technical users with no knowledge of the underlying training pipeline.
+
 #figure(
   image("figures/web_analyze_fake.png", width: 85%),
   caption: [Web interface — Analyze tab classifying a fake video with red "FAKE" verdict, displaying audio, video, and joint authenticity scores.],
 )
+
+The screenshot demonstrates the system classifying a fake audio-modified video using Model 3. The per-modality scores illustrate the modality dissociation behaviour described in Section 4.4: the video head assigns a high authenticity score because the video stream is genuine and unmanipulated, while the audio head correctly suppresses its score in response to the synthesised audio. The joint head aggregates both signals and produces a low authenticity score, correctly triggering the red FAKE verdict at high confidence. This example is consistent with the per-type mean head scores reported in Section 4.4, where `audio_modified` clips produced elevated video head scores alongside suppressed audio and joint scores.
 
 #figure(
   image("figures/web_compare.png", width: 85%),
   caption: [Web interface — Compare tab running one video through both models simultaneously, with side-by-side verdicts, per-modality scores, and an agree/disagree summary.],
 )
 
+The Compare tab output shown here runs a fake video through both configured models simultaneously. Both models correctly classify the video as FAKE and agree on the verdict, as indicated by the "Both models agree" summary. The per-modality scores reveal subtle differences in the models' behaviour: Model 2's extended fine-tuning tends to produce narrower score margins between classes, while Model 3's earlier checkpoint suppresses fake scores more aggressively, consistent with the score calibration findings discussed in Section 4.3.2. This side-by-side comparison facility allows practitioners to assess model agreement and identify cases where the two models diverge.
+
 #figure(
   image("figures/web_history.png", width: 85%),
   caption: [Web interface — History tab showing SQLite-backed table of all past analyses with filename, verdict, joint score, model used, and per-entry delete options.],
 )
+
+The History tab records all past analyses in an SQLite database, displaying filename, verdict, joint score, model used, and timestamp. The entries illustrate the system's classification behaviour: correctly classified real videos typically receiving joint scores above 0.5, and fake videos receiving scores substantially below the threshold. The per-entry delete and bulk clear options support ongoing use across multiple sessions. The persistent history enables audit trails in deployment contexts where classification records may need to be reviewed.
 
 //3.8
 == Conclusion
