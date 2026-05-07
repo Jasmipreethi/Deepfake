@@ -572,7 +572,7 @@ This chapter reviewed deepfake generation and detection techniques across image,
 // METHODOLOGY
 // -----------------------------------------------------------------------------
 // Chapter 3
-= Methodology and Implementation
+= Methodology
 
 // 3.1
 == Introduction
