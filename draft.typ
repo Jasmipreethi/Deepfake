@@ -1952,7 +1952,7 @@ This glossary defines technical terminology used throughout this dissertation. D
 
   #figure(
     table(
-      columns: (26%, 20%, 6%, 48%),
+      columns: (26%, 46%, 8%, 20%),
       [_Figure_], [_Filename_], [_Section_], [_Source_],
       [System architecture], [`architecture.png`], [3.3.1], [AI-generated],
       [Speaker-disjoint split], [`speaker_split.png`], [3.3.2], [AI-generated],
