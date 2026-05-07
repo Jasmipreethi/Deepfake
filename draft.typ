@@ -309,7 +309,7 @@ The most significant recent development in deepfake technology is the move from 
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
     [_Dataset_], [_Year_], [_Modality_], [_Scale_], [_Key Characteristics_],
     [FaceForensics++ @Rossler2019],
     [2019],
@@ -418,7 +418,7 @@ Video-based deepfake generation extends beyond static image manipulation by mode
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
     [_Modality_], [_Target_], [_Key Architectures_], [_Advances_], [_Detection Challenge_],
     [Image / Visual],
     [Faces: identity swap, expression transfer, attribute manipulation],
@@ -474,7 +474,7 @@ Several architectural choices commonly employed in prior multimodal detection wo
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
     [_Modality_], [_Approach_], [_Named Architectures_], [_Best Reported Metric_], [_Key Limitation_],
     [Image],
     [CNN on frames; frequency-domain analysis],
@@ -929,7 +929,7 @@ Three Vast.ai GPU instances were rented over the course of the project. Their sp
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
     [_GPU_], [_VRAM_], [_CPU / RAM_], [_Cost (per hour)_], [_Used for_],
     [2× RTX 3060], [24 GB total], [192 vCPU / 257.8 GB], [\$0.783/hr], [Training runs (higher-spec)],
     [2× RTX 3060], [24 GB total], [192 vCPU / 257.8 GB], [\$0.569/hr], [Training runs (spot pricing)],
@@ -1027,7 +1027,7 @@ All four runs used the same architecture - ResNet3D-18 video encoder, ResNet18 a
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
     [_Run_], [_Epochs_], [_Best Val Joint AUC_], [_Final Train Loss_], [_Final Val Loss_], [_Checkpoint Status_],
     [Run 1 (Model 1)], [1], [0.6626], [0.2621], [1.2895], [Corrupted on download],
     [Run 2 (Model 2)], [5], [_0.9937_], [0.0605], [0.2774], [Intact],
@@ -1056,7 +1056,7 @@ Run 2 completed all five epochs, transitioning from Phase 1 (frozen encoders, le
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
     [_Epoch_],
     [_Phase_],
     [_Train Loss_],
@@ -1089,7 +1089,7 @@ _Run 4_ completed 5 epochs from the same training session as Run 3, reaching a b
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
     [_Epoch_],
     [_Phase_],
     [_Train Loss_],
@@ -1118,7 +1118,7 @@ Model 3 is the epoch-3 checkpoint from this same run; Models 3 and 4 therefore s
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
     [_Epoch_], [_Model 1_], [_Model 2_], [_Model 3_], [_Model 4_],
     [1], [0.6626], [0.6692], [0.6829], [0.6829],
     [2], [-], [0.6924], [0.6910], [0.6910],
@@ -1133,7 +1133,7 @@ All runs show the same characteristic pattern: low AUC during frozen-encoder tra
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
     [_Epoch_], [_Model 1_], [_Model 2_], [_Model 3_], [_Model 4_],
     [1], [0.2621], [0.2634], [0.2631], [0.2631],
     [2], [-], [0.2544], [0.2552], [0.2552],
@@ -1242,7 +1242,7 @@ With a 100-video test set, a single misclassification shifts category accuracy b
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
     [_Type_], [_M2 audio_], [_M2 video_], [_M3 audio_], [_M3 video_], [_M4 audio_], [_M4 video_],
     [`real`], [0.861], [0.930], [0.716], [0.712], [0.862], [0.906],
     [`audio_modified`], [0.425], [_0.874_], [0.375], [_0.294_], [0.427], [_0.849_],
@@ -1269,7 +1269,7 @@ _4. The `real` video accuracy gap between models_ (72% for Model 3 vs 92–96% f
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
     [_Use Case_], [_Recommended Model_], [_Threshold_], [_Expected Accuracy_], [_Expected F1_],
     [Maximum overall accuracy], [Model 3], [0.50], [_93.0%_], [_0.837_],
     [Maximum recall (miss no real videos)], [Model 4], [0.50], [71.0%], [0.623],
@@ -1287,7 +1287,7 @@ A counterintuitive finding is that the ordering of models by training validation
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto, auto),
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
     [_Model_], [_Train Val AUC_], [_Test AUC_], [_Gap_], [_Test Accuracy_], [_Test F1_],
     [Model 1 (1ep)], [0.6626], [N/A (corrupted)], [-], [-], [-],
     [Model 2 (5ep)], [_0.9937_], [0.9189], [−0.075], [66.0%], [0.575],
@@ -1863,7 +1863,7 @@ This glossary defines technical terminology used throughout this dissertation. D
 
   #figure(
     table(
-      columns: (auto, auto, auto, auto, auto, auto),
+      columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
       [_Run_], [_Epochs_], [_Best Val Joint AUC_], [_Test AUC_], [_Test Acc at 0.5_], [_Status_],
       [Model 1], [1], [0.6626], [N/A], [N/A], [Corrupted on download],
       [Model 2], [5], [0.9937], [0.9189], [66.0%], [Intact],
