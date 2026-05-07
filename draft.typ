@@ -1198,6 +1198,11 @@ _An important caveat:_ all runs were capped at 5 epochs due to student resource 
 
 These results suggest that Model 3 at threshold 0.5 achieves the highest accuracy (93.0%) with zero false positives, while Model 2 at its best threshold of 0.795 offers a balanced precision/recall trade-off (F1 = 0.764, accuracy 87.0%). The optimal choice depends on the deployment context, as discussed in Section 5.3.1.
 
+#figure(
+  image("figures/calibration_curves.png", width: 100%),
+  caption: [Reliability diagrams: predicted joint score probability vs. actual fraction of positives for Models 2, 3, and 4. Points on the diagonal indicate perfect calibration; points above the diagonal indicate the model is overconfident (predicting higher scores than justified). Model 3 shows the smallest mean calibration gap (0.19), confirming that earlier fine-tuning epochs produce better-calibrated scores for this architecture.],
+)
+
 // 4.4
 == Per Type Breakdown
 

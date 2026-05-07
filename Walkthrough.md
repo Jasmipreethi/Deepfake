@@ -390,6 +390,16 @@ Generates `figures/mel_spectrogram_comparison.png`:
 - Annotations highlighting natural harmonic structure vs over-smoothed synthetic patterns
 - Parameter panel below: 16kHz, 1024-FFT, 128 mel bins, 63 time frames
 
+**`plot_calibration_curves.py`** — Reads prediction CSVs and generates reliability diagrams:
+```bash
+python plot_calibration_curves.py
+```
+Generates `figures/calibration_curves.png`:
+- Side-by-side reliability diagrams for Models 2, 3, and 4
+- Shows predicted probability vs. actual fraction of positives (10 uniform bins)
+- Diagonal = perfect calibration; deviation = miscalibration
+- Mean calibration gap printed to console (Model 3: 0.19 — best, Model 2: 0.31 — worst)
+
 All scripts use the same matplotlib theme as `compare_models.py`.
 
 ---
