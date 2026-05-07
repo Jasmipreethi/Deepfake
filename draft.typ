@@ -1610,9 +1610,9 @@ Overall, the project met its core objective: a functional, well-documented multi
   = Appendix
 
   // A
-  == Initial Project Proposal (CN6000)
+  == Initial Project Proposal
 
-  The initial project proposal for this dissertation was submitted as part of the CN6000 Initial Proposal (2025) module. The proposal outlined the following scope, methodology, and objectives as originally conceived.
+  The initial project proposal for this dissertation was submitted as part of the CN6000 Initial Proposal. The proposal outlined the following scope, methodology, and objectives as originally conceived.
 
   _*Initial Proposal Form*_
 
@@ -1626,7 +1626,7 @@ Overall, the project met its core objective: a functional, well-documented multi
       [_Proposed Aim_],
       [To research on and create a demo software that will distinguish between real and deepfake media files using deep learning techniques.],
     ),
-    caption: [],
+    caption: [Initial project summary],
   )
 
   _*Proposed Objectives*_
