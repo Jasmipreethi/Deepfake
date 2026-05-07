@@ -278,7 +278,7 @@ Chapter 4 presents the results of five training runs conducted across three conf
 
 Chapter 5 discusses these findings against the six stated objectives, interprets the per-type behaviour and the score calibration phenomenon, compares results against prior work, and reflects on the development process and the gap between the initial proposal and the delivered system.
 
-Chapter 6 concludes the dissertation with a summary of contributions, five key findings, an honest assessment of limitations, directions for future work, and a personal reflection on the project.
+Chapter 6 concludes the dissertation with a summary of contributions, five key findings mapped to the research questions, an honest assessment of limitations, directions for future work, recommendations for practitioners and educators, and a personal reflection on the project.
 
 // -----------------------------------------------------------------------------
 // LITERATURE REVIEW
@@ -1380,7 +1380,9 @@ The training validation AUC measures ranking performance on the full 13,000-vide
 // 4.7
 == Conclusion
 
-Four training sessions were conducted, producing four checkpoints; three produced intact, loadable checkpoints (Models 2, 3, and 4). Model 3 is the epoch-3 checkpoint from the same run that produced Model 4 at epoch 5. All three were evaluated on a 100-video test set. Model 3 achieved the best test-set results: AUC 0.937, accuracy 93.0%, precision 1.000, with zero false positives. Model 2 achieved the highest training AUC (0.994) but delivered lower at-threshold accuracy (66.0%) due to score compression - a divergence discussed further in Chapter 5.
+Four training sessions were conducted, producing four checkpoints; three produced intact, loadable checkpoints (Models 2, 3, and 4). Model 3 is the epoch-3 checkpoint from the same run that produced Model 4 at epoch 5. All three were evaluated on a 100-video test set.
+
+With respect to the research questions established in Section 1.2: *RQ1* (detection performance) — Model 3 achieved AUC 0.937, accuracy 93.0%, and zero false positives, demonstrating that the Cross-Modal Transformer Fusion architecture can distinguish real from fake audio-visual media on the test set. *RQ2* (per-modality interpretability) — the three-head architecture produced modality-specific score dissociation, with audio and video head scores correctly discriminating by manipulation type as confirmed by the per-type breakdowns. *RQ3* (speaker-disjoint generalisation) — the speaker-disjoint partition was implemented with zero overlap between the 105 training and 21 test speakers, ensuring that all reported metrics reflect generalisation to unseen identities rather than face or voice recognition; direct comparison with random-split protocols remains a limitation for future work.
 
 A web interface was developed to make the detection capability accessible without command-line expertise (Section 3.7.1). Figure 4.X shows the Analyze tab classifying a fake video with the full per-modality score breakdown.
 
@@ -1555,13 +1557,13 @@ Four training sessions were conducted, producing four checkpoints (Models 2, 3, 
 // 6.2
 == Key Findings
 
-The primary finding is that a Cross-Modal Transformer Fusion network trained on a speaker-disjoint subset of AV-Deepfake1M++ can achieve high-fidelity detection performance within three to five training epochs using only the 68,851-video validation split. Five specific findings are noted:
+The primary finding is that a Cross-Modal Transformer Fusion network trained on a speaker-disjoint subset of AV-Deepfake1M++ can achieve high-fidelity detection performance within three to five training epochs using only the 68,851-video validation split. Five specific findings are noted, mapped to the research questions established in Section 1.2:
 
-1. _Phase 2 fine-tuning is the essential driver of performance._ Model 1 (1 epoch, Phase 1 only) achieved AUC 0.663; all Phase-2-trained models achieved training AUC ≥ 0.985 and test AUC ≥ 0.915.
-2. _Model 3 outperforms Model 2 on the test set despite a lower training AUC._ The model saved at the first fine-tuning epoch achieves better score calibration, zero false positives, 93.0% accuracy, and precision 1.000 - compared to 66.0% accuracy at the same threshold for the further-trained Model 2. This result must be interpreted within the project's resource constraints: all runs were capped at 5 epochs, and it is unknown whether further training would change the model ranking.
-3. _Training AUC does not predict test-set accuracy rank under the 5-epoch budget._ Extended fine-tuning - within the epoch range tested - compressed fake scores toward the real distribution, degrading at-threshold accuracy without necessarily reducing ranking quality. Threshold recalibration recovered performance for Model 2 (87.0% at threshold 0.795). Whether this pattern would persist, reverse, or stabilise with longer training (10–20 epochs) is unknown due to resource constraints.
-4. _Visual manipulation is most detectable; audio modification is hardest._ `visual_modified` clips produce the lowest mean joint scores; `audio_modified` clips land closest to the decision boundary because the genuine video stream earns a high video head score that counteracts the audio head's fake signal.
-5. _The three-head architecture demonstrates genuine modality-specific specialisation_, with audio and video head scores dissociating by manipulation type in the direction predicted by the architecture.
+1. _Phase 2 fine-tuning is the essential driver of performance._ Model 1 (1 epoch, Phase 1 only) achieved AUC 0.663; all Phase-2-trained models achieved training AUC ≥ 0.985 and test AUC ≥ 0.915. This confirms that cross-modal representations require encoder adaptation to the target domain (addressing RQ1).
+2. _Model 3 outperforms Model 2 on the test set despite a lower training AUC._ The model saved at the first fine-tuning epoch achieves better score calibration, zero false positives, 93.0% accuracy, and precision 1.000 - compared to 66.0% accuracy at the same threshold for the further-trained Model 2. This result must be interpreted within the project's resource constraints: all runs were capped at 5 epochs, and it is unknown whether further training would change the model ranking (addressing RQ1).
+3. _Training AUC does not predict test-set accuracy rank under the 5-epoch budget._ Extended fine-tuning - within the epoch range tested - compressed fake scores toward the real distribution, degrading at-threshold accuracy without necessarily reducing ranking quality. Threshold recalibration recovered performance for Model 2 (87.0% at threshold 0.795). Whether this pattern would persist, reverse, or stabilise with longer training (10–20 epochs) is unknown due to resource constraints (addressing RQ1).
+4. _Visual manipulation is most detectable; audio modification is hardest._ `visual_modified` clips produce the lowest mean joint scores; `audio_modified` clips land closest to the decision boundary because the genuine video stream earns a high video head score that counteracts the audio head's fake signal. This per-type ranking is consistent across all models, confirming that the three-head architecture captures modality-specific vulnerability patterns (addressing RQ2).
+5. _The three-head architecture demonstrates genuine modality-specific specialisation_, with audio and video head scores dissociating by manipulation type in the direction predicted by the architecture. The speaker-disjoint split ensured these results reflect generalisation to unseen identities rather than face or voice recognition (addressing RQ2 and RQ3).
 
 // 6.3
 == Limitations and Honest Assessment
