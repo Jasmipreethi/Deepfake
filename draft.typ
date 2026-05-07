@@ -1392,7 +1392,7 @@ Four training sessions were conducted, producing four checkpoints; three produce
 
 With respect to the research questions established in Section 1.2: *RQ1* (detection performance) - Model 3 achieved AUC 0.937, accuracy 93.0%, and zero false positives, demonstrating that the Cross-Modal Transformer Fusion architecture can distinguish real from fake audio-visual media on the test set. *RQ2* (per-modality interpretability) - the three-head architecture produced modality-specific score dissociation, with audio and video head scores correctly discriminating by manipulation type as confirmed by the per-type breakdowns. *RQ3* (speaker-disjoint generalisation) - the speaker-disjoint partition was implemented with zero overlap between the 105 training and 21 test speakers, ensuring that all reported metrics reflect generalisation to unseen identities rather than face or voice recognition; direct comparison with random-split protocols remains a limitation for future work.
 
-A web interface was developed to make the detection capability accessible without command-line expertise (Section 3.7.1). Figure 4.X shows the Analyze tab classifying a fake video with the full per-modality score breakdown.
+A web interface was developed to make the detection capability accessible without command-line expertise (Section 3.7.1). A screenshot of the Analyze tab classifying a fake video with the full per-modality score breakdown is shown above.
 
 #figure(
   image("figures/web_analyze_fake.png", width: 85%),
