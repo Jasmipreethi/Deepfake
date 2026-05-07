@@ -874,7 +874,7 @@ The primary reason for this departure was reproducibility and implementation com
 
 The Transformer Encoder fusion module receives the 256-dimensional feature vectors produced by both encoders, projects each to 512 dimensions, and forms a three-token input sequence `[CLS, video, audio]` augmented with learned positional embeddings. Two layers of multi-head self-attention with eight heads, GELU activation, and pre-norm layer normalisation allow the video and audio tokens to attend to each other. This attention mechanism captures cross-modal inconsistencies - for example, audio spectrogram patterns that do not correspond to the observed facial motion - in a way that simple feature concatenation and MLP fusion cannot, as identified as a key gap in Section 2.7 @yi2023audiodeepfakedetectionsurvey. The [CLS] token output aggregates information from both modalities and feeds three independent sigmoid classification heads: one for the audio stream, one for the video stream, and one for the joint verdict.
 
-On CPU-only hardware, the Transformer module is automatically replaced with a lightweight MLP fusion module to reduce inference latency, making the system deployable without GPU hardware.
+When loading trained checkpoints for inference, the architecture is automatically detected from the checkpoint keys and the Transformer Encoder is used regardless of the hardware platform. All inference results reported in Chapter 4 and all web interface classifications used the Transformer fusion module. An MLP-based fusion fallback is available for CPU-only deployment when no pretrained checkpoint is loaded, though this mode was not used in evaluation.
 
 #figure(
   image("figures/transformer_fusion_module.png", width: 70%),
