@@ -7,15 +7,15 @@
   supervisor: "Lucian Duta",
   date: datetime.today(),
   abstract: [
-    *Background*: The proliferation of deepfake technology — synthetic audio-visual media generated through deep learning — poses threats to digital media integrity across finance, politics, and personal security. Traditional unimodal detection systems struggle with modern multimodal deepfakes that manipulate both audio and video streams simultaneously.
+    *Background*: The proliferation of deepfake technology - synthetic audio-visual media generated through deep learning - poses threats to digital media integrity across finance, politics, and personal security. Traditional unimodal detection systems struggle with modern multimodal deepfakes that manipulate both audio and video streams simultaneously.
 
     *Aims*: This dissertation aims to design, implement, and evaluate a multimodal audio-visual deepfake detection system using cross-modal transformer fusion, trained on a speaker-disjoint partition of the AV-Deepfake1M++ dataset.
 
-    *Methods*: The system integrates ResNet3D-18 (video) and ResNet18 (audio) encoders with a two-layer Transformer Encoder fusion module producing three independent sigmoid classification heads — audio, video, and joint authenticity. Training used Focal Loss under a strict speaker-disjoint split. Four training sessions were conducted on Vast.ai GPU instances, limited to five epochs by student resource constraints.
+    *Methods*: The system integrates ResNet3D-18 (video) and ResNet18 (audio) encoders with a two-layer Transformer Encoder fusion module producing three independent sigmoid classification heads - audio, video, and joint authenticity. Training used Focal Loss under a strict speaker-disjoint split. Four training sessions were conducted on Vast.ai GPU instances, limited to five epochs by student resource constraints.
 
-    *Results*: Model 2 achieved peak validation AUC of 0.994. However, Model 3 — the epoch-3 checkpoint from the same run that produced Model 4 — achieved superior threshold-based performance on a 100-video speaker-disjoint test set: 93% accuracy, zero false positives, and a mean calibration gap of 0.19 compared to Model 2's 0.31. Test AUC for Model 3 was 0.937. Wilson 95% confidence intervals on overall accuracy were 86.3%–96.6%.
+    *Results*: Model 2 achieved peak validation AUC of 0.994. However, Model 3 - the epoch-3 checkpoint from the same run that produced Model 4 - achieved superior threshold-based performance on a 100-video speaker-disjoint test set: 93% accuracy, zero false positives, and a mean calibration gap of 0.19 compared to Model 2's 0.31. Test AUC for Model 3 was 0.937. Wilson 95% confidence intervals on overall accuracy were 86.3%–96.6%.
 
-    *Conclusions*: The three-head architecture demonstrated modality-specific score dissociation, with audio and video heads correctly discriminating by manipulation type. The finding that earlier fine-tuning checkpoints produced better-calibrated scores — confirmed by reliability diagrams — suggests practical deployment advantages. Results should be interpreted as indicative trends rather than definitive benchmarks: a single misclassification shifts category accuracy by 4 percentage points, and training was limited to five epochs with no ablation studies conducted.
+    *Conclusions*: The three-head architecture demonstrated modality-specific score dissociation, with audio and video heads correctly discriminating by manipulation type. The finding that earlier fine-tuning checkpoints produced better-calibrated scores - confirmed by reliability diagrams - suggests practical deployment advantages. Results should be interpreted as indicative trends rather than definitive benchmarks: a single misclassification shifts category accuracy by 4 percentage points, and training was limited to five epochs with no ablation studies conducted.
   ],
   acknowledgments: [
     I would like to express my sincere gratitude to my supervisor, Lucian Duta, for his invaluable guidance, patience, and support throughout this project. His feedback and encouragement were instrumental in shaping this work.
@@ -24,7 +24,7 @@
 
     To my family, thank you for your unwavering love, patience, and belief in me throughout this journey.
 
-    To my friends, especially Jayrup, for his constant support, guidance, and encouragement — thank you for being there through the late nights and challenging moments.
+    To my friends, especially Jayrup, for his constant support, guidance, and encouragement - thank you for being there through the late nights and challenging moments.
 
     I am also grateful to the developers of the AV-Deepfake1M++ dataset for providing the benchmark data that made this work possible.
   ],
@@ -176,7 +176,7 @@
   // Paragraph styling
   set par(justify: true, leading: 0.8em)
 
-  // Image styling — black border
+  // Image styling - black border
   show image: it => box(stroke: 0.5pt + black, it)
 
   // Spacing after all figures (images and tables)
@@ -233,11 +233,11 @@ Despite growing interest in multimodal deepfake detection, existing approaches e
 
 This dissertation addresses the following research questions:
 
-*RQ1:* To what extent can a deep learning model trained on a speaker-disjoint subset of AV-Deepfake1M++ distinguish real from fake audio-visual media across four manipulation types? _(Evaluated via test-set AUC, accuracy, precision, recall, and F1 — Sections 4.3–4.4; discussed in Section 5.3.1)_
+*RQ1:* To what extent can a deep learning model trained on a speaker-disjoint subset of AV-Deepfake1M++ distinguish real from fake audio-visual media across four manipulation types? _(Evaluated via test-set AUC, accuracy, precision, recall, and F1 - Sections 4.3–4.4; discussed in Section 5.3.1)_
 
-*RQ2:* How does a three-head multi-task architecture contribute to per-modality interpretability in audio-visual deepfake detection? _(Evaluated via per-type head score dissociation analysis — Section 4.4; discussed in Sections 5.3.2–5.3.3)_
+*RQ2:* How does a three-head multi-task architecture contribute to per-modality interpretability in audio-visual deepfake detection? _(Evaluated via per-type head score dissociation analysis - Section 4.4; discussed in Sections 5.3.2–5.3.3)_
 
-*RQ3:* How can a speaker-disjoint partition mitigate identity leakage and support out-of-distribution evaluation in audio-visual deepfake detection? _(Implemented via GroupShuffleSplit with zero speaker overlap — Section 3.3.2; cross-referenced against random-split limitations documented in literature — Section 2.6.5; identified as a limitation requiring future direct comparison — Section 5.5)_
+*RQ3:* How can a speaker-disjoint partition mitigate identity leakage and support out-of-distribution evaluation in audio-visual deepfake detection? _(Implemented via GroupShuffleSplit with zero speaker overlap - Section 3.3.2; cross-referenced against random-split limitations documented in literature - Section 2.6.5; identified as a limitation requiring future direct comparison - Section 5.5)_
 
 //1.3
 == Aim
@@ -294,7 +294,7 @@ Recent advances in artificial intelligence have reshaped digital media forensics
 //2.1.1
 === Theoretical Framework
 
-This dissertation operates at the intersection of three established research domains: computer vision (spatial and spatio-temporal feature learning), audio signal processing (spectral analysis and neural speech synthesis detection), and cross-modal learning (attention-based fusion of heterogeneous data streams). The theoretical premise underlying multimodal deepfake detection is that generative models, despite their increasing realism, introduce subtle inconsistencies across the audio and visual modalities that neither stream alone can capture. A face-swapped video may appear visually flawless frame by frame, but its lip-synchronisation with synthesised speech will deviate from natural phoneme-viseme alignment in ways detectable by joint analysis. Similarly, a voice-cloned audio track may pass perceptual scrutiny, but its spectral characteristics will not correlate with the observed facial motion patterns of the speaker. This cross-modal inconsistency hypothesis motivates architectures that allow audio and visual representations to interact during feature learning rather than being concatenated post-hoc @Cai2024 @yi2023audiodeepfakedetectionsurvey. The three-head multi-task architecture adopted in this dissertation — producing independent predictions for audio, video, and joint authenticity — operationalises this framework by quantifying the contribution of each modality separately while capturing their interaction through a joint classification head.
+This dissertation operates at the intersection of three established research domains: computer vision (spatial and spatio-temporal feature learning), audio signal processing (spectral analysis and neural speech synthesis detection), and cross-modal learning (attention-based fusion of heterogeneous data streams). The theoretical premise underlying multimodal deepfake detection is that generative models, despite their increasing realism, introduce subtle inconsistencies across the audio and visual modalities that neither stream alone can capture. A face-swapped video may appear visually flawless frame by frame, but its lip-synchronisation with synthesised speech will deviate from natural phoneme-viseme alignment in ways detectable by joint analysis. Similarly, a voice-cloned audio track may pass perceptual scrutiny, but its spectral characteristics will not correlate with the observed facial motion patterns of the speaker. This cross-modal inconsistency hypothesis motivates architectures that allow audio and visual representations to interact during feature learning rather than being concatenated post-hoc @Cai2024 @yi2023audiodeepfakedetectionsurvey. The three-head multi-task architecture adopted in this dissertation - producing independent predictions for audio, video, and joint authenticity - operationalises this framework by quantifying the contribution of each modality separately while capturing their interaction through a joint classification head.
 
 //2.1.2
 //2.1.2
@@ -595,7 +595,7 @@ This chapter also documents the architectural decisions and the practical reason
 //3.2.1
 === Research Paradigm
 
-This project adopts a quantitative, empirical research paradigm grounded in secondary data analysis. The three research questions established in Section 1.2 — RQ1 (detection performance), RQ2 (per-modality interpretability), and RQ3 (speaker-disjoint generalisation) — are evaluated through measurable classification metrics (AUC, accuracy, precision, recall, F1) computed against ground-truth labels in a pre-existing benchmark dataset. This paradigm treats the detection problem as a binary classification task amenable to statistical evaluation, distinguishing it from qualitative or mixed-methods approaches that might investigate user perception, content authenticity through non-computational analysis, or the societal impact of deepfakes. The empirical evaluation uses a held-out test set to produce quantitative evidence of system capability, with findings interpreted through the lens of statistical significance and practical calibration as detailed in Section 3.2.4.
+This project adopts a quantitative, empirical research paradigm grounded in secondary data analysis. The three research questions established in Section 1.2 - RQ1 (detection performance), RQ2 (per-modality interpretability), and RQ3 (speaker-disjoint generalisation) - are evaluated through measurable classification metrics (AUC, accuracy, precision, recall, F1) computed against ground-truth labels in a pre-existing benchmark dataset. This paradigm treats the detection problem as a binary classification task amenable to statistical evaluation, distinguishing it from qualitative or mixed-methods approaches that might investigate user perception, content authenticity through non-computational analysis, or the societal impact of deepfakes. The empirical evaluation uses a held-out test set to produce quantitative evidence of system capability, with findings interpreted through the lens of statistical significance and practical calibration as detailed in Section 3.2.4.
 
 //3.2.2
 === Research Methodology
@@ -632,7 +632,7 @@ _Speaker-Disjoint Partition._ Speaker IDs were extracted from file paths and a G
 
 _Feature Extraction._ For each video, a central two-second window was sampled at 25 FPS (50 frames, 224×224 pixels, ImageNet normalisation) for the video stream, and a 128-bin mel-spectrogram (16,000 Hz, 1,024-point FFT, 80 dB dynamic range, per-sample normalisation) was computed for the audio stream. Training-time augmentation applied SpecAugment (frequency masking up to 20 mel bins, time masking up to 15 steps) to audio tensors and random horizontal flipping with brightness and contrast jitter to video frames. Extracted features were saved as individual `.pt` files for lazy loading.
 
-_Evaluation Framework._ The primary evaluation metric for each of the three classification heads is Area Under the ROC Curve (AUC), a threshold-independent measure of ranking quality. AUC was chosen over threshold-dependent metrics (accuracy, precision, recall) because it is not affected by the 3:1 fake-to-real class imbalance in the test set — a model predicting FAKE for all inputs would achieve 75% accuracy without any discriminative capability, whereas AUC requires genuine ranking ability. Supporting metrics (accuracy at optimal threshold, precision, recall, F1 score) are reported for each model to provide a complete picture of deployment performance.
+_Evaluation Framework._ The primary evaluation metric for each of the three classification heads is Area Under the ROC Curve (AUC), a threshold-independent measure of ranking quality. AUC was chosen over threshold-dependent metrics (accuracy, precision, recall) because it is not affected by the 3:1 fake-to-real class imbalance in the test set - a model predicting FAKE for all inputs would achieve 75% accuracy without any discriminative capability, whereas AUC requires genuine ranking ability. Supporting metrics (accuracy at optimal threshold, precision, recall, F1 score) are reported for each model to provide a complete picture of deployment performance.
 
 Model comparison was conducted across two dimensions: overall performance (aggregate AUC and test-set metrics) and per-type breakdown (accuracy and mean scores for each of the four manipulation categories). Per-modality dissociation was assessed by comparing audio head scores against video head scores for each manipulation type, with the hypothesis that `audio_modified` clips should show suppressed audio scores with elevated video scores, and `visual_modified` clips should show the reverse. Score calibration was quantified using reliability diagrams and mean calibration gap (predicted probability vs. actual fraction of positives, binned uniformly into 10 intervals).
 
@@ -734,7 +734,7 @@ The metadata file catalogues 77,326 video clips across 1,835 unique speakers. Th
 
 #figure(
   image("analysis/modification_type_distribution.png", width: 80%),
-  caption: [Modification type distribution — the table values above represent the authoritative counts derived directly from val_metadata.json.],
+  caption: [Modification type distribution - the table values above represent the authoritative counts derived directly from val_metadata.json.],
 )
 
 Speaker coverage is substantial but uneven: the most prolific speaker (`id02760`) contributes 1,417 clips, while the least represented (`id08916`) contributes only 1. The mean videos per speaker is 42.1, with a median of 20, indicating a right-skewed distribution that is common in datasets drawn from real-world video collections. Of the 1,835 speakers, 1,336 (72.8%) have clips across all four modification types, providing good cross-type coverage for the majority of identities.
@@ -916,7 +916,7 @@ In Phase 2, covering the remaining 75% of epochs, all parameters were unfrozen. 
 // 3.4.3
 === Optimiser and Scheduler
 
-AdamW was used with weight decay $1 times 10^-4$. Gradient norms were clipped to a maximum of 1.0 per step to prevent instability arising from the 3D convolutional operations on 50-frame inputs, which can produce large gradient magnitudes. The observed learning rate drop at epoch 3 in the per-epoch tables reflects the two-phase fine-tuning schedule (encoder LR reduced from $1 times 10^-4$ to $1 times 10^-5$), not the ReduceLROnPlateau scheduler. ReduceLROnPlateau was configured to halve all learning rates when validation joint AUC did not improve for five consecutive epochs, but with only 5 total epochs and a 2-epoch freeze phase, the maximum fine-tuning duration was 3 epochs — fewer than the scheduler's 5-epoch patience threshold, meaning the scheduler likely never triggered. Early stopping halted training when no improvement was observed for 30% of the total epoch budget. The default epoch budget was set to 10 as a conservative upper bound; in practice, training runs were limited to 5 epochs due to student resource constraints.
+AdamW was used with weight decay $1 times 10^-4$. Gradient norms were clipped to a maximum of 1.0 per step to prevent instability arising from the 3D convolutional operations on 50-frame inputs, which can produce large gradient magnitudes. The observed learning rate drop at epoch 3 in the per-epoch tables reflects the two-phase fine-tuning schedule (encoder LR reduced from $1 times 10^-4$ to $1 times 10^-5$), not the ReduceLROnPlateau scheduler. ReduceLROnPlateau was configured to halve all learning rates when validation joint AUC did not improve for five consecutive epochs, but with only 5 total epochs and a 2-epoch freeze phase, the maximum fine-tuning duration was 3 epochs - fewer than the scheduler's 5-epoch patience threshold, meaning the scheduler likely never triggered. Early stopping halted training when no improvement was observed for 30% of the total epoch budget. The default epoch budget was set to 10 as a conservative upper bound; in practice, training runs were limited to 5 epochs due to student resource constraints.
 
 Multi-GPU training was managed via PyTorch `DataParallel`, with the effective batch size scaling linearly with the number of available GPUs. This was necessary because the GPU instances available through Vast.ai varied in configuration between training runs.
 
@@ -997,17 +997,17 @@ Instances 1 and 2 shared identical hardware (dual RTX 3060 on a ProLiant DL580 G
 
 #figure(
   image("figures/vastai_instance_1.jpg", width: 85%),
-  caption: [Vast.ai Instance 1 — 2× RTX 3060 (24 GB), \$0.783/hr],
+  caption: [Vast.ai Instance 1 - 2× RTX 3060 (24 GB), \$0.783/hr],
 )
 
 #figure(
   image("figures/vastai_instance_2.jpg", width: 85%),
-  caption: [Vast.ai Instance 2 — 2× RTX 3060 (24 GB), \$0.569/hr],
+  caption: [Vast.ai Instance 2 - 2× RTX 3060 (24 GB), \$0.569/hr],
 )
 
 #figure(
   image("figures/vastai_instance_3.jpg", width: 85%),
-  caption: [Vast.ai Instance 3 — 1× RTX 3070 (8 GB), \$0.028/hr],
+  caption: [Vast.ai Instance 3 - 1× RTX 3070 (8 GB), \$0.028/hr],
 )
 
 //3.5.2
@@ -1065,28 +1065,28 @@ The backend imports `load_model` and `predict_video` directly from `inference.py
 
 #figure(
   image("figures/web_analyze_empty.png", width: 85%),
-  caption: [Web interface — Analyze tab initial state, showing model selector dropdown, drag-and-drop upload area, and threshold slider.],
+  caption: [Web interface - Analyze tab initial state, showing model selector dropdown, drag-and-drop upload area, and threshold slider.],
 )
 
 The initial state of the Analyze tab presents the user with three core controls: a model selector dropdown allowing selection between Model 2 (epoch 5, Val AUC 0.994) and Model 3 (epoch 3, Val AUC 0.985), a drag-and-drop upload area accepting MP4, AVI, MOV, MKV, and WEBM formats, and a threshold slider defaulting to 0.5. This layout was designed to minimise the steps required before analysis, making the tool accessible to non-technical users with no knowledge of the underlying training pipeline.
 
 #figure(
   image("figures/web_analyze_fake.png", width: 85%),
-  caption: [Web interface — Analyze tab classifying a fake video with red "FAKE" verdict, displaying audio, video, and joint authenticity scores.],
+  caption: [Web interface - Analyze tab classifying a fake video with red "FAKE" verdict, displaying audio, video, and joint authenticity scores.],
 )
 
 The screenshot demonstrates the system classifying a fake audio-modified video using Model 3. The per-modality scores illustrate the modality dissociation behaviour described in Section 4.4: the video head assigns a high authenticity score because the video stream is genuine and unmanipulated, while the audio head correctly suppresses its score in response to the synthesised audio. The joint head aggregates both signals and produces a low authenticity score, correctly triggering the red FAKE verdict at high confidence. This example is consistent with the per-type mean head scores reported in Section 4.4, where `audio_modified` clips produced elevated video head scores alongside suppressed audio and joint scores.
 
 #figure(
   image("figures/web_compare.png", width: 85%),
-  caption: [Web interface — Compare tab running one video through both models simultaneously, with side-by-side verdicts, per-modality scores, and an agree/disagree summary.],
+  caption: [Web interface - Compare tab running one video through both models simultaneously, with side-by-side verdicts, per-modality scores, and an agree/disagree summary.],
 )
 
 The Compare tab output shown here runs a fake video through both configured models simultaneously. Both models correctly classify the video as FAKE and agree on the verdict, as indicated by the "Both models agree" summary. The per-modality scores reveal subtle differences in the models' behaviour: Model 2's extended fine-tuning tends to produce narrower score margins between classes, while Model 3's earlier checkpoint suppresses fake scores more aggressively, consistent with the score calibration findings discussed in Section 4.3.2. This side-by-side comparison facility allows practitioners to assess model agreement and identify cases where the two models diverge.
 
 #figure(
   image("figures/web_history.png", width: 85%),
-  caption: [Web interface — History tab showing SQLite-backed table of all past analyses with filename, verdict, joint score, model used, and per-entry delete options.],
+  caption: [Web interface - History tab showing SQLite-backed table of all past analyses with filename, verdict, joint score, model used, and per-entry delete options.],
 )
 
 The History tab records all past analyses in an SQLite database, displaying filename, verdict, joint score, model used, and timestamp. The entries illustrate the system's classification behaviour: correctly classified real videos typically receiving joint scores above 0.5, and fake videos receiving scores substantially below the threshold. The per-entry delete and bulk clear options support ongoing use across multiple sessions. The persistent history enables audit trails in deployment contexts where classification records may need to be reviewed.
@@ -1159,7 +1159,7 @@ Run 2 completed all five epochs, transitioning from Phase 1 (frozen encoders, le
   caption: [Model 2: per-epoch validation metrics],
 )
 
-The AUC jump from epoch 2 (0.692) to epoch 3 (0.988) reflects the encoder unfreezing behaviour described in Section 3.4.2: with both modality-specific encoders adapting to the deepfake detection task, the cross-modal representations rapidly specialise. The gap between training loss (0.14) and validation loss (0.41) at epoch 3 is not directly interpretable as overfitting, because Focal Loss (γ=2.0) was used for training while standard BCE was used for validation monitoring — the two loss functions produce values on different numerical scales. AUC, which is independent of the loss function used for monitoring, is the primary convergence indicator; the monotonic improvement in validation AUC through epoch 5 confirms that training was progressing correctly.
+The AUC jump from epoch 2 (0.692) to epoch 3 (0.988) reflects the encoder unfreezing behaviour described in Section 3.4.2: with both modality-specific encoders adapting to the deepfake detection task, the cross-modal representations rapidly specialise. The gap between training loss (0.14) and validation loss (0.41) at epoch 3 is not directly interpretable as overfitting, because Focal Loss (γ=2.0) was used for training while standard BCE was used for validation monitoring - the two loss functions produce values on different numerical scales. AUC, which is independent of the loss function used for monitoring, is the primary convergence indicator; the monotonic improvement in validation AUC through epoch 5 confirms that training was progressing correctly.
 
 // 4.2.3
 === Models 3–4: Additional Runs
@@ -1232,7 +1232,7 @@ The near-identical loss values across Models 2 and 4 further confirm that Runs 3
 // 4.3
 == Test Set Evaluation
 
-Evaluation was conducted using `compare_models.py` on a 100-video test set (25 real, 75 fake) sampled from the validation split using `create_test_data.py`. The test set was held out from training — no video in the test set appears in the training partition. All 21 test speakers originate from the validation split, with zero overlap with the 105 training speakers, preserving the speaker-disjoint evaluation guarantee. All three loadable checkpoints (Models 2–4) were evaluated. Model 1's checkpoint was corrupted and could not be loaded. Each video was processed with one 2-second analysis window on CPU. All results below are measured directly from inference on the test set; no numbers are estimated.
+Evaluation was conducted using `compare_models.py` on a 100-video test set (25 real, 75 fake) sampled from the validation split using `create_test_data.py`. The test set was held out from training - no video in the test set appears in the training partition. All 21 test speakers originate from the validation split, with zero overlap with the 105 training speakers, preserving the speaker-disjoint evaluation guarantee. All three loadable checkpoints (Models 2–4) were evaluated. Model 1's checkpoint was corrupted and could not be loaded. Each video was processed with one 2-second analysis window on CPU. All results below are measured directly from inference on the test set; no numbers are estimated.
 
 // 4.3.1
 === Overall Metrics
@@ -1390,13 +1390,13 @@ The training validation AUC measures ranking performance on the full 13,000-vide
 
 Four training sessions were conducted, producing four checkpoints; three produced intact, loadable checkpoints (Models 2, 3, and 4). Model 3 is the epoch-3 checkpoint from the same run that produced Model 4 at epoch 5. All three were evaluated on a 100-video test set.
 
-With respect to the research questions established in Section 1.2: *RQ1* (detection performance) — Model 3 achieved AUC 0.937, accuracy 93.0%, and zero false positives, demonstrating that the Cross-Modal Transformer Fusion architecture can distinguish real from fake audio-visual media on the test set. *RQ2* (per-modality interpretability) — the three-head architecture produced modality-specific score dissociation, with audio and video head scores correctly discriminating by manipulation type as confirmed by the per-type breakdowns. *RQ3* (speaker-disjoint generalisation) — the speaker-disjoint partition was implemented with zero overlap between the 105 training and 21 test speakers, ensuring that all reported metrics reflect generalisation to unseen identities rather than face or voice recognition; direct comparison with random-split protocols remains a limitation for future work.
+With respect to the research questions established in Section 1.2: *RQ1* (detection performance) - Model 3 achieved AUC 0.937, accuracy 93.0%, and zero false positives, demonstrating that the Cross-Modal Transformer Fusion architecture can distinguish real from fake audio-visual media on the test set. *RQ2* (per-modality interpretability) - the three-head architecture produced modality-specific score dissociation, with audio and video head scores correctly discriminating by manipulation type as confirmed by the per-type breakdowns. *RQ3* (speaker-disjoint generalisation) - the speaker-disjoint partition was implemented with zero overlap between the 105 training and 21 test speakers, ensuring that all reported metrics reflect generalisation to unseen identities rather than face or voice recognition; direct comparison with random-split protocols remains a limitation for future work.
 
 A web interface was developed to make the detection capability accessible without command-line expertise (Section 3.7.1). Figure 4.X shows the Analyze tab classifying a fake video with the full per-modality score breakdown.
 
 #figure(
   image("figures/web_analyze_fake.png", width: 85%),
-  caption: [Web interface — Analyze tab showing a fake video classified with red "FAKE" verdict, displaying audio, video, and joint authenticity scores. The browser-based interface makes the detection capability accessible to non-technical users without training pipeline dependencies.],
+  caption: [Web interface - Analyze tab showing a fake video classified with red "FAKE" verdict, displaying audio, video, and joint authenticity scores. The browser-based interface makes the detection capability accessible to non-technical users without training pipeline dependencies.],
 )
 
 // -----------------------------------------------------------------------------
@@ -1600,7 +1600,7 @@ An improved experiment management infrastructure (cloud storage for checkpoints,
 
 Based on the findings of this project, the following recommendations are offered for practitioners, dataset users, and educators working in multimodal deepfake detection.
 
-_For practitioners._ When deploying detector models under constrained training budgets, prioritise checkpointing at the first fine-tuning epoch. The finding that Model 3 (epoch 3) produced better-calibrated scores with zero false positives — outperforming models trained to higher AUC — suggests that maximum validation AUC does not guarantee optimal deployment performance at a fixed threshold. Score calibration should be evaluated explicitly using reliability diagrams, not assumed from ranking metrics alone.
+_For practitioners._ When deploying detector models under constrained training budgets, prioritise checkpointing at the first fine-tuning epoch. The finding that Model 3 (epoch 3) produced better-calibrated scores with zero false positives - outperforming models trained to higher AUC - suggests that maximum validation AUC does not guarantee optimal deployment performance at a fixed threshold. Score calibration should be evaluated explicitly using reliability diagrams, not assumed from ranking metrics alone.
 
 _For dataset users._ Speaker-disjoint partitioning should be adopted as standard practice in audio-visual deepfake detection evaluation. The literature reviewed in Section 2.6.5 demonstrates that random splits inflate performance metrics by allowing identity recognition rather than manipulation detection. GroupShuffleSplit on speaker ID provides a straightforward implementation that produces honest generalisation estimates, even on subsets of large datasets.
 
@@ -2076,10 +2076,10 @@ Overall, the project met its core objective: a functional, well-documented multi
         [Calibration curves], [`calibration_curves.png`], [4.3.2], [`plot_calibration_curves.py`],
         [Video frame distribution], [`video_frames_distribution.png`], [3.2.3], [`analyze_data.py`],
         [Videos per speaker], [`videos_per_speaker_distribution.png`], [3.2.3], [`analyze_data.py`],
-        [Web interface — empty], [`web_analyze_empty.png`], [3.7.1], [Screenshot],
-        [Web interface — fake verdict], [`web_analyze_fake.png`], [3.7.1], [Screenshot],
-        [Web interface — compare], [`web_compare.png`], [3.7.1], [Screenshot],
-        [Web interface — history], [`web_history.png`], [3.7.1], [Screenshot],
+        [Web interface - empty], [`web_analyze_empty.png`], [3.7.1], [Screenshot],
+        [Web interface - fake verdict], [`web_analyze_fake.png`], [3.7.1], [Screenshot],
+        [Web interface - compare], [`web_compare.png`], [3.7.1], [Screenshot],
+        [Web interface - history], [`web_history.png`], [3.7.1], [Screenshot],
       )
     ],
     caption: [Figure attribution - AI-generated conceptual diagrams vs. code-generated plots from project results],
@@ -2092,12 +2092,12 @@ Overall, the project met its core objective: a functional, well-documented multi
 
   #figure(
     image("figures/gantt_initial.png", width: 90%),
-    caption: [Initial project Gantt chart — submitted as part of the CN6000 proposal (January 2026).],
+    caption: [Initial project Gantt chart - submitted as part of the CN6000 proposal (January 2026).],
   )
 
   #figure(
     image("figures/gantt_final.png", width: 90%),
-    caption: [Final project Gantt chart — updated to reflect actual progress and infrastructure delays (May 2026).],
+    caption: [Final project Gantt chart - updated to reflect actual progress and infrastructure delays (May 2026).],
   )
 
 ]
