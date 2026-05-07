@@ -566,7 +566,7 @@ These four gaps collectively motivate the design of the system developed in this
 //2.8
 == Conclusion
 
-This chapter reviewed deepfake generation and detection techniques across image, audio, video, and multimodal domains. Across modalities, a consistent limitation is reduced performance outside controlled benchmarks, particularly when detectors encounter unseen generators or real-world media conditions @Rossler2019 @Dolhansky2020 @Cai2024. Four specific gaps were identified - simple concatenation fusion, vision-centric bias, speaker identity leakage, and easy-example domination - each motivating a corresponding design choice in the system developed in this dissertation, as detailed in Chapter 3.
+In summary, this chapter reviewed deepfake generation and detection techniques across image, audio, video, and multimodal domains. Across modalities, a consistent limitation is reduced performance outside controlled benchmarks, particularly when detectors encounter unseen generators or real-world media conditions @Rossler2019 @Dolhansky2020 @Cai2024. Four specific gaps were identified - simple concatenation fusion, vision-centric bias, speaker identity leakage, and easy-example domination - each motivating a corresponding design choice in the system developed in this dissertation, as detailed in Chapter 3.
 
 // -----------------------------------------------------------------------------
 // METHODOLOGY
