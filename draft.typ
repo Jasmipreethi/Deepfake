@@ -665,20 +665,20 @@ The system constitutes a deep learning pipeline: ResNet3D-18 (pretrained on Kine
 //3.3.2
 === Dataset Selection and Subset Strategy
 
-The AV-Deepfake1M++ dataset is distributed as approximately 1.4 TB of split compressed archives, which makes full local storage and processing infeasible within the available development environment. The extracted video files require substantially more disk space beyond the archive size. The validation split, comprising 77,326 video clips, was used exclusively throughout this work. Of these, 68,851 videos (89%) were confirmed present on disk following extraction; the remaining 8,475 were absent due to corruption or incomplete extraction and were excluded from all experiments. The four manipulation categories in the validation split are balanced, each containing between 16,848 and 18,037 videos, as shown in the table below.
+The AV-Deepfake1M++ dataset is distributed as approximately 1.4 TB of split compressed archives, which makes full local storage and processing infeasible within the available development environment. The extracted video files require substantially more disk space beyond the archive size. The validation split, comprising 77,326 video clips, was used exclusively throughout this work. Of these, 68,851 videos (89%) were confirmed present on disk following extraction; the remaining 8,264 were absent at the on-disk stage (in addition to 211 dropped at the metadata stage, for a total of 8,475 excluded across both cleaning stages) and were excluded from all experiments. The four manipulation categories in the validation split are balanced, each containing between 16,848 and 18,037 videos, as shown in the table below.
 
-// _Validation split composition_
+// _Post-cleaning dataset composition_
 
 #figure(
   table(
     columns: (auto, auto, auto),
-    [_Category_], [_Description_], [_Count_],
+    [_Category_], [_Description_], [_Count_ (post-cleaning)_],
     [`real`], [Unmodified audio and video], [18,037],
     [`audio_modified`], [Voice replaced or cloned; video untouched], [16,848],
     [`visual_modified`], [Face swapped or reenacted; audio untouched], [17,020],
     [`both_modified`], [Both audio and video manipulated], [16,946],
   ),
-  caption: [Validation split composition],
+  caption: [Post-cleaning dataset composition (68,851 videos). Pre-cleaning per-category distribution (77,326 videos) is reported in Section 3.3.3.],
 )
 
 Each entry in the accompanying metadata file (`val_metadata.json`) records the file path, manipulation type, frame counts, and the temporal coordinates of any manipulated segments (`fake_segments`) as `[start_sec, end_sec]` pairs.
