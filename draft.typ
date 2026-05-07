@@ -916,8 +916,10 @@ To overcome these infrastructure barriers, all model training and large-scale fe
     [Local; always available],
 
     [Cost],
-    [Free tier unworkable; paid ~\$50+/month], [~\$10–15 per 5-epoch run (student-funded)],
+    [Free tier unworkable; paid ~\$50+/month],
+    [~\$10–15 per 5-epoch run (student-funded)],
     [N/A (existing hardware)],
+
     [Outcome],
 
     [Unworkable for 68K-video dataset], [Used for all training and extraction], [Used for CPU debugging only],
@@ -933,7 +935,11 @@ Three Vast.ai GPU instances were rented over the course of the project. Their sp
     [_GPU_], [_VRAM_], [_CPU / RAM_], [_Cost (per hour)_], [_Used for_],
     [2× RTX 3060], [24 GB total], [192 vCPU / 257.8 GB], [\$0.783/hr], [Training runs (higher-spec)],
     [2× RTX 3060], [24 GB total], [192 vCPU / 257.8 GB], [\$0.569/hr], [Training runs (spot pricing)],
-    [1× RTX 3070], [8 GB], [24 vCPU / 64.4 GB], [\$0.028/hr], [Feature extraction, CPU debugging, small-batch experiments],
+    [1× RTX 3070],
+    [8 GB],
+    [24 vCPU / 64.4 GB],
+    [\$0.028/hr],
+    [Feature extraction, CPU debugging, small-batch experiments],
   ),
   caption: [Vast.ai GPU instances used for training and feature extraction],
 )
@@ -1518,90 +1524,90 @@ Overall, the project met its core objective: a functional, well-documented multi
 
 // Glossary
 #appendix[
-= Glossary
+  = Glossary
 
-This glossary defines technical terminology used throughout this dissertation. Definitions are paraphrased from the cited sources or represent standard usage in the deep learning and digital forensics literature.
+  This glossary defines technical terminology used throughout this dissertation. Definitions are paraphrased from the cited sources or represent standard usage in the deep learning and digital forensics literature.
 
-== A–D
+  == A–D
 
-*AUC (Area Under the ROC Curve).* A threshold-independent metric measuring a classifier's ability to rank samples by authenticity. An AUC of 0.99 means the model correctly ranks 99% of random real/fake pairs. Preferred over accuracy under class imbalance. @Rossler2019 @Dolhansky2020
+  *AUC (Area Under the ROC Curve).* A threshold-independent metric measuring a classifier's ability to rank samples by authenticity. An AUC of 0.99 means the model correctly ranks 99% of random real/fake pairs. Preferred over accuracy under class imbalance. @Rossler2019 @Dolhansky2020
 
-*AdamW.* A variant of the Adam optimiser that decouples weight decay from gradient updates, providing better regularisation in deep network training.
+  *AdamW.* A variant of the Adam optimiser that decouples weight decay from gradient updates, providing better regularisation in deep network training.
 
-*ASVspoof.* A challenge series providing standardised benchmarks for audio deepfake and spoofing detection under logical and physical access conditions. @yi2023audiodeepfakedetectionsurvey
+  *ASVspoof.* A challenge series providing standardised benchmarks for audio deepfake and spoofing detection under logical and physical access conditions. @yi2023audiodeepfakedetectionsurvey
 
-*AV-Deepfake1M++.* A large-scale audio-visual deepfake benchmark containing ~2 million video clips, 2,000+ speakers, and four manipulation categories with real-world perturbations. @Cai2025
+  *AV-Deepfake1M++.* A large-scale audio-visual deepfake benchmark containing ~2 million video clips, 2,000+ speakers, and four manipulation categories with real-world perturbations. @Cai2025
 
-*BCE (Binary Cross-Entropy).* The standard loss function for binary classification, measuring divergence between predicted probabilities and true labels. Subsumed by Focal Loss when γ = 0.
+  *BCE (Binary Cross-Entropy).* The standard loss function for binary classification, measuring divergence between predicted probabilities and true labels. Subsumed by Focal Loss when γ = 0.
 
-*CLS token.* A learnable classification token prepended to input sequences in Transformer architectures. Its final representation aggregates information from all inputs and feeds the classification heads.
+  *CLS token.* A learnable classification token prepended to input sequences in Transformer architectures. Its final representation aggregates information from all inputs and feeds the classification heads.
 
-*Cross-modal attention.* A mechanism allowing representations from different modalities (audio, video) to attend to each other during feature learning, capturing inconsistencies that simple concatenation cannot. @Cai2024
+  *Cross-modal attention.* A mechanism allowing representations from different modalities (audio, video) to attend to each other during feature learning, capturing inconsistencies that simple concatenation cannot. @Cai2024
 
-*DataParallel.* A PyTorch wrapper splitting batches across multiple GPUs and synchronising gradients, scaling effective batch size linearly with GPU count.
+  *DataParallel.* A PyTorch wrapper splitting batches across multiple GPUs and synchronising gradients, scaling effective batch size linearly with GPU count.
 
-*DFDC (Deepfake Detection Challenge).* A large-scale benchmark with 100,000+ clips from 3,426 actors, created for a Kaggle competition on deepfake detection. @Dolhansky2020
+  *DFDC (Deepfake Detection Challenge).* A large-scale benchmark with 100,000+ clips from 3,426 actors, created for a Kaggle competition on deepfake detection. @Dolhansky2020
 
-*Diffusion model.* A generative model that learns to reverse a gradual noising process, producing high-fidelity synthetic speech and images. @shen2023naturalspeech2latentdiffusion
+  *Diffusion model.* A generative model that learns to reverse a gradual noising process, producing high-fidelity synthetic speech and images. @shen2023naturalspeech2latentdiffusion
 
-== E–L
+  == E–L
 
-*FaceForensics++.* A widely-used face manipulation benchmark with ~4,000 videos and multiple manipulation methods. @Rossler2019
+  *FaceForensics++.* A widely-used face manipulation benchmark with ~4,000 videos and multiple manipulation methods. @Rossler2019
 
-*Focal Loss.* A loss function extending BCE with a modulating factor (1−p_t)^γ that downweights well-classified examples, concentrating training on hard, ambiguous samples. γ = 2.0 in this project. @lin2018focallossdenseobject
+  *Focal Loss.* A loss function extending BCE with a modulating factor (1−p_t)^γ that downweights well-classified examples, concentrating training on hard, ambiguous samples. γ = 2.0 in this project. @lin2018focallossdenseobject
 
-*GAN (Generative Adversarial Network).* A framework where generator and discriminator networks compete, enabling realistic synthetic content generation. @Rossler2019
+  *GAN (Generative Adversarial Network).* A framework where generator and discriminator networks compete, enabling realistic synthetic content generation. @Rossler2019
 
-*Gradient clipping.* A technique capping gradient norms to prevent instability from exploding gradients, especially important with 3D convolutions.
+  *Gradient clipping.* A technique capping gradient norms to prevent instability from exploding gradients, especially important with 3D convolutions.
 
-*Identity leakage.* A bias where the same speaker appears in both training and validation sets, allowing models to recognise faces/voices rather than detect manipulation. @Rossler2019
+  *Identity leakage.* A bias where the same speaker appears in both training and validation sets, allowing models to recognise faces/voices rather than detect manipulation. @Rossler2019
 
-*Kanban.* An agile methodology using visual boards to track task status across iterative sprints. @Ahmad2013
+  *Kanban.* An agile methodology using visual boards to track task status across iterative sprints. @Ahmad2013
 
-== M–R
+  == M–R
 
-*Mel-spectrogram.* A 2D time-frequency representation mapping audio frequencies to the mel scale (approximating human perception). Generated via FFT, mel filterbank, and decibel conversion.
+  *Mel-spectrogram.* A 2D time-frequency representation mapping audio frequencies to the mel scale (approximating human perception). Generated via FFT, mel filterbank, and decibel conversion.
 
-*MFCC (Mel Frequency Cepstral Coefficients).* Handcrafted acoustic features representing the short-term power spectrum of speech, used in speaker verification. @Korshunov2018
+  *MFCC (Mel Frequency Cepstral Coefficients).* Handcrafted acoustic features representing the short-term power spectrum of speech, used in speaker verification. @Korshunov2018
 
-*NeRF (Neural Radiance Field).* A neural rendering approach synthesising talking-head videos with controllable viewpoint and audio. @Guo2021
+  *NeRF (Neural Radiance Field).* A neural rendering approach synthesising talking-head videos with controllable viewpoint and audio. @Guo2021
 
-*RawNet2.* A deep architecture processing raw waveforms through SincNet filters for audio deepfake detection. @yi2023audiodeepfakedetectionsurvey
+  *RawNet2.* A deep architecture processing raw waveforms through SincNet filters for audio deepfake detection. @yi2023audiodeepfakedetectionsurvey
 
-*ReduceLROnPlateau.* A scheduler halving the learning rate when a monitored metric stops improving, allowing models to settle into finer minima.
+  *ReduceLROnPlateau.* A scheduler halving the learning rate when a monitored metric stops improving, allowing models to settle into finer minima.
 
-*ResNet3D.* A 3D convolutional network jointly processing spatial and temporal video dimensions, pretrained on Kinetics-400. @tran2018closerlookspatiotemporalconvolutions
+  *ResNet3D.* A 3D convolutional network jointly processing spatial and temporal video dimensions, pretrained on Kinetics-400. @tran2018closerlookspatiotemporalconvolutions
 
-== S–Z
+  == S–Z
 
-*Score calibration.* The alignment between predicted probability scores and actual correctness. Poor calibration (fake scores near 0.5) degrades at-threshold accuracy without reducing AUC.
+  *Score calibration.* The alignment between predicted probability scores and actual correctness. Poor calibration (fake scores near 0.5) degrades at-threshold accuracy without reducing AUC.
 
-*Self-attention.* A mechanism allowing each element in a sequence to attend to all others, computing weighted representations. Multi-head runs several attention operations in parallel.
+  *Self-attention.* A mechanism allowing each element in a sequence to attend to all others, computing weighted representations. Multi-head runs several attention operations in parallel.
 
-*Sigmoid activation.* A function mapping values to (0, 1), used as the output activation for binary classification.
+  *Sigmoid activation.* A function mapping values to (0, 1), used as the output activation for binary classification.
 
-*SpecAugment.* Data augmentation applying random frequency and time masking to spectrograms for robustness.
+  *SpecAugment.* Data augmentation applying random frequency and time masking to spectrograms for robustness.
 
-*Speaker-disjoint partition.* A dataset split where all videos from a given speaker are assigned exclusively to one subset, ensuring zero overlap. Implemented via `GroupShuffleSplit`.
+  *Speaker-disjoint partition.* A dataset split where all videos from a given speaker are assigned exclusively to one subset, ensuring zero overlap. Implemented via `GroupShuffleSplit`.
 
-*t-DCF (tandem Detection Cost Function).* A metric from ASVspoof measuring combined cost of missed detections and false alarms. @yi2023audiodeepfakedetectionsurvey
+  *t-DCF (tandem Detection Cost Function).* A metric from ASVspoof measuring combined cost of missed detections and false alarms. @yi2023audiodeepfakedetectionsurvey
 
-*Transformer Encoder.* A neural architecture using multi-head self-attention to model dependencies without recurrence. Adapted here for cross-modal fusion.
+  *Transformer Encoder.* A neural architecture using multi-head self-attention to model dependencies without recurrence. Adapted here for cross-modal fusion.
 
-*Transfer learning.* Initialising a model with weights pretrained on a large dataset and fine-tuning on the target task. @tran2018closerlookspatiotemporalconvolutions
+  *Transfer learning.* Initialising a model with weights pretrained on a large dataset and fine-tuning on the target task. @tran2018closerlookspatiotemporalconvolutions
 
-*TTUR (Two Time-Scale Update Rule).* A GAN stabilisation technique using different learning rates for generator and discriminator. @Heusel2017
+  *TTUR (Two Time-Scale Update Rule).* A GAN stabilisation technique using different learning rates for generator and discriminator. @Heusel2017
 
-*TTS (Text-to-Speech) / VC (Voice Conversion).* Deep learning systems for synthesising or converting speech, enabling realistic voice cloning. @yi2023audiodeepfakedetectionsurvey
+  *TTS (Text-to-Speech) / VC (Voice Conversion).* Deep learning systems for synthesising or converting speech, enabling realistic voice cloning. @yi2023audiodeepfakedetectionsurvey
 
-*Two-phase fine-tuning.* Training where encoder parameters are frozen first (protecting pretrained features), then unfrozen for full-domain adaptation at a lower learning rate.
+  *Two-phase fine-tuning.* Training where encoder parameters are frozen first (protecting pretrained features), then unfrozen for full-domain adaptation at a lower learning rate.
 
-*XceptionNet.* A CNN using depthwise separable convolutions, achieving state-of-the-art frame-level deepfake detection on FaceForensics++. @Rossler2019
+  *XceptionNet.* A CNN using depthwise separable convolutions, achieving state-of-the-art frame-level deepfake detection on FaceForensics++. @Rossler2019
 ]
 
 // Appendix
 #appendix[
-= Appendix
+  = Appendix
 
   // A
   == Initial Project Proposal (CN6000)
@@ -1617,7 +1623,8 @@ This glossary defines technical terminology used throughout this dissertation. D
       [_Year_], [2025],
       [_Student Number_], [2571395],
       [_Proposed Title_], [Deepfake detection using deep learning model],
-      [_Proposed Aim_], [To research on and create a demo software that will distinguish between real and deepfake media files using deep learning techniques.],
+      [_Proposed Aim_],
+      [To research on and create a demo software that will distinguish between real and deepfake media files using deep learning techniques.],
     ),
     caption: [],
   )
@@ -1951,22 +1958,25 @@ This glossary defines technical terminology used throughout this dissertation. D
   All figures in this dissertation were either generated programmatically from project code and results, or created using generative AI tools for conceptual diagrams. The attribution is as follows.
 
   #figure(
-    table(
-      columns: (26%, 46%, 8%, 20%),
-      [_Figure_], [_Filename_], [_Section_], [_Source_],
-      [System architecture], [`architecture.png`], [3.3.1], [AI-generated],
-      [Speaker-disjoint split], [`speaker_split.png`], [3.3.2], [AI-generated],
-      [Transformer fusion module], [`transformer_fusion_module.png`], [3.3.6], [AI-generated],
-      [Two-phase training timeline], [`two_phase_training.png`], [3.4.2], [AI-generated],
-      [Modification type distribution], [`modification_type_distribution.png`], [3.3.3], [\ `analyze_data.py`],
-      [Fake segment analysis], [`fake_segment_analysis.png`], [3.3.3], [\ `analyze_data.py`],
-      [Mel-spectrogram comparison], [`mel_spectrogram_comparison.png`], [3.3.4], [\ `plot_mel_spectrogram.py`],
-      [Training history (all)], [`training_history.png`], [4.2], [\ `compare_models.py`],
-      [Training history (Model 4)], [`training_history_model4.png`], [4.2.3], [\ `plot_training_history.py`],
-      [Model comparison], [`model_comparison.png`], [4.3.1], [\ `compare_models.py`],
-      [Per-type bar chart], [`per_type_accuracy_bar_chart.png`], [4.4], [\ `plot_per_type_accuracy.py`],
-      [Calibration curves], [`calibration_curves.png`], [4.3.2], [\ `plot_calibration_curves.py`],
-    ),
+    block(width: 100%)[
+      #set text(size: 9pt)
+      #table(
+        columns: (1.2fr, 1.8fr, 0.5fr, 1.5fr),
+        [_Figure_], [_Filename_], [_Section_], [_Source_],
+        [System architecture], [`architecture.png`], [3.3.1], [AI-generated],
+        [Speaker-disjoint split], [`speaker_split.png`], [3.3.2], [AI-generated],
+        [Transformer fusion module], [`transformer_fusion_module.png`], [3.3.6], [AI-generated],
+        [Two-phase training timeline], [`two_phase_training.png`], [3.4.2], [AI-generated],
+        [Modification type distribution], [`modification_type_distribution.png`], [3.3.3], [`analyze_data.py`],
+        [Fake segment analysis], [`fake_segment_analysis.png`], [3.3.3], [`analyze_data.py`],
+        [Mel-spectrogram comparison], [`mel_spectrogram_comparison.png`], [3.3.4], [`plot_mel_spectrogram.py`],
+        [Training history (all)], [`training_history.png`], [4.2], [`compare_models.py`],
+        [Training history (Model 4)], [`training_history_model4.png`], [4.2.3], [`plot_training_history.py`],
+        [Model comparison], [`model_comparison.png`], [4.3.1], [`compare_models.py`],
+        [Per-type bar chart], [`per_type_accuracy_bar_chart.png`], [4.4], [`plot_per_type_accuracy.py`],
+        [Calibration curves], [`calibration_curves.png`], [4.3.2], [`plot_calibration_curves.py`],
+      )
+    ],
     caption: [Figure attribution - AI-generated conceptual diagrams vs. code-generated plots from project results],
   )
 
