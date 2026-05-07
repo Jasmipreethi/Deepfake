@@ -230,7 +230,7 @@ This dissertation addresses the following research questions:
 
 *RQ2:* How does a three-head multi-task architecture contribute to per-modality interpretability in audio-visual deepfake detection? _(Evaluated via per-type head score dissociation analysis — Section 4.4; discussed in Sections 5.3.2–5.3.3)_
 
-*RQ3:* What effect does a speaker-disjoint partition have on model generalisation compared to standard random-split protocols? _(Evaluated via zero-overlap speaker split — Section 3.3.2; cross-referenced against literature benchmarks in Section 5.4; identified as a limitation for future ablation in Section 5.5)_
+*RQ3:* How can a speaker-disjoint partition mitigate identity leakage and support out-of-distribution evaluation in audio-visual deepfake detection? _(Implemented via GroupShuffleSplit with zero speaker overlap — Section 3.3.2; cross-referenced against random-split limitations documented in literature — Section 2.6.5; identified as a limitation requiring future direct comparison — Section 5.5)_
 
 //1.3
 == Aim
@@ -263,9 +263,9 @@ This work contributes a complete end-to-end multimodal deepfake detection system
 //1.6
 == Structure of the Dissertation
 
-Chapter 2 provides a comprehensive literature review, covering the evolution of deepfakes from early visual-only manipulation to modern multimodal generation, documented real-world harms across healthcare, finance, and politics, and an assessment of image, audio, video, and multimodal detection methodologies. The chapter identifies four specific gaps - simple concatenation fusion, vision-centric bias, speaker identity leakage, and class imbalance - that directly motivate the design of the system.
+Chapter 2 provides a comprehensive literature review, covering the evolution of deepfakes from early visual-only manipulation to modern multimodal generation, documented real-world harms across healthcare, finance, and politics, and an assessment of image, audio, video, and multimodal detection methodologies. The chapter identifies four specific gaps - simple concatenation fusion, vision-centric bias, speaker identity leakage, and easy-example domination - that directly motivate the design of the system.
 
-Chapter 3 describes the methodology and implementation in full, covering dataset selection and cleaning, the three architectural deviations from the initial proposal (Wav2Vec 2.0 → ResNet18, MobileNetV3 → ResNet3D-18, DiMoDif → Transformer fusion), the training protocol (Focal Loss, two-phase schedule with frozen then unfrozen encoders), the resumable checkpoint system, and the infrastructure challenges that necessitated migration from Colab to Vast.ai.
+Chapter 3 describes the methodology and implementation in full, covering dataset selection and cleaning, the three architectural choices (Wav2Vec 2.0 → ResNet18, MobileNetV3 → ResNet3D-18, DiMoDif → Transformer fusion), the training protocol (Focal Loss, two-phase schedule with frozen then unfrozen encoders), the resumable checkpoint system, and the infrastructure challenges that necessitated migration from Colab to Vast.ai.
 
 Chapter 4 presents the results of five training runs conducted across three configurations and their evaluation on a 100-video held-out test set, including per-epoch metrics, overall accuracy, per-type breakdown, and a comparative analysis of why the earliest stopping model (Model 3) outperforms later models on the test set.
 
@@ -320,7 +320,7 @@ The latest and arguably most concerning development in deepfake technology is th
     [Multiple manipulation methods; widely used baseline],
 
     [DFDC @Dolhansky2020], [2020], [Video (visual)], [100,000+ clips], [3,426 paid actors; multiple generation methods],
-    [Celeb-DF @Li2019], [2019], [Video (visual)], [~5,600 videos], [High-quality face swaps of celebrities],
+    [Celeb-DF @Li2019], [2020], [Video (visual)], [~5,600 videos], [High-quality face swaps of celebrities],
     [DF-Platter @Narayan2023],
     [2023],
     [Video (visual)],
@@ -468,7 +468,7 @@ Video-based detection approaches extend image-level analysis by incorporating te
 
 The emergence of deepfakes that manipulate both audio and visual streams has driven increasing interest in multimodal detection approaches. These methods jointly analyse facial motion, lip synchronisation, and speech content to identify cross-modal inconsistencies that are difficult for generative models to reproduce perfectly @yi2023audiodeepfakedetectionsurvey. Datasets such as FakeAVCeleb and AV-Deepfake1M have enabled systematic evaluation of multimodal detectors under coordinated manipulation scenarios @Cai2024. Building on this trend, @Cai2025 introduced AV-Deepfake1M++, an extension containing approximately 2 million video clips across over 2,000 speakers, with four manipulation categories - `real`, `audio_modified`, `visual_modified`, and `both_modified` - reflecting independent manipulation of each stream rather than a single holistic transformation. This structure makes it suitable for evaluating detectors that decompose the detection problem into per-modality authenticity predictions, as each manipulation type corresponds to a known combination of stream-level tampering. The dataset includes diverse audio perturbations (codec compression, background noise) and video post-processing (H.264 transcoding, resolution scaling), simulating the real-world conditions under which deployed detectors must operate @Cai2025. Multimodal detection systems generally demonstrate improved generalisation compared to unimodal approaches, particularly in cross-dataset evaluations @Cai2024. However, their performance remains constrained by dataset bias, limited availability of synchronised training data, and increased computational complexity, which may hinder real-time deployment @Cai2024 @Cai2025.
 
-A further challenge in training multimodal detectors is class imbalance and the dominance of easy examples during optimisation. When straightforward, high-contrast artefacts account for a large proportion of gradient updates, the model converges to coarse decision boundaries and fails to learn the subtle cross-modal inconsistencies that distinguish modern, high-quality deepfakes. @lin2018focallossdenseobject introduced Focal Loss as a principled solution in the context of dense object detection: by downweighting well-classified examples through a modulating factor, training is concentrated on hard, ambiguous samples. Focal Loss has since been adopted in audio-visual deepfake detection to address easy-example domination, consistent with its original motivation of mitigating gradient dominance from well-classified samples @lin2018focallossdenseobject.
+A further challenge in training multimodal detectors is easy-example domination during optimisation. When straightforward, high-contrast artefacts account for a large proportion of gradient updates, the model converges to coarse decision boundaries and fails to learn the subtle cross-modal inconsistencies that distinguish modern, high-quality deepfakes. @lin2018focallossdenseobject introduced Focal Loss as a principled solution in the context of dense object detection: by downweighting well-classified examples through a modulating factor, training is concentrated on hard, ambiguous samples. Focal Loss has since been adopted in audio-visual deepfake detection to address easy-example domination, consistent with its original motivation of mitigating gradient dominance from well-classified samples @lin2018focallossdenseobject.
 
 Multi-task learning offers another strategy for improving multimodal detector reliability. Rather than training a single output head on a joint real/fake label, multi-task architectures produce separate predictions for each modality - one for audio authenticity, one for video authenticity, and one joint verdict - training them simultaneously with a shared loss @Cai2024. @Cai2024 demonstrated that this design forces each head to specialise on its respective stream while the joint head captures their interaction, yielding a more interpretable and diagnostically useful model that independently quantifies the contribution of each modality. Such architectures are particularly well-suited to datasets where manipulation types affect each stream independently, as seen in the AV-Deepfake1M framework @Cai2025.
 
@@ -525,7 +525,7 @@ Gap 2 - Vision-centric treatment of audio: Many multimodal systems treat audio a
 
 Gap 3 - Speaker identity leakage in evaluation: The widespread use of random train/validation splits means that the same speaker can appear in both sets, allowing models to exploit face or voice recognition rather than learning genuine manipulation artefacts @Rossler2019. This produces inflated accuracy figures that do not reflect true generalisation to unseen identities.
 
-Gap 4 - Class imbalance and easy-example domination: Standard loss functions applied to datasets with heavily skewed or imbalanced fake/real distributions allow the model to converge on coarse decision boundaries by exploiting high-confidence examples, without learning to distinguish the subtle manipulations that characterise modern high-quality deepfakes.
+Gap 4 - Easy-example domination: Standard loss functions allow the model to converge on coarse decision boundaries by exploiting high-confidence examples, without learning to distinguish the subtle manipulations that characterise modern high-quality deepfakes. While the dataset is balanced at the category level (Section 3.3.3), easy examples with obvious artefacts dominate gradient updates under standard loss functions like BCE, preventing learning of fine-grained manipulation boundaries.
 
 These four gaps collectively motivate the design of the system developed in this dissertation: a Cross-Modal Transformer Fusion network with a three-head output architecture (addressing Gap 2), trained with Focal Loss on a speaker-disjoint partition (addressing Gaps 3 and 4), using self-attention cross-modal fusion (addressing Gap 1), as detailed in Chapter 3.
 
@@ -559,7 +559,7 @@ These four gaps collectively motivate the design of the system developed in this
 //2.8
 == Conclusion
 
-This chapter reviewed deepfake generation and detection techniques across image, audio, video, and multimodal domains. Across modalities, a consistent limitation is reduced performance outside controlled benchmarks, particularly when detectors encounter unseen generators or real-world media conditions @Rossler2019 @Dolhansky2020 @Cai2024. Four specific gaps were identified - simple concatenation fusion, vision-centric bias, speaker identity leakage, and class imbalance - each motivating a corresponding design choice in the system developed in this dissertation, as detailed in Chapter 3.
+This chapter reviewed deepfake generation and detection techniques across image, audio, video, and multimodal domains. Across modalities, a consistent limitation is reduced performance outside controlled benchmarks, particularly when detectors encounter unseen generators or real-world media conditions @Rossler2019 @Dolhansky2020 @Cai2024. Four specific gaps were identified - simple concatenation fusion, vision-centric bias, speaker identity leakage, and easy-example domination - each motivating a corresponding design choice in the system developed in this dissertation, as detailed in Chapter 3.
 
 // -----------------------------------------------------------------------------
 // METHODOLOGY
@@ -574,7 +574,7 @@ This chapter outlines the approach taken to design, develop, and assess a deepfa
 
 The work targets content-driven deepfakes where a real identity is preserved but the spoken content is altered via audio synthesis and lip synchronisation, alongside visual manipulations. Such changes are subtle and localised, making unimodal detection unreliable @Cai2024 @Korshunov2018. A multimodal strategy is therefore adopted that exploits inconsistencies between the audio stream and the visual stream.
 
-This chapter also documents the deviations from the initially proposed architecture and the practical reasons that necessitated each change. The initial proposal outlined a system built around Wav2Vec 2.0 for audio feature extraction, MobileNetV3 for visual feature extraction, and a DiMoDif fusion module. As implementation progressed, each of these components was revised in response to engineering constraints, training instability, and the specific characteristics of the dataset. The rationale for each departure is discussed explicitly alongside the adopted solution.
+This chapter also documents the architectural decisions and the practical reasons that shaped each choice. The initial proposal outlined a system built around Wav2Vec 2.0 for audio feature extraction, MobileNetV3 for visual feature extraction, and a DiMoDif fusion module. During implementation, each of these components was evaluated against the specific characteristics of the AV-Deepfake1M++ dataset and the available training infrastructure. The rationale for the final architecture is discussed alongside each component.
 
 // 3.2
 == Research and Development Approach
@@ -895,7 +895,7 @@ In Phase 2, covering the remaining 75% of epochs, all parameters were unfrozen. 
 // 3.4.3
 === Optimiser and Scheduler
 
-AdamW was used with weight decay $1 times 10^-4$. Gradient norms were clipped to a maximum of 1.0 per step to prevent instability arising from the 3D convolutional operations on 50-frame inputs, which can produce large gradient magnitudes. ReduceLROnPlateau halved all learning rates when validation joint AUC did not improve for five consecutive epochs, allowing the model to settle into finer minima as training progressed. Early stopping halted training when no improvement was observed for 30% of the total epoch budget. The default epoch budget was set to 10 as a conservative upper bound; in practice, training runs were limited to 5 epochs due to the financial and resource constraints of a student project.
+AdamW was used with weight decay $1 times 10^-4$. Gradient norms were clipped to a maximum of 1.0 per step to prevent instability arising from the 3D convolutional operations on 50-frame inputs, which can produce large gradient magnitudes. The observed learning rate drop at epoch 3 in the per-epoch tables reflects the two-phase fine-tuning schedule (encoder LR reduced from $1 times 10^-4$ to $1 times 10^-5$), not the ReduceLROnPlateau scheduler. ReduceLROnPlateau was configured to halve all learning rates when validation joint AUC did not improve for five consecutive epochs, but with only 5 total epochs and a 2-epoch freeze phase, the maximum fine-tuning duration was 3 epochs — fewer than the scheduler's 5-epoch patience threshold, meaning the scheduler likely never triggered. Early stopping halted training when no improvement was observed for 30% of the total epoch budget. The default epoch budget was set to 10 as a conservative upper bound; in practice, training runs were limited to 5 epochs due to student resource constraints.
 
 Multi-GPU training was managed via PyTorch `DataParallel`, with the effective batch size scaling linearly with the number of available GPUs. This was necessary because the GPU instances available through Vast.ai varied in configuration between training runs.
 
@@ -1034,7 +1034,7 @@ A browser-based web application (`web/app.py`) was developed to make the detecti
 - *Compare:* Upload one video and run it through both configured models simultaneously, with side-by-side verdicts, three per-modality scores per model, and an agree/disagree summary.
 - *History:* SQLite-backed table of all past analyses showing filename, verdict tag, joint score, and model used, with per-entry delete and bulk clear.
 
-The backend imports `load_model` and `predict_video` directly from `inference.py`. `inference.py` redefines the model architecture classes inline, mirroring `audio.py`, `video.py`, and `cross_modal.py` so that it can run without depending on the training pipeline's module imports. An in-memory cache loads each model once and shares it across requests. Uploaded videos are saved to a temporary directory, processed by calling `predict_video`, and deleted immediately after. Model paths are hardcoded to `logs/logs_2/best_model.pth` (Model 2) and `logs/logs_3/best_model.pth` (Model 3), with environment variable overrides available. Multi-window inference (3 windows, averaged) is applied for robustness. The full API specification, including all five endpoints (`/api/models`, `/api/analyze`, `/api/compare`, `/api/history`, `/api/history/<id>`), is documented in `WebInterface.md`.
+The backend imports `load_model` and `predict_video` directly from `inference.py`. `inference.py` redefines the model architecture classes inline, mirroring `audio.py`, `video.py`, and `cross_modal.py` so that it can run without depending on the training pipeline's module imports. An in-memory cache loads each model once and shares it across requests. Uploaded videos are saved to a temporary directory, processed by calling `predict_video`, and deleted immediately after. Model paths are hardcoded to `logs/logs_2/best_model.pth` (Model 2) and `logs/logs_3/best_model.pth` (Model 3), with environment variable overrides available. Multi-window inference (3 evenly-spaced 2-second windows from the start, centre, and end of the video, averaged) is applied for robustness. The full API specification, including all five endpoints (`/api/models`, `/api/analyze`, `/api/compare`, `/api/history`, `/api/history/<id>`), is documented in `WebInterface.md`.
 
 //3.8
 == Conclusion
@@ -1104,7 +1104,7 @@ Run 2 completed all five epochs, transitioning from Phase 1 (frozen encoders, le
   caption: [Model 2: per-epoch validation metrics],
 )
 
-The AUC jump from epoch 2 (0.692) to epoch 3 (0.988) reflects the encoder unfreezing behaviour described in Section 3.4.2: with both modality-specific encoders adapting to the deepfake detection task, the cross-modal representations rapidly specialise. The gap between training loss (0.14) and validation loss (0.41) at epoch 3 is not overfitting - it is a measurement artefact arising from the use of Focal Loss for training (which suppresses easy examples, producing artificially low values) and standard BCE for validation monitoring (producing higher absolute values). Val AUC improved monotonically throughout, confirming the absence of overfitting.
+The AUC jump from epoch 2 (0.692) to epoch 3 (0.988) reflects the encoder unfreezing behaviour described in Section 3.4.2: with both modality-specific encoders adapting to the deepfake detection task, the cross-modal representations rapidly specialise. The gap between training loss (0.14) and validation loss (0.41) at epoch 3 is not directly interpretable as overfitting, because Focal Loss (γ=2.0) was used for training while standard BCE was used for validation monitoring — the two loss functions produce values on different numerical scales. AUC, which is independent of the loss function used for monitoring, is the primary convergence indicator; the monotonic improvement in validation AUC through epoch 5 confirms that training was progressing correctly.
 
 // 4.2.3
 === Models 3–4: Additional Runs
@@ -1224,7 +1224,7 @@ This behaviour is consistent with the known dynamics of encoder fine-tuning. Mod
 
 _An important caveat:_ all runs were capped at 5 epochs due to student resource constraints on cloud GPU access (Section 3.4.3). It is unknown whether Models 2 and 4, if trained for the full 10-epoch budget, would have produced better-calibrated scores after undergoing a full learning rate schedule cycle with ReduceLROnPlateau. The score compression observed between epochs 3 and 5 may represent a transient phase rather than a permanent degradation - extended training with a reduced learning rate could potentially restore clean score separation. Model 3's results must therefore be interpreted as the best achieved within the resource limits of a student project, rather than as evidence that early stopping is universally preferable for this architecture. Further training would be needed to determine whether score separation improves, degrades, or stabilises with extended fine-tuning.
 
-The practical recommendation is: _use Model 3 at threshold 0.5 for highest accuracy (93.0%), or use Model 2 at threshold 0.795 for a balanced precision/recall trade-off (F1 = 0.764, accuracy 87.0%)_.
+These results suggest that Model 3 at threshold 0.5 achieves the highest accuracy (93.0%) with zero false positives, while Model 2 at its best threshold of 0.795 offers a balanced precision/recall trade-off (F1 = 0.764, accuracy 87.0%). The optimal choice depends on the deployment context, as discussed in Section 5.3.1.
 
 // 4.4
 == Per Type Breakdown
@@ -1424,6 +1424,8 @@ For `visual_modified` clips, the reverse pattern holds: the video head scores (0
 
 For `real` videos, both heads assign high scores (audio: 0.72–0.86, video: 0.71–0.93), confirming that genuine content is not confused with fakes at the modality level.
 
+The weaker audio head discriminative margin in Models 2 and 4 suggests that the vision-centric bias identified in Gap 2 (Section 2.7) is only partially resolved by the three-head architecture. While both heads produce directionally correct outputs, the video head provides substantially stronger per-type discrimination than the audio head in these models. Model 3's stronger audio suppression (mean audio head score 0.375 for `audio_modified` vs 0.716 for `real`) suggests that earlier checkpoints may provide more balanced modality specialisation, though this requires confirmation through larger-scale evaluation.
+
 // 5.3.4
 === Model 1 Failure Analysis
 
@@ -1461,7 +1463,7 @@ All training runs were capped at 5 epochs due to the financial and resource cons
 // 5.6
 == Reflection on the Development Process
 
-The three architectural deviations documented in Chapter 3 - audio encoder, visual encoder, and fusion module - were each driven by practical constraints rather than deliberate design choices. This highlights a fundamental challenge in applied deep learning research: the gap between a theoretically motivated architecture and what can be implemented within a given hardware budget, time frame, and software ecosystem.
+The three architectural choices documented in Chapter 3 - audio encoder, visual encoder, and fusion module - were each driven by practical constraints and dataset characteristics.
 
 The decision to replace Wav2Vec 2.0 with a ResNet18 on mel-spectrograms was initially reluctant, as Wav2Vec's contextual speech representations were expected to provide superior sensitivity to voice cloning artefacts. In retrospect, the mel-spectrogram approach proved robust and simple to integrate, and the resulting model achieved strong performance. This suggests that the mel-spectrogram representation captures sufficient information for this task, at least at the validation split scale.
 
