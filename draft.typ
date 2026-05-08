@@ -265,7 +265,7 @@ The initial proposal (CN6000, 2025) established six objectives covering literatu
 //1.5
 == Significance
 
-This work contributes a complete end-to-end multimodal deepfake detection system built on one of the largest audio-visual deepfake datasets currently available (Section 3.3.2). The system is designed with research reproducibility in mind - all hyperparameters are centralised, all randomness is seeded, and the full training state is checkpointed (Section 3.4.4) - making it straightforward to extend or replicate. The complete codebase, including all training scripts, configuration files, and the web interface, is available at: \https://github.com/Jasmipreethi/Deepfake. The three-head output design (Section 3.3.1) provides richer diagnostic information than a single binary classifier, allowing the contribution of each modality to be assessed independently. Beyond academic contribution, the project delivers a standalone command-line inference tool and a browser-based web interface with model comparison and history tracking, making the detection capability accessible to non-technical users without requiring any knowledge of the underlying training pipeline. The empirical observation that the earliest fine-tuned model (Model 3, epoch 3) achieved better score calibration and test-set accuracy than models trained to higher training AUC (Models 2 and 4, epoch 5) - observed across multiple independent training runs within the project's computational budget - is a practical finding of interest for practitioners deploying similar architectures on speaker-disjoint data, though extended training beyond 5 epochs would be needed to confirm whether this pattern persists or reverses with additional fine-tuning.
+This work contributes a complete end-to-end multimodal deepfake detection system built on one of the largest audio-visual deepfake datasets currently available (Section 3.3.2). The system is designed with research reproducibility in mind - all hyperparameters are centralised, all randomness is seeded, and the full training state is checkpointed (Section 3.4.4) - making it straightforward to extend or replicate. The complete codebase, including all training scripts, configuration files, and the web interface, is available at: https://github.com/Jasmipreethi/Deepfake. The three-head output design (Section 3.3.1) provides richer diagnostic information than a single binary classifier, allowing the contribution of each modality to be assessed independently. Beyond academic contribution, the project delivers a standalone command-line inference tool and a browser-based web interface with model comparison and history tracking, making the detection capability accessible to non-technical users without requiring any knowledge of the underlying training pipeline. The empirical observation that the earliest fine-tuned model (Model 3, epoch 3) achieved better score calibration and test-set accuracy than models trained to higher training AUC (Models 2 and 4, epoch 5) - observed across multiple independent training runs within the project's computational budget - is a practical finding of interest for practitioners deploying similar architectures on speaker-disjoint data, though extended training beyond 5 epochs would be needed to confirm whether this pattern persists or reverses with additional fine-tuning.
 
 //1.6
 == Structure of the Dissertation
@@ -1512,10 +1512,29 @@ Direct numerical comparison with published results is not possible: this project
   table(
     columns: (auto, auto, auto, auto, auto),
     [_System_], [_Fusion Method_], [_Output Type_], [_Speaker Split_], [_Dataset_],
-    [AV-Deepfake1M baseline @Cai2024], [Concatenation + MLP], [Binary joint verdict], [Random split], [AV-Deepfake1M (full)],
-    [FakeAVCeleb detectors @yi2023audiodeepfakedetectionsurvey], [Late fusion], [Binary joint verdict], [Random split], [FakeAVCeleb],
-    [DiMoDif @Cai2025], [Cross-modal attention + temporal], [Joint + temporal boundary], [Random split], [AV-Deepfake1M++ (full)],
-    [_This work_], [Transformer Encoder + CLS token], [Three-head: audio, video, joint], [Speaker-disjoint (GroupShuffleSplit)], [AV-Deepfake1M++ (val only)],
+    [AV-Deepfake1M baseline @Cai2024],
+    [Concatenation + MLP],
+    [Binary joint verdict],
+    [Random split],
+    [AV-Deepfake1M (full)],
+
+    [FakeAVCeleb detectors @yi2023audiodeepfakedetectionsurvey],
+    [Late fusion],
+    [Binary joint verdict],
+    [Random split],
+    [FakeAVCeleb],
+
+    [DiMoDif @Cai2025],
+    [Cross-modal attention + temporal],
+    [Joint + temporal boundary],
+    [Random split],
+    [AV-Deepfake1M++ (full)],
+
+    [_This work_],
+    [Transformer Encoder + CLS token],
+    [Three-head: audio, video, joint],
+    [Speaker-disjoint (GroupShuffleSplit)],
+    [AV-Deepfake1M++ (val only)],
   ),
   caption: [Qualitative architectural comparison with prior multimodal detection systems. Direct numerical comparison is not feasible due to different training data regimes and evaluation protocols.],
 )
