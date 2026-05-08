@@ -411,6 +411,8 @@ Deepfake technologies exemplify a dual-use dilemma: the same deep generative mod
 
 This dual-use nature has a direct consequence for detection research: the same architectural insights that improve a detector can be applied to make generators more convincing, creating an adversarial loop where detector improvements incentivise better generators. Chesney and Citron (2019) describe this dynamic as a "race to the bottom" in which detection capabilities struggle to keep pace with generative improvements, particularly as open-source tools proliferate @Chesney2019. From a forensic perspective, this reinforces the need for detection mechanisms that are robust to unseen generators, not just those present in training data @Rossler2019 @Dolhansky2020.
 
+The present work is not exempt from this tension. Publishing the architecture, training methodology, and open-source codebase contributes to the body of detection research but also provides adversarial actors with a reference point against which to optimise generative models. Mitigating factors include: this project operates on a limited subset of AV-Deepfake1M++ rather than the full 2M-clip benchmark, its findings are indicative rather than definitive, and the speaker-disjoint protocol and score calibration analysis provide detection-specific insights that do not directly transfer to generation tasks. The project's contribution is positioned strictly within the detection and harm-mitigation framework; its limitations in scale and scope mean it does not constitute a deployment-ready adversarial blueprint.
+
 //2.5
 == Deepfake Generation Techniques
 
@@ -1094,7 +1096,7 @@ The History tab records all past analyses in an SQLite database, displaying file
 //3.8
 == Conclusion
 
-This chapter described the complete methodology and implementation. The implemented system diverges from the initial proposal in three principal areas: Wav2Vec 2.0 → ResNet18 on mel-spectrograms (memory and codec compatibility), MobileNetV3 lip-region → ResNet3D-18 full-frame (temporal and whole-face coverage), and DiMoDif → Transformer Encoder fusion (reduced alignment dependency). BCE loss was replaced with Focal Loss to address easy-example domination. Each change is grounded in specific implementation constraints. The web interface (Section 3.7.1) provides browser-based access to the detection system. Results of applying this pipeline are presented in Chapter 4.
+The implemented system differed from the initial proposal in three principal areas: Wav2Vec 2.0 → ResNet18 on mel-spectrograms (memory and codec compatibility), MobileNetV3 lip-region → ResNet3D-18 full-frame (temporal and whole-face coverage), and DiMoDif → Transformer Encoder fusion (reduced alignment dependency). BCE loss was replaced with Focal Loss to address easy-example domination.
 
 // Chapter 4
 = Results and Findings
@@ -1487,7 +1489,7 @@ This pattern is counterintuitive - one might expect `audio_modified` to be detec
 //  5.3.3
 === Audio vs Video Head Dissociation
 
-The per-type head scores table provides direct evidence of per-modality score dissociation. For `audio_modified` clips, the video head scores (0.85–0.87 across models) are significantly higher than the audio head scores (0.37–0.43) and approach the level seen for real videos (0.86–0.93). This confirms that the video encoder correctly identifies the video stream as authentic while the audio encoder correctly flags the manipulated audio - exactly the dissociation expected from a modality-aware architecture.
+The per-type head scores table provides direct evidence of per-modality score dissociation. For `audio_modified` clips, the video head scores (0.85–0.87 across models) are significantly higher than the audio head scores (0.37–0.43) and approach the level seen for real videos (0.86–0.93). This demonstrates that the video encoder correctly identifies the video stream as authentic while the audio encoder correctly flags the manipulated audio — the dissociation expected from a modality-aware architecture.
 
 For `visual_modified` clips, the reverse pattern holds: the video head scores (0.70–0.77) are lower than for real videos, while the audio head scores (0.32–0.41) remain somewhat elevated. The asymmetry is less sharp than for `audio_modified` clips, which may reflect the fact that visual manipulation in AV-Deepfake1M++ involves lip-region synthesis that ResNet3D-18 (operating on full frames at 224×224 rather than cropped lip regions) is less sensitive to than audio cloning artefacts in the mel-spectrogram representation.
 
