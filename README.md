@@ -14,17 +14,22 @@
 
 ---
 
-## Overview
+## Empirical Evaluation of Multimodal Deception Capabilities
 
-A modular deepfake detection pipeline that analyzes **both audio and video** modalities to determine if a video has been manipulated. The system answers three questions per video:
+**Abstract**
+As generative models advance, evaluating their capacity for multimodal deception becomes critical for AI security. Traditional media forensics fail to capture the cross-modal inconsistencies inherent in modern agentic deception. This project presents an empirical evaluation framework designed to benchmark how effectively synthetic models maintain cross-modal coherence (audio-visual synchronisation) when deceiving human overseers.
 
-| Prediction | Question |
-|---|---|
-| **Audio** | Is the audio track authentic? |
-| **Video** | Are the visual frames authentic? |
-| **Joint** | Is the overall video authentic? |
+We engineered a Cross-Modal Transformer Fusion architecture—integrating ResNet3D-18 and ResNet18 encoders with a two-layer multi-head attention fusion module. To prevent identity leakage and enforce strict out-of-distribution evaluation, the system was trained under a speaker-disjoint partition using Focal Loss.
 
-Built on the [AV-Deepfake1M++](https://huggingface.co/datasets/ControlNet/AV-Deepfake1M-PlusPlus) dataset with 77K+ validation videos across 4 manipulation types: `real`, `audio_modified`, `visual_modified`, and `both_modified`.
+**Key Findings:**
+
+* **Modality-Specific Dissociation:** The three-head multi-task architecture successfully isolated deception vectors. The system correctly suppressed audio authenticity scores for `audio_modified` clips whilst maintaining high video authenticity scores, proving the capacity to independently verify modality coherence.
+
+* **Calibration Over Convergence:** Empirical results demonstrated that extended fine-tuning degrades score calibration. Our early-stopped checkpoint (Model 3) achieved 93.0% accuracy on the test set with zero false positives, significantly outperforming the fully converged model.
+
+This repository contains the complete, reproducible training pipeline, web-based inference evaluation tool, and the raw experimental logs demonstrating our results.
+
+**Full dissertation:** [`Deepfake_detection_using_cross-model_transformer_fusion.pdf`](./Deepfake_detection_using_cross-model_transformer_fusion.pdf)
 
 ---
 
