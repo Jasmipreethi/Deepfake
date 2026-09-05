@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deepfake Detection Using Cross-Model Transformer Fusion</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/theme/white.css">
+  <style>
+    .reveal { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 28px; }
+    .reveal h1, .reveal h2, .reveal h3 { text-transform: none; color: #1A1A2E; }
+    .reveal h1 { font-size: 1.6em; }
+    .reveal h2 { font-size: 1.3em; }
+    .reveal h3 { font-size: 1.1em; color: #0F3460; }
+    .reveal table { font-size: 0.42em; margin: 5px auto; border-collapse: collapse; }
+    .reveal th { background: #0070C0; color: white; padding: 4px 8px; }
+    .reveal td { padding: 3px 8px; border-bottom: 1px solid #ddd; }
+    .reveal img { border: 0 !important; box-shadow: none !important; }
+    .reveal .slides section { padding: 15px 30px; text-align: left; }
+    .reveal .text-block p { margin: 2px 0; line-height: 1.15; }
+    .reveal .r-stretch { max-width: 98%; }
+    .slides section:first-child { text-align: center; }
+    .slides section:first-child .text-block { text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section>
+<div class="text-block">
+<p><span style="font-size:66px; color:#0070C0; font-weight:bold;">Viva: </span><span style="font-size:48px; color:#000000; font-weight:bold;">Deepfake Detection Using
+Cross-Model Transformer Fusion</span></p>
+</div>
+<div class="text-block">
+<p><span style="font-size:22px; color:#000000;">Jasmi Preethi Alasapuri</span></p><p><span style="font-size:22px; color:#000000;">2571395</span></p><p></p><p><span style="font-size:22px; color:#000000;">Supervisor: Lucian Duta</span></p><p></p><p><span style="font-size:22px; color:#000000;">BSc (Hons) Data Science and Artificial Intelligence | CN6000 Dissertation 2026</span></p>
+</div>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">The Problem — Why Deepfake Detection Matters</span></p>
+</div>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">AI-generated synthetic media is eroding trust in digital evidence across law, politics, finance, and journalism.</span></p><p></p><p><span style="font-size:18px; color:inherit; font-weight:bold;">Real-world incidents:</span></p><p><span style="font-size:18px; color:inherit;">• £20M corporate fraud via deepfake video call (Arup, 2024)</span></p><p><span style="font-size:18px; color:inherit;">• Political deepfakes for disinformation (Zelenskyy, 2022)</span></p><p><span style="font-size:18px; color:inherit;">• AI kidnapping and impersonation scams (FBI, 2025)</span></p><p></p><p><span style="font-size:18px; color:inherit;">Multimodal deepfakes — manipulating both audio and video — are the hardest to detect.</span></p><p><span style="font-size:18px; color:inherit;">Current systems are vision-centric and fail to capture speech-lip temporal relationships.</span></p><p></p><p><span style="font-size:18px; color:inherit; font-weight:bold;">Computing challenge: Process 1.4 TB video data · Train 50M-parameter network · Real-time inference</span></p>
+</div>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Project Aims &amp; Objectives</span></p>
+</div>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit; font-weight:bold;">Aim: A multimodal deepfake detection system to distinguish real from manipulated audio-visual media using deep learning.</span></p><p></p><p><span style="font-size:18px; color:inherit; font-weight:bold;">Six Objectives:</span></p><p></p><p><span style="font-size:18px; color:inherit;">1. Literature review on deepfake generation and detection techniques</span></p><p><span style="font-size:18px; color:inherit;">2. Analyse real-world impacts; identify gaps in current solutions</span></p><p><span style="font-size:18px; color:inherit;">3. Quantitative secondary analysis of AV-Deepfake1M++ (speaker-disjoint split)</span></p><p><span style="font-size:18px; color:inherit;">4. Design and implement Cross-Modal Transformer Fusion architecture</span></p><p><span style="font-size:18px; color:inherit;">5. Resumable training pipeline; evaluation on held-out test set</span></p><p><span style="font-size:18px; color:inherit;">6. Standalone inference system and web interface for non-technical use</span></p>
+</div>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Literature Review — Key Findings</span></p>
+</div>
+<table><tr><th>Phase</th><th>Era</th><th>Characteristics</th></tr><tr><td>Visual Fidelity</td><td>2017–2019</td><td>Face-swaps via Autoencoders / GANs</td></tr><tr><td>In-the-Wild</td><td>2019–2021</td><td>Multi-subject, uncontrolled environments</td></tr><tr><td>Multimodal</td><td>2023–2025</td><td>Neural generation: audio + video</td></tr></table>
+<div class="text-block">
+<p></p><p><span style="font-size:14px; color:inherit; font-weight:bold;">Three Gaps Identified:</span></p><p><span style="font-size:14px; color:inherit;">1. Identity Leakage — Random splits allow face recognition, not manipulation detection</span></p><p><span style="font-size:14px; color:inherit;">2. Vision-Centric Bias — Audio is handled via simple concatenation or ignored entirely</span></p><p><span style="font-size:14px; color:inherit;">3. Limited Generalisation — Detectors overfit to training generators and datasets</span></p>
+</div>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Cross-Modal Transformer Fusion — Architecture</span></p>
+</div>
+<img src="figures/architecture.png" class="r-stretch" style="max-height:520px;">
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Key Design Decisions</span></p>
+</div>
+<table><tr><th>Component</th><th>Initial Plan</th><th>Final Choice</th><th>Reason</th></tr><tr><td>Audio Encoder</td><td>Wav2Vec 2.0</td><td>ResNet18 + Mel-spec</td><td>torchaudio/FFmpeg handles corrupted MP4s</td></tr><tr><td>Video Encoder</td><td>MobileNetV3</td><td>ResNet3D-18</td><td>3D convolutions for temporal lip-motion artefacts</td></tr><tr><td>Fusion Module</td><td>DiMoDif</td><td>Transformer + [CLS]</td><td>Cross-modal self-attention captures inconsistencies</td></tr><tr><td>Loss Function</td><td>BCE</td><td>Focal Loss (γ=2.0)</td><td>Down-weights easy examples; focuses on hard cases</td></tr></table>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Implementation — Training Pipeline</span></p>
+</div>
+<img src="figures/two_phase_training.png" class="r-stretch" style="max-height:520px;">
+<table><tr><th>Setting</th><th>Value</th></tr><tr><td>Dataset</td><td>68,851 clips (val split); 4 manipulation types</td></tr><tr><td>Phase 1</td><td>Frozen encoders (~2 epochs)</td></tr><tr><td>Phase 2</td><td>Full fine-tune at 10× lower LR</td></tr><tr><td>Optimiser</td><td>AdamW (1e-4 fusion, 1e-5 encoders)</td></tr><tr><td>Batch Size</td><td>8 per GPU (×2 DataParallel)</td></tr><tr><td>Loss</td><td>Focal Loss (γ=2.0, α=0.25)</td></tr><tr><td>Infrastructure</td><td>Vast.ai (2× RTX 3080); W&amp;B tracking</td></tr><tr><td>Workers</td><td>28 CPU parallel extraction, crash-resumable</td></tr></table>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Results — Training History &amp; Per-Type Accuracy</span></p>
+</div>
+<img src="comparison_results/training_history.png" class="r-stretch" style="max-height:520px;">
+<img src="figures/per_type_accuracy_bar_chart.png" class="r-stretch" style="max-height:520px;">
+<table><tr><th>Model</th><th>Ep</th><th>Val AUC</th><th>Test AUC</th><th>Test Acc</th><th>Notes</th></tr><tr><td>M1</td><td>1</td><td>0.663</td><td>—</td><td>—</td><td>Underfit; corrupted download</td></tr><tr><td>M2</td><td>5</td><td>0.994</td><td>0.919</td><td>66%</td><td>Highest val AUC</td></tr><tr><td>M3 ★</td><td>3</td><td>0.985</td><td>0.937</td><td>93%</td><td>Best: Precision 1.000, 0 false positives</td></tr><tr><td>M4</td><td>5</td><td>0.993</td><td>0.915</td><td>71%</td><td>Same session as M3, epoch 5</td></tr></table>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Model Comparison &amp; Score Calibration</span></p>
+</div>
+<img src="comparison_results/model_comparison.png" class="r-stretch" style="max-height:520px;">
+<img src="figures/calibration_curves.png" class="r-stretch" style="max-height:520px;">
+<div class="text-block">
+<p><span style="font-size:14px; color:inherit; font-weight:bold;">Key Finding:</span></p><p><span style="font-size:14px; color:inherit; font-weight:bold;">Higher validation AUC does NOT equal better deployment performance.</span></p><p></p><p><span style="font-size:14px; color:inherit;">• Model 2 (AUC 0.994) → 66% accuracy at τ=0.5 (poorly calibrated near boundary)</span></p><p><span style="font-size:14px; color:inherit;">• Model 3 (AUC 0.985) → 93% accuracy at τ=0.5 (well-separated, zero false positives)</span></p><p></p><p><span style="font-size:14px; color:inherit;">Calibration curves confirm Model 3 has near-perfect score-probability alignment. Audio-modified hardest type (88%) — genuine video signal counteracts audio head.</span></p>
+</div>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Key Findings</span></p>
+</div>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit; font-weight:bold;">1. Phase 2 fine-tuning is essential</span></p><p><span style="font-size:18px; color:inherit;">   Phase 1 only (Model 1): AUC 0.663. Phase-2 models: ≥ 0.915 test AUC.</span></p><p></p><p><span style="font-size:18px; color:inherit; font-weight:bold;">2. Validation AUC ≠ deployment performance</span></p><p><span style="font-size:18px; color:inherit;">   Model 2 (AUC 0.994) → 66%. Model 3 (AUC 0.985) → 93%. Score calibration matters.</span></p><p></p><p><span style="font-size:18px; color:inherit; font-weight:bold;">3. Three-head architecture provides genuine modality specialisation</span></p><p><span style="font-size:18px; color:inherit;">   Audio/video scores dissociate by manipulation type as predicted. Per-modality interpretability.</span></p><p></p><p><span style="font-size:18px; color:inherit; font-weight:bold;">4. Speaker-disjoint evaluation is critical</span></p><p><span style="font-size:18px; color:inherit;">   GroupShuffleSplit ensures zero speaker overlap. Results reflect manipulation detection, not identity.</span></p>
+</div>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Web Interface — Three Tabs</span></p>
+</div>
+<img src="figures/web_analyze_fake.png" class="r-stretch" style="max-height:520px;">
+<div class="text-block">
+<p><span style="font-size:12px; color:#0070C0; font-weight:bold;">Analyze — Upload + Verdict</span></p>
+</div>
+<img src="figures/web_compare.png" class="r-stretch" style="max-height:520px;">
+<div class="text-block">
+<p><span style="font-size:12px; color:#0070C0; font-weight:bold;">Compare — Side-by-Side Models</span></p>
+</div>
+<img src="figures/web_history.png" class="r-stretch" style="max-height:520px;">
+<div class="text-block">
+<p><span style="font-size:12px; color:#0070C0; font-weight:bold;">History — SQLite-Backed Log</span></p>
+</div>
+<div class="text-block">
+<p><span style="font-size:13px; color:#000000;">Flask backend + inference.py CLI. Drag-and-drop, model selector, per-head scores (audio/video/joint), batch processing, PDF reports.</span></p>
+</div>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Limitations</span></p>
+</div>
+<table><tr><th>Limitation</th><th>Impact</th></tr><tr><td>100-video test set</td><td>1 misclassification = 1% accuracy shift; wide confidence intervals</td></tr><tr><td>Validation split only</td><td>68,851 clips vs 1M+ in full training set; limited diversity</td></tr><tr><td>No ablation study</td><td>Cannot attribute performance to Focal Loss vs BCE, Transformer vs MLP</td></tr><tr><td>Fixed 2-second window</td><td>May miss manipulation in short or late segments</td></tr><tr><td>Single dataset</td><td>No cross-dataset evaluation (FakeAVCeleb, DFDC, FaceForensics++)</td></tr><tr><td>5-epoch training cap</td><td>Cloud GPU budget prevented full convergence and hyperparameter sweeps</td></tr></table>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Future Work</span></p>
+</div>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">1. Ablation studies — Isolate Focal Loss vs BCE, Transformer vs MLP, full-frame vs lip-region</span></p><p><span style="font-size:18px; color:inherit;">2. Cross-dataset evaluation — Test on FakeAVCeleb, DFDC, FaceForensics++ for generalisation</span></p><p><span style="font-size:18px; color:inherit;">3. Full dataset training — Complete AV-Deepfake1M++ (1M+ clips) instead of validation split</span></p><p><span style="font-size:18px; color:inherit;">4. Temporal localisation — Frame-level predictions via fake_segments annotations</span></p><p><span style="font-size:18px; color:inherit;">5. Threshold optimisation — Calibrate on held-out set to balance FP/FN for deployment</span></p><p><span style="font-size:18px; color:inherit;">6. Longer training runs — 20+ epochs with hyperparameter sweeps (institutional GPU)</span></p>
+</div>
+      </section>
+      <section>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit;">Conclusion</span></p>
+</div>
+<div class="text-block">
+<p><span style="font-size:18px; color:inherit; font-weight:bold;">What Was Achieved:</span></p><p><span style="font-size:18px; color:inherit;">• Multimodal deepfake detector: 93% accuracy, precision 1.000, zero false positives</span></p><p><span style="font-size:18px; color:inherit;">• Six objectives met — scope exceeds initial CN6000 proposal</span></p><p><span style="font-size:18px; color:inherit;">• Speaker-disjoint evaluation for honest generalisation estimates</span></p><p><span style="font-size:18px; color:inherit;">• Interpretable three-head output revealing per-modality vulnerability patterns</span></p><p><span style="font-size:18px; color:inherit;">• Production-ready: Resumable pipeline, W&amp;B audit trail, web UI, standalone CLI</span></p><p></p><p><span style="font-size:18px; color:inherit; font-weight:bold;">Key Takeaway:</span></p><p><span style="font-size:18px; color:inherit;">Score calibration, not AUC, determines deployment readiness. Model 3 (epoch 3, lower AUC) outperformed Model 2 (epoch 5) by 27pp — with zero false positives.</span></p><p></p><p><span style="font-size:18px; color:inherit;">Hardest challenges were engineering: corrupted MP4s, crash-resumable extraction, cloud GPU management.</span></p>
+</div>
+      </section>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.0/dist/reveal.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true, width: 1200, height: 700, margin: 0.04,
+      transition: 'slide', center: false
+    });
+  </script>
+</body>
+</html>

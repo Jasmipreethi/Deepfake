@@ -21,3 +21,4 @@ wandb/
 .DS_Store
 logs/
 test/
+replace_citations.py
