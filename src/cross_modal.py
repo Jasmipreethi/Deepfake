@@ -192,8 +192,11 @@ class TransformerFusion(nn.Module):
         self.audio_classifier = nn.Linear(hidden_dim, 1)
         self.video_classifier = nn.Linear(hidden_dim, 1)
         self.joint_classifier = nn.Linear(hidden_dim, 1)
+        
+        # Temperature parameter for post-hoc logit calibration
+        self.temperature = nn.Parameter(torch.ones(1) * 1.0)
     
-    def forward(self, video_feat, audio_feat):
+    def forward(self, video_feat, audio_feat, return_logits=False):
         B = video_feat.shape[0]
         
         # Project to hidden dimension
@@ -213,11 +216,43 @@ class TransformerFusion(nn.Module):
         # Use [CLS] token output for classification
         cls_out = fused[:, 0, :]  # (B, H)
         
+        audio_logit = self.audio_classifier(cls_out)
+        video_logit = self.video_classifier(cls_out)
+        joint_logit = self.joint_classifier(cls_out)
+        
+        if return_logits:
+            return {
+                'audio_logit': audio_logit,
+                'video_logit': video_logit,
+                'joint_logit': joint_logit,
+                'fused': cls_out
+            }
+            
+        # Temperature-calibrated sigmoid
+        temp = torch.clamp(self.temperature, min=0.01)
         return {
-            'audio_pred': torch.sigmoid(self.audio_classifier(cls_out)),
-            'video_pred': torch.sigmoid(self.video_classifier(cls_out)),
-            'joint_pred': torch.sigmoid(self.joint_classifier(cls_out)),
+            'audio_pred': torch.sigmoid(audio_logit / temp),
+            'video_pred': torch.sigmoid(video_logit / temp),
+            'joint_pred': torch.sigmoid(joint_logit / temp),
             'fused': cls_out
+        }
+
+
+class TemperatureScaling(nn.Module):
+    """Post-hoc temperature scaling model wrapper for calibration."""
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+        self.temperature = nn.Parameter(torch.ones(1) * 1.5)
+
+    def forward(self, video_feat, audio_feat):
+        logits = self.model(video_feat, audio_feat, return_logits=True)
+        temp = torch.clamp(self.temperature, min=0.01)
+        return {
+            'audio_pred': torch.sigmoid(logits['audio_logit'] / temp),
+            'video_pred': torch.sigmoid(logits['video_logit'] / temp),
+            'joint_pred': torch.sigmoid(logits['joint_logit'] / temp),
+            'fused': logits['fused']
         }
 
 
@@ -246,4 +281,5 @@ def get_fusion_module(fusion_type='pretrained', feature_dim=256, hidden_dim=512,
         return TransformerFusion(feature_dim=feature_dim, hidden_dim=hidden_dim, dropout=dropout)
     else:
         raise ValueError(f"Unknown fusion type: {fusion_type}")
+
 

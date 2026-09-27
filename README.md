@@ -1,7 +1,7 @@
 <h1 align="center">🎭 AV-Deepfake1M++ Detection</h1>
 
 <p align="center">
-  <strong>Audio-Video Deepfake Detection using Cross-Modal Transformer Fusion</strong>
+  <strong>Multimodal Audio-Video Deepfake Detection using Cross-Modal Transformer Fusion</strong>
 </p>
 
 <p align="center">
@@ -9,238 +9,106 @@
     <img src="https://img.shields.io/badge/Dataset-HuggingFace-yellow?style=flat-square&logo=huggingface" alt="Dataset">
   </a>
   <img src="https://img.shields.io/badge/PyTorch-2.0+-ee4c2c?style=flat-square&logo=pytorch" alt="PyTorch">
+  <img src="https://img.shields.io/badge/Accelerate-AMP%20%2F%20Compile-blue?style=flat-square" alt="PyTorch AMP">
   <img src="https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey?style=flat-square" alt="License">
 </p>
 
 ---
 
-## Empirical Evaluation of Multimodal Deception Capabilities
+## Overview & Publication Framework
 
-**Abstract**
-As generative models advance, evaluating their capacity for multimodal deception becomes critical for AI security. Traditional media forensics fail to capture the cross-modal inconsistencies inherent in modern agentic deception. This project presents an empirical evaluation framework designed to benchmark how effectively synthetic models maintain cross-modal coherence (audio-visual synchronisation) when deceiving human overseers.
+This repository presents an empirical evaluation framework and PyTorch 2.0+ pipeline designed to benchmark audio-visual deepfake detection on the **AV-Deepfake1M++** dataset.
 
-We engineered a Cross-Modal Transformer Fusion architecture—integrating ResNet3D-18 and ResNet18 encoders with a two-layer multi-head attention fusion module. To prevent identity leakage and enforce strict out-of-distribution evaluation, the system was trained under a speaker-disjoint partition using Focal Loss.
+The system features a **Cross-Modal Transformer Fusion architecture**—integrating ResNet3D-18 video encoder and ResNet18 audio encoder with a two-layer multi-head attention fusion module. Trained under a speaker-disjoint partition using Focal Loss, the architecture yields multi-head predictions for audio authenticity, video authenticity, and joint verdict.
 
-**Key Findings:**
-
-* **Modality-Specific Dissociation:** The three-head multi-task architecture successfully isolated deception vectors. The system correctly suppressed audio authenticity scores for `audio_modified` clips whilst maintaining high video authenticity scores, proving the capacity to independently verify modality coherence.
-
-* **Calibration Over Convergence:** Empirical results demonstrated that extended fine-tuning degrades score calibration. Our early-stopped checkpoint (Model 3) achieved 93.0% accuracy on the test set with zero false positives, significantly outperforming the fully converged model.
-
-This repository contains the complete, reproducible training pipeline, web-based inference evaluation tool, and the raw experimental logs demonstrating our results.
-
-**Full dissertation:** [`Deepfake_detection_using_cross-model_transformer_fusion.pdf`](./Deepfake_detection_using_cross-model_transformer_fusion.pdf)
+### Key Capabilities & PyTorch 2.0+ Features:
+* **Native PyTorch 2.0+ Optimizations:** Automatic Mixed Precision (`bfloat16`/`float16`), `torch.compile()` graph optimization, and GPU-accelerated `torchaudio.transforms.MelSpectrogram`.
+* **Model Calibration Suite:** Temperature scaling (`scripts/evaluate_calibration.py`) and Expected Calibration Error (ECE) calculation.
+* **Cross-Dataset Zero-Shot Generalization:** Benchmark evaluator (`scripts/evaluate_cross_dataset.py`) for FakeAVCeleb, DFDC, and FaceForensics++.
+* **Perturbation Robustness Suite:** Noise injection and H.264 video compression sweep (`scripts/test_robustness.py`).
+* **Systemic Ablation Suite:** Automated comparison (`scripts/run_ablations.py`) across fusion types, loss functions, and modality streams.
 
 ---
 
-## Pipeline
+## Directory Organization
 
-```mermaid
-flowchart TD
-    A["📥 Download Data
-      from Hugging Face"] --> B["📋 Load Metadata\nval_metadata.json"]
-    B --> C["👥 Speaker-Based Split
-            80/20 train/val
-            zero speaker overlap"]
-    C --> D["🔧 Extract Features
-            Video: 50 frames → ResNet3D
-            Audio: mel-spectrogram → ResNet18"]
-    D --> E["💾 Save to Disk
-            Individual .pt files
-            resumable extraction"]
-    E --> F["🧠 Train Model
-            Phase 1: Frozen encoders
-            Phase 2: Fine-tune all"]
-    F --> G["📊 Evaluate
-            AUC, Accuracy, Confusion Matrix"]
+```
+AV-Deepfake1M/Try/
+├── src/                        # PyTorch Source Code & Neural Architectures
+│   ├── main.py                 # Training pipeline entry point
+│   ├── cross_modal.py          # Transformer & Temperature Scaling Fusion
+│   ├── train_utils.py          # Focal Loss, AMP & Optimization
+│   ├── config.py               # Hyperparameter & Path config
+│   ├── data_utils.py           # Datasets & Speaker-Disjoint Splitting
+│   ├── checkpoint_utils.py     # Checkpoint save/load & recovery
+│   ├── inference.py            # Standalone prediction pipeline
+│   ├── audio.py                # Audio extraction & spectrograms
+│   └── video.py                # Video frame extraction
+│
+├── scripts/                    # Research Evaluation & Analysis Suite
+│   ├── evaluate_calibration.py # Temperature scaling & ECE metrics
+│   ├── evaluate_cross_dataset.py # Zero-shot OOD evaluation
+│   ├── test_robustness.py      # Noise & Compression perturbation sweep
+│   ├── run_ablations.py        # Systemic ablation runner
+│   ├── compare_models.py       # Multi-model evaluation tool
+│   ├── evaluate_models.py      # Benchmark test set evaluator
+│   ├── plot_calibration_curves.py
+│   ├── plot_mel_spectrogram.py
+│   ├── plot_per_type_accuracy.py
+│   └── plot_training_history.py
+│
+├── manuscript/                 # Dissertation Drafts & Journal Paper Materials
+│   ├── draft.md                # Full dissertation manuscript
+│   ├── draft.pdf               # Rendered PDF paper draft
+│   ├── Deepfake_detection_using_cross-model_transformer_fusion.pdf
+│   └── references.bib          # BibTeX citations
+│
+├── viva_presentation/          # Slide Decks, Viva Q&A & Defense Assets
+│   ├── presentation.pptx / .md / .html
+│   └── viva_questions.md / .pdf
+│
+├── docs_admin/                 # Ethics Approval & Official Forms
+├── notebooks/                  # Jupyter Notebook Prototypes
+├── data_and_results/           # Output Figures, Results & Metadata
+└── web/                        # Web Dashboard Interface
 ```
 
 ---
 
-## Model Architecture
+## Quick Start & Execution
 
-The model uses **pretrained encoders** to extract features from each modality, then fuses them for classification:
-
-```mermaid
-flowchart LR
-    V["Video\n(B, 50, 3, 224, 224)"] --> VE["ResNet3D-18\n(Kinetics pretrained)"]
-    A["Audio mel-spec\n(B, 1, 128, T)"] --> AE["ResNet18\n(ImageNet pretrained)"]
-    VE --> |"256-d"| FUS
-    AE --> |"256-d"| FUS
-    FUS["Fusion Module\n(auto-selected)"] --> AH["Audio Head → σ"]
-    FUS --> VH["Video Head → σ"]
-    FUS --> JH["Joint Head → σ"]
-```
-
-### Fusion Modes
-
-| Mode | Architecture | Best For |
-|---|---|---|
-| `auto` **(default)** | Transformer on GPU, MLP on CPU | Automatic |
-| `transformer` | 2-layer Transformer Encoder + [CLS] token | GPU training |
-| `pretrained` | 2-layer MLP with dropout | CPU / lightweight |
-| `attention` | Cross-modal multi-head attention | Moderate compute |
-
----
-
-## Quick Start
-
-### 1. Clone & Install
-
+### 1. Install Dependencies
 ```bash
-git clone https://github.com/Jasmipreethi/Deepfake.git
-cd Deepfake
 pip install -r requirements.txt
-apt-get install p7zip-full   # for zip extraction
 ```
 
-### 2. Configure
-
-Copy and edit the `.env` file with your API keys and paths:
-
+### 2. Run Training Pipeline (PyTorch 2.0+)
 ```bash
-# API Keys
-HF_TOKEN=hf_xxxxxxxxxxxx
-WANDB_API_KEY=xxxxxxxxxxxx
-
-# Paths (uncomment for VPS)
-DATA_DIR=/workspace/Deepfake/data
-CHECKPOINT_DIR=/workspace/Deepfake/checkpoints
+python src/main.py --fusion transformer --epochs 5 --batch_size 32
 ```
 
-### 3. Run
-
+### 3. Run Calibration & Evaluation Suite
 ```bash
-# Full pipeline (download → extract → train → evaluate)
-python main.py --fresh
+# Model Calibration & Temperature Scaling
+python scripts/evaluate_calibration.py
 
-# Resume training (skip already-extracted features)
-python main.py
+# Cross-Dataset Zero-Shot Benchmarking
+python scripts/evaluate_cross_dataset.py --checkpoint checkpoints/model_3.pt
 
-# Without W&B logging
-python main.py --no_wandb
+# Real-World Compression & Perturbation Testing
+python scripts/test_robustness.py
 
-# Force a specific fusion type
-python main.py --fusion_type transformer
-
-# Analyze dataset before training
-python analyze_data.py
-
-# Compare multiple models
-python compare_models.py \
-    --models logs/logs_1/best_model.pth logs/logs_2/best_model.pth \
-    --names "Model 1" "Model 2" \
-    --video_dir ./test/ \
-    --output_dir comparison_results/
-
-# Run web interface
-python web/app.py
+# Automated Ablation Studies
+python scripts/run_ablations.py
 ```
 
-### 4. Web Interface
-Open **http://localhost:5000** to access the browser-based tool.
-- **Analyze** — drag-and-drop upload, model selector, real-time verdict + audio/video/joint scores
-- **Compare** — run one video through both models side-by-side with agree/disagree summary
-- **History** — SQLite-backed table of all past analyses with per-entry delete and bulk clear
-
----
-
-### 5. Generate Dissertation Figures
-
+### 4. Run Standalone Inference
 ```bash
-# Training history — loss/AUC curves from per-epoch metrics
-python plot_training_history.py
-
-# Per-type accuracy bar chart — from model prediction CSVs
-python plot_per_type_accuracy.py
-
-# Mel-spectrogram comparison — real vs fake audio side-by-side
-python plot_mel_spectrogram.py
-```
-
-All outputs go to `figures/`. Requires `matplotlib`, `torch`, `torchaudio`. `plot_mel_spectrogram.py` also needs `ffmpeg`.
-
----
-
-## Training Details
-
-| Setting | Value |
-|---|---|
-| **Two-Phase Training** | Phase 1: frozen encoders (2 epochs), Phase 2: fine-tune all (LR 10× lower) |
-| **Loss** | Focal Loss (γ=2.0, α=0.25), joint head weighted 2× |
-| **Optimizer** | AdamW (fusion: 1e-4, encoders: 1e-5) |
-| **Scheduler** | ReduceLROnPlateau (patience=5, factor=0.5) |
-| **Early Stopping** | 30% of total epoch budget without AUC improvement |
-| **Speaker-Based Split** | Zero speaker overlap between train/val |
-
----
-
-## Project Structure
-
-```
-├── config.py            # Paths and hyperparameters (reads from .env)
-├── audio.py             # Audio encoder (ResNet18)
-├── video.py             # Video encoder (ResNet3D-18)
-├── cross_modal.py       # Fusion modules (MLP, Attention, Transformer)
-├── data_utils.py        # Data loading, speaker split, feature extraction
-├── train_utils.py       # Training loop, loss, optimizer
-├── checkpoint_utils.py  # Checkpoint save/load for resumable training
-├── download_data.py     # Download dataset from Hugging Face
-├── analyze_data.py      # Dataset analysis and visualization
-├── create_test_data.py  # Generate leak-free test sets (val speakers only)
-├── compare_models.py    # Multi-model comparison with full metrics/plots
-├── evaluate_models.py   # [DEPRECATED] superseded by compare_models.py
-├── inference.py         # Standalone single-video inference
-├── plot_training_history.py   # Generate training curves from output.txt
-├── plot_per_type_accuracy.py  # Generate per-type accuracy bar chart
-├── plot_mel_spectrogram.py    # Generate real vs fake mel-spectrogram comparison
-├── main.py              # Entry point — orchestrates the full pipeline
-├── requirements.txt     # Python dependencies
-├── .env                 # API keys and configurable paths (git-ignored)
-├── Walkthrough.md       # Detailed code walkthrough
-├── WebInterface.md      # Web API specification
-├── PipelineAnalysis.md  # Pipeline technical documentation
-├── comparison_results/  # Model comparison outputs (CSVs, plots, metrics)
-├── figures/             # Generated figures for dissertation
-│   ├── training_history_model4.png
-│   ├── per_type_accuracy_bar_chart.png
-│   └── mel_spectrogram_comparison.png
-├── logs/                # Training checkpoints and run logs
-└── web/                 # Web interface
-    ├── app.py           # Flask server (wraps inference.py)
-    ├── templates/index.html
-    └── static/          # CSS + JS
+python src/inference.py --video sample.mp4 --checkpoint checkpoints/model_3.pt
 ```
 
 ---
 
-## Hardware Requirements
+## License & Citation
 
-| Component | Minimum | Recommended |
-|---|---|---|
-| **GPU VRAM** | 8 GB (batch_size=8) | 24 GB (batch_size=32) |
-| **RAM** | 16 GB | 32 GB |
-| **Disk** | 500 GB SSD | 1 TB SSD |
-
----
-
-## Dataset
-
-**[AV-Deepfake1M++](https://huggingface.co/datasets/ControlNet/AV-Deepfake1M-PlusPlus)** — a large-scale audio-visual deepfake dataset.
-
-| Type | Audio | Video | Count |
-|---|---|---|---|
-| `real` | ✅ Real | ✅ Real | ~19K |
-| `audio_modified` | ❌ Fake | ✅ Real | ~19K |
-| `visual_modified` | ✅ Real | ❌ Fake | ~19K |
-| `both_modified` | ❌ Fake | ❌ Fake | ~19K |
-
-> **License:** CC BY-NC 4.0 — requires accepting terms on Hugging Face before download.
-
----
-
-## Acknowledgments
-
-- Dataset: [AV-Deepfake1M++](https://huggingface.co/datasets/ControlNet/AV-Deepfake1M-PlusPlus) by ControlNet
-- Video encoder: [ResNet3D-18](https://pytorch.org/vision/stable/models.html) pretrained on Kinetics-400
-- Audio encoder: [ResNet18](https://pytorch.org/vision/stable/models.html) pretrained on ImageNet
+This codebase is licensed under **CC BY-NC 4.0**.

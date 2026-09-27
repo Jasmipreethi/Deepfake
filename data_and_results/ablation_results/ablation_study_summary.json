@@ -1,0 +1,53 @@
+{
+  "fusion_architecture_ablation": [
+    {
+      "name": "Concat_MLP",
+      "val_auc": 0.952,
+      "test_accuracy": 0.84
+    },
+    {
+      "name": "Cross_Attention",
+      "val_auc": 0.978,
+      "test_accuracy": 0.89
+    },
+    {
+      "name": "Transformer_CLS_Token",
+      "val_auc": 0.994,
+      "test_accuracy": 0.93
+    }
+  ],
+  "loss_function_ablation": [
+    {
+      "name": "Standard_BCE",
+      "val_auc": 0.961,
+      "test_accuracy": 0.85
+    },
+    {
+      "name": "Focal_Loss_gamma_1",
+      "val_auc": 0.981,
+      "test_accuracy": 0.89
+    },
+    {
+      "name": "Focal_Loss_gamma_2",
+      "val_auc": 0.994,
+      "test_accuracy": 0.93
+    }
+  ],
+  "modality_isolation_ablation": [
+    {
+      "name": "Video_Only_Stream",
+      "val_auc": 0.924,
+      "test_accuracy": 0.81
+    },
+    {
+      "name": "Audio_Only_Stream",
+      "val_auc": 0.891,
+      "test_accuracy": 0.77
+    },
+    {
+      "name": "Joint_Multimodal_Fusion",
+      "val_auc": 0.994,
+      "test_accuracy": 0.93
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "Model_2": {
+    "raw_ece": 0.2534,
+    "optimal_temperature": 1.2136527299880981,
+    "calibrated_ece": 0.25488598031028686,
+    "raw_acc_at_0.5": 0.63,
+    "calibrated_acc_at_0.5": 0.63
+  },
+  "Model_3": {
+    "raw_ece": 0.11173599999999999,
+    "optimal_temperature": -5.741147518157959,
+    "calibrated_ece": 0.5155055901216473,
+    "raw_acc_at_0.5": 0.93,
+    "calibrated_acc_at_0.5": 0.07
+  },
+  "Model_4": {
+    "raw_ece": 0.214015,
+    "optimal_temperature": 1.2615669965744019,
+    "calibrated_ece": 0.21450591821787143,
+    "raw_acc_at_0.5": 0.71,
+    "calibrated_acc_at_0.5": 0.71
+  },
+  "Model_5": {
+    "raw_ece": 0.214015,
+    "optimal_temperature": 1.2615669965744019,
+    "calibrated_ece": 0.21450591821787143,
+    "raw_acc_at_0.5": 0.71,
+    "calibrated_acc_at_0.5": 0.71
+  }
+}
